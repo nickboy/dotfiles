@@ -1,0 +1,14 @@
+# This is Git's per-user configuration file.
+[core]
+# Please adapt and uncomment the following lines:
+#	user = Nick Liu
+#	email = nickliu0211@gmail.com
+[user]
+	name = Nick Liu
+	email = nickliu0211@gmail.com
+[filter "lfs"]
+	clean = git-lfs clean %f
+	smudge = git-lfs smudge %f
+	required = true
+[diff]
+	tool = code

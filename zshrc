@@ -81,6 +81,8 @@ source $ZSH/oh-my-zsh.sh
 # alias ohmyzsh="mate ~/.oh-my-zsh"
 DEFAULT_USER="Nickboy"
 
+# zsh tmux settings
+ZSH_TMUX_AUTOSTART='true'
 
 #hadoop alias
 alias hstart="/usr/local/Cellar/hadoop/2.6.0/sbin/start-dfs.sh;/usr/local/Cellar/hadoop/2.6.0/sbin/start-yarn.sh" 

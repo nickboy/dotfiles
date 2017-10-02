@@ -33,7 +33,9 @@ Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
 " Plugin 'ascenator/L9', {'name': 'newL9'}
 
 Plugin 'Valloric/YouCompleteMe'
-
+Plugin 'Lokaltog/vim-powerline'
+" Show boockmark sign in front of the line
+Plugin 'kshenoy/vim-signature'
 Plugin 'myusuf3/numbers.vim'
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -62,3 +64,12 @@ try
 source ~/.vim_runtime/my_configs.vim
 catch
 endtry
+
+
+"Highlight current row
+set cursorline
+set hlsearch
+
+"Enable vim settings immediately
+autocmd BufWritePost $MYVIMRC source $MYVIMRC
+

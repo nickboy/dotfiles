@@ -36,3 +36,15 @@ Copy dotfiles to home directory
 cd ~/dotfiles
 rake
 ```
+
+Update Vim 8.0
+Mac
+```bash
+brew install vim --with-override-system-vi
+```
+Ubuntu
+```bash
+sudo add-apt-repository ppa:jonathonf/vim
+sudo apt-get update
+sudo apt-get install vim
+```

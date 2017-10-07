@@ -73,3 +73,5 @@ set hlsearch
 "Enable vim settings immediately
 autocmd BufWritePost $MYVIMRC source $MYVIMRC
 
+"Wild menu
+set wildmenu

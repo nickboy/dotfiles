@@ -4,7 +4,6 @@ filetype off                  " required
 call plug#begin('~/.vim/plugged')
 
 " for Java development environment
-Plug 'SirVer/ultisnips'
 Plug 'artur-shaik/vim-javacomplete2'
 
 Plug 'terryma/vim-smooth-scroll'

@@ -1,0 +1,7 @@
+.DS_Store
+.bin/assets/corona
+.config/vifm/vifminfo
+vim/plugged/
+vim/undodir/
+git/gitconfig.local.symlink
+Brewfile.lock.json

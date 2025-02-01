@@ -44,10 +44,14 @@ brew "perl"
 brew "pipx"
 # Theme for zsh
 brew "powerlevel10k"
+# Static type checker for Python
+brew "pyright"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
 # Tool to find ROP sequences in PE/Elf/Mach-O x86/x64 binaries
 brew "rp"
+# Extremely fast Python linter, written in Rust
+brew "ruff"
 # Safe, concurrent, practical language
 brew "rust"
 # Rust toolchain installer

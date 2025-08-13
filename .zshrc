@@ -136,8 +136,7 @@ zinit wait lucid for \
 # Additional useful plugins
 zinit wait lucid for \
     MichaelAquilina/zsh-you-should-use \
-    fdellwing/zsh-bat \
-    Aloxaf/fzf-tab
+    fdellwing/zsh-bat
 
 # ============================================================================
 # Binary Programs via Zinit (Load in background)
@@ -167,8 +166,9 @@ eval "$(starship init zsh)"
 # Shell Integrations
 # ============================================================================
 
-# FZF Configuration
+# FZF Configuration  
 if command -v fzf &> /dev/null; then
+    # Load FZF key-bindings and completion
     eval "$(fzf --zsh)"
     
     # Use fd for better performance
@@ -176,29 +176,29 @@ if command -v fzf &> /dev/null; then
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
     export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
     
-    # FZF Theme (TokyoNight)
+    # FZF Theme (TokyoNight Night - from BAT theme)
     export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
       --highlight-line \
       --info=inline-right \
       --ansi \
       --layout=reverse \
       --border=none \
-      --color=bg+:#283457 \
-      --color=bg:#16161e \
-      --color=border:#27a1b9 \
+      --color=bg+:#282833 \
+      --color=bg:#1a1b26 \
+      --color=border:#7aa2f7 \
       --color=fg:#c0caf5 \
-      --color=gutter:#16161e \
+      --color=gutter:#1a1b26 \
       --color=header:#ff9e64 \
-      --color=hl+:#2ac3de \
-      --color=hl:#2ac3de \
-      --color=info:#545c7e \
-      --color=marker:#ff007c \
-      --color=pointer:#ff007c \
-      --color=prompt:#2ac3de \
+      --color=hl+:#7dcfff \
+      --color=hl:#7aa2f7 \
+      --color=info:#565f89 \
+      --color=marker:#f7768e \
+      --color=pointer:#f7768e \
+      --color=prompt:#7dcfff \
       --color=query:#c0caf5:regular \
-      --color=scrollbar:#27a1b9 \
+      --color=scrollbar:#565f89 \
       --color=separator:#ff9e64 \
-      --color=spinner:#ff007c"
+      --color=spinner:#f7768e"
     
     # Preview settings
     show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
@@ -229,6 +229,25 @@ if command -v fzf &> /dev/null; then
     # FZF-git integration
     [[ -f ~/fzf-git.sh/fzf-git.sh ]] && source ~/fzf-git.sh/fzf-git.sh
 fi
+
+# Load fzf-tab AFTER fzf is initialized
+zinit light Aloxaf/fzf-tab
+
+# Configure fzf-tab
+zstyle ':fzf-tab:*' fzf-command fzf
+zstyle ':fzf-tab:*' fzf-pad 4
+# Inherit FZF theme and add specific flags for fzf-tab
+zstyle ':fzf-tab:*' fzf-flags --height=50% --border=rounded
+
+# Configure preview for different completion types
+zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
+zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
+zstyle ':fzf-tab:complete:ls:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
+zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --icons=always --color=always $realpath | head -200 || [[ -f $realpath ]] && bat --style=numbers --color=always --theme=tokyonight_night --line-range :500 $realpath || echo $desc'
+
+# Group colors and descriptions
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '[%d]'
 
 # Zoxide (better cd)
 if command -v zoxide &> /dev/null; then
@@ -276,9 +295,10 @@ alias gl='git log --oneline --graph --decorate'
 setopt VI
 
 # Better completion
-setopt MENU_COMPLETE
-setopt AUTO_LIST
-setopt COMPLETE_IN_WORD
+# setopt MENU_COMPLETE  # Comment out - this causes inline completion
+setopt AUTO_MENU        # Show completion menu on tab
+setopt AUTO_LIST        # List choices on ambiguous completion
+setopt COMPLETE_IN_WORD # Complete from cursor position
 
 # ============================================================================
 # Environment Specific Settings

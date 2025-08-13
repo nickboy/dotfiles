@@ -1,120 +1,78 @@
+#!/usr/bin/env zsh
 
-# Path to your oh-my-zsh installation.
+# ============================================================================
+# Environment Variables (Set early for consistency)
+# ============================================================================
+
 export TERM="xterm-256color"
-export ZSH=$HOME/.oh-my-zsh
-
-# Starship
-eval "$(starship init zsh)"
-
-
-# Set name of the theme to load.
-# Look in ~/.oh-my-zsh/themes/
-# Optionally, if you set this to "random", it'll load a random theme each
-# time that oh-my-zsh is loaded.
-ZSH_THEME=""
-
-# Uncomment the following line to use case-sensitive completion.
-# CASE_SENSITIVE="true"
-
-# Uncomment the following line to disable bi-weekly auto-update checks.
-# DISABLE_AUTO_UPDATE="true"
-
-# Uncomment the following line to change how often to auto-update (in days).
-# export UPDATE_ZSH_DAYS=13
-
-# Uncomment the following line to disable colors in ls.
-# DISABLE_LS_COLORS="true"
-
-# Uncomment the following line to disable auto-setting terminal title.
-# DISABLE_AUTO_TITLE="true"
-
-# Uncomment the following line to enable command auto-correction.
-# ENABLE_CORRECTION="true"
-
-# Uncomment the following line to display red dots whilst waiting for completion.
-# COMPLETION_WAITING_DOTS="true"
-
-# Uncomment the following line if you want to disable marking untracked files
-# under VCS as dirty. This makes repository status check for large repositories
-# much, much faster.
-# DISABLE_UNTRACKED_FILES_DIRTY="true"
-
-# Uncomment the following line if you want to change the command execution time
-# stamp shown in the history command output.
-# The optional three formats: "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
-# HIST_STAMPS="mm/dd/yyyy"
-
-# Would you like to use another custom folder than $ZSH/custom?
-# ZSH_CUSTOM=/path/to/new-custom-folder
-
-# Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
-# Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
-# Example format: plugins=(rails git textmate ruby lighthouse)
-# Add wisely, as too many plugins slow down shell startup.
-plugins=(git macos brew z)
-
-# User configuration
-
-export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
-# export MANPATH="/usr/local/man:$MANPATH"
-
-source $ZSH/oh-my-zsh.sh
-
-# You may need to manually set your language environment
-# export LANG=en_US.UTF-8
-
-# Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='mvim'
-# fi
 export EDITOR='nvim'
+export LANG=en_US.UTF-8
 
+# ============================================================================
+# PATH Configuration (Consolidated and deduplicated)
+# ============================================================================
 
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+# Homebrew (Apple Silicon) - Set first for priority
+export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
-# ssh
-# export SSH_KEY_PATH="~/.ssh/dsa_id"
+# User binaries
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
-# Set personal aliases, overriding those provided by oh-my-zsh libs,
-# plugins, and themes. Aliases can be placed here, though oh-my-zsh
-# users are encouraged to define aliases within the ZSH_CUSTOM folder.
-# For a full list of active aliases, run `alias`.
-#
-# Example aliases
-# alias zshconfig="mate ~/.zshrc"
-# alias ohmyzsh="mate ~/.oh-my-zsh"
+# System paths
+export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
 
-# zsh tmux settings
-ZSH_TMUX_AUTOSTART='true'
-
-
-export PATH="/opt/homebrew/bin:$PATH"
-export PATH="/usr/local/sbin:$PATH"
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# Language specific
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/Library/TeX/texbin:$PATH"
-export PATH="/Users/nickboy/.cargo/bin:$PATH"
-export PATH="/Users/nickboy/.local/share/bob/nvim-bin:$PATH"
+
+# Initialize Homebrew environment (this also sets PATH, MANPATH, INFOPATH)
+eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Compilation flags for macOS
+export LDFLAGS="-L/opt/homebrew/lib"
+export CPPFLAGS="-I/opt/homebrew/include"
+export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
+
+# Homebrew settings
+export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_RUBY3=true
 
-alias python="python3"
-alias pip="pip3"
+# ============================================================================
+# History Configuration (Set early for better history handling)
+# ============================================================================
 
-# Fig post block. Keep at the bottom of this file.
-[[ -f "$HOME/.fig/shell/zshrc.post.zsh" ]] && builtin source "$HOME/.fig/shell/zshrc.post.zsh"
-eval "$(gh copilot alias -- zsh)"
+HISTSIZE=10000
+HISTFILE=~/.zsh_history
+SAVEHIST=$HISTSIZE
+HISTDUP=erase
+setopt appendhistory
+setopt sharehistory
+setopt hist_ignore_space
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_find_no_dups
 
-export LDFLAGS="-L/usr/local/lib"
-export CPPFLAGS="-I/usr/local/include"
-export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig"
+# ============================================================================
+# Oh-My-Zsh Configuration (Framework only, plugins via Zinit)
+# ============================================================================
 
+export ZSH=$HOME/.oh-my-zsh
+ZSH_THEME=""  # Empty because we use Starship
+plugins=(macos)    # Load macos plugin through OMZ to avoid submodule issues
 
-. /opt/homebrew/etc/profile.d/z.sh
+# Tmux settings (before loading OMZ)
+ZSH_TMUX_AUTOSTART='true'
 
-### Added by Zinit's installer
+# Load Oh-My-Zsh framework
+source $ZSH/oh-my-zsh.sh
+
+# ============================================================================
+# Zinit Plugin Manager
+# ============================================================================
+
+# Install Zinit if not present
 if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
     print -P "%F{33} %F{220}Installing %F{33}ZDHARMA-CONTINUUM%F{220} Initiative Plugin Manager (%F{33}zdharma-continuum/zinit%F{220})…%f"
     command mkdir -p "$HOME/.local/share/zinit" && command chmod g-rwX "$HOME/.local/share/zinit"
@@ -127,154 +85,214 @@ source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
 autoload -Uz _zinit
 (( ${+_comps} )) && _comps[zinit]=_zinit
 
-# Load a few important annexes, without Turbo
-# (this is currently required for annexes)
+# ============================================================================
+# Zinit Annexes
+# ============================================================================
+
 zinit light-mode for \
     zdharma-continuum/zinit-annex-as-monitor \
     zdharma-continuum/zinit-annex-bin-gem-node \
     zdharma-continuum/zinit-annex-patch-dl \
     zdharma-continuum/zinit-annex-rust
 
-# Plugin history-search-multi-word loaded with investigating.
-zinit load zdharma-continuum/history-search-multi-word
+# ============================================================================
+# Essential Plugins (Load immediately)
+# ============================================================================
 
-# Two regular plugins loaded without investigating.
-zinit light zsh-users/zsh-autosuggestions
+# OMZ Libraries (load first as other plugins may depend on them)
+zinit snippet OMZ::lib/clipboard.zsh
+zinit snippet OMZ::lib/termsupport.zsh
+zinit snippet OMZ::lib/completion.zsh
+zinit snippet OMZ::lib/key-bindings.zsh
+
+# OMZ Plugins (via Zinit for better control)
+zinit snippet OMZP::git
+# macos plugin is loaded via OMZ plugins array to avoid submodule issues
+zinit snippet OMZP::brew
+zinit snippet OMZP::dotenv
+zinit snippet OMZP::rake
+zinit snippet OMZP::rbenv
+zinit snippet OMZP::ruby
+
+# Fast syntax highlighting (load early for immediate effect)
 zinit light zdharma-continuum/fast-syntax-highlighting
 
-# OMZ Shorthand Syntax
-zi snippet OMZ::lib/clipboard.zsh
-zi snippet OMZ::lib/termsupport.zsh
+# History search
+zinit load zdharma-continuum/history-search-multi-word
 
-zi snippet OMZP::git
-zi snippet OMZP::dotenv
-zi snippet OMZP::rake
-zi snippet OMZP::rbenv
-zi snippet OMZP::ruby
+# ============================================================================
+# Deferred Plugins (Load after prompt for faster startup)
+# ============================================================================
 
-# Install tmux and cmake via zinit
-zinit id-as for \
-    cmake \
-  @thewtex/tmux-mem-cpu-load \
-    configure'--disable-utf8proc' make \
-  @tmux/tmux
+# Autosuggestions and completions
+zinit wait lucid for \
+    atinit"zicompinit; zicdreplay" \
+        zsh-users/zsh-completions \
+    atload"_zsh_autosuggest_start" \
+        zsh-users/zsh-autosuggestions \
+    blockf \
+        zsh-users/zsh-completions
 
+# Additional useful plugins
+zinit wait lucid for \
+    MichaelAquilina/zsh-you-should-use \
+    fdellwing/zsh-bat \
+    Aloxaf/fzf-tab
 
-zi for \
-    from'gh-r' \
-    sbin'* -> jq' \
-    nocompile \
-  @jqlang/jq
+# ============================================================================
+# Binary Programs via Zinit (Load in background)
+# ============================================================================
 
-zi for \
-    from'gh-r'  \
-    sbin'fzf'   \
-  junegunn/fzf
+# Development tools
+zinit wait"1" lucid for \
+    from'gh-r' sbin'* -> jq' \
+        @jqlang/jq \
+    from'gh-r' sbin'fzf' \
+        junegunn/fzf
 
-# Additional plugins
-zinit light zsh-users/zsh-completions
-zinit light MichaelAquilina/zsh-you-should-use
-zinit light fdellwing/zsh-bat
-zinit light Aloxaf/fzf-tab
-### End of Zinit's installer chunk
-#
-# history
-HISTSIZE=5000
-HISTFILE=~/.zsh_history
-SAVEHIST=$HISTSIZE
-HISTDUP=erase
-setopt appendhistory
-setopt sharehistory
-setopt hist_ignore_space
-setopt hist_ignore_all_dups
-setopt hist_save_no_dups
-setopt hist_find_no_dups
+# Tmux and related tools (only if not already installed)
+if ! command -v tmux &> /dev/null; then
+    zinit wait"2" lucid for \
+        configure'--disable-utf8proc' make sbin'tmux' \
+            @tmux/tmux
+fi
 
+# ============================================================================
+# Prompt (Starship)
+# ============================================================================
 
-# Aliases
-alias ls='eza --icons=always --color=always'
-alias vim='nvim'
-alias c='clear'
-alias cd='z'  # Use zoxide for cd
+eval "$(starship init zsh)"
 
-# Shell integrations
-eval "$(fzf --zsh)"
+# ============================================================================
+# Shell Integrations
+# ============================================================================
+
+# FZF Configuration
+if command -v fzf &> /dev/null; then
+    eval "$(fzf --zsh)"
+    
+    # Use fd for better performance
+    export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+    export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+    export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+    
+    # FZF Theme (TokyoNight)
+    export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
+      --highlight-line \
+      --info=inline-right \
+      --ansi \
+      --layout=reverse \
+      --border=none \
+      --color=bg+:#283457 \
+      --color=bg:#16161e \
+      --color=border:#27a1b9 \
+      --color=fg:#c0caf5 \
+      --color=gutter:#16161e \
+      --color=header:#ff9e64 \
+      --color=hl+:#2ac3de \
+      --color=hl:#2ac3de \
+      --color=info:#545c7e \
+      --color=marker:#ff007c \
+      --color=pointer:#ff007c \
+      --color=prompt:#2ac3de \
+      --color=query:#c0caf5:regular \
+      --color=scrollbar:#27a1b9 \
+      --color=separator:#ff9e64 \
+      --color=spinner:#ff007c"
+    
+    # Preview settings
+    show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+    export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+    export FZF_ALT_C_OPTS="--preview 'eza --tree --icons=always --color=always {} | head -200'"
+    
+    # FZF completion functions
+    _fzf_compgen_path() {
+        fd --hidden --exclude .git . "$1"
+    }
+    
+    _fzf_compgen_dir() {
+        fd --type=d --hidden --exclude .git . "$1"
+    }
+    
+    _fzf_comprun() {
+        local command=$1
+        shift
+        
+        case "$command" in
+            cd)           fzf --preview 'eza --tree --icons=always --color=always {} | head -200' "$@" ;;
+            export|unset) fzf --preview "eval 'echo \${}'" "$@" ;;
+            ssh)          fzf --preview 'dig {}' "$@" ;;
+            *)            fzf --preview "$show_file_or_dir_preview" "$@" ;;
+        esac
+    }
+    
+    # FZF-git integration
+    [[ -f ~/fzf-git.sh/fzf-git.sh ]] && source ~/fzf-git.sh/fzf-git.sh
+fi
 
 # Zoxide (better cd)
-eval "$(zoxide init zsh)"
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi
 
-# The fuck
-eval $(thefuck --alias fk)
+# GitHub Copilot CLI
+if command -v gh &> /dev/null && gh copilot --help &>/dev/null; then
+    eval "$(gh copilot alias -- zsh)"
+fi
 
-# -- Use fd instead of fzf --
+# The fuck (command correction)
+if command -v thefuck &> /dev/null; then
+    eval $(thefuck --alias fk)
+fi
 
-export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+# ============================================================================
+# Aliases
+# ============================================================================
 
-# FZF Theme (TokyoNight)
-export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
-  --highlight-line \
-  --info=inline-right \
-  --ansi \
-  --layout=reverse \
-  --border=none \
-  --color=bg+:#283457 \
-  --color=bg:#16161e \
-  --color=border:#27a1b9 \
-  --color=fg:#c0caf5 \
-  --color=gutter:#16161e \
-  --color=header:#ff9e64 \
-  --color=hl+:#2ac3de \
-  --color=hl:#2ac3de \
-  --color=info:#545c7e \
-  --color=marker:#ff007c \
-  --color=pointer:#ff007c \
-  --color=prompt:#2ac3de \
-  --color=query:#c0caf5:regular \
-  --color=scrollbar:#27a1b9 \
-  --color=separator:#ff9e64 \
-  --color=spinner:#ff007c \
-"
+# Modern replacements
+alias ls='eza --icons=always --color=always'
+alias ll='eza -la --icons=always --color=always'
+alias tree='eza --tree --icons=always --color=always'
+alias cat='bat'
+alias vim='nvim'
+alias vi='nvim'
 
-# Use fd (https://github.com/sharkdp/fd) for listing path candidates.
-# - The first argument to the function ($1) is the base path to start traversal
-# - See the source code (completion.{bash,zsh}) for the details.
-_fzf_compgen_path() {
-  fd --hidden --exclude .git . "$1"
-}
+# Shortcuts
+alias c='clear'
+alias cd='z'  # Use zoxide for cd
+alias python='python3'
+alias pip='pip3'
 
-# Use fd to generate the list for directory completion
-_fzf_compgen_dir() {
-  fd --type=d --hidden --exclude .git . "$1"
-}
+# Git extras (in addition to OMZ git plugin)
+alias gs='git status'
+alias gd='git diff'
+alias gl='git log --oneline --graph --decorate'
 
-source ~/fzf-git.sh/fzf-git.sh
+# ============================================================================
+# Shell Options
+# ============================================================================
 
-
-# eza
-show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
-
-_fzf_comprun() {
-  local command=$1
-  shift
-
-  case "$command" in
-    cd)           fzf --preview 'eza --tree --icons=always --color=always {} | head -200' "$@" ;;
-    export|unset) fzf --preview "eval 'echo \${}'"         "$@" ;;
-    ssh)          fzf --preview 'dig {}'                   "$@" ;;
-    *)            fzf --preview "$show_file_or_dir_preview" "$@" ;;
-  esac
-}
-
-export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
-export FZF_ALT_C_OPTS="--preview 'eza --tree --icons=always --color=always {} | head -200'"
-
-# zsh-bat
-export BAT_THEME=tokyonight_night
-
-# VI
+# VI mode
 setopt VI
 
-. "$HOME/.local/bin/env"
+# Better completion
+setopt MENU_COMPLETE
+setopt AUTO_LIST
+setopt COMPLETE_IN_WORD
 
+# ============================================================================
+# Environment Specific Settings
+# ============================================================================
+
+# Bat theme
+export BAT_THEME=tokyonight_night
+
+# ============================================================================
+# Local/Private Configuration
+# ============================================================================
+
+# Source local environment if exists
+[[ -f "$HOME/.local/bin/env" ]] && source "$HOME/.local/bin/env"
+
+# Source private/work specific configs if exists
+[[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"

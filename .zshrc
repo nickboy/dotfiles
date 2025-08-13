@@ -1,0 +1,1 @@
+/Users/nickboy/dotfiles/zshrc

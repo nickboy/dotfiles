@@ -1,0 +1,265 @@
+{
+  "icon_theme": "Material Icon Theme",
+  "base_keymap": "VSCode",
+  "theme": "One Dark",
+  "ui_font_family": "JetBrains Mono",
+  "buffer_font_family": "JetBrains Mono",
+  "ui_font_size": 16,
+  "buffer_font_size": 15,
+  "buffer_font_features": {
+    "calt": true,
+    "liga": true
+  },
+  "buffer_line_height": {
+    "custom": 1.6
+  },
+  "current_line_highlight": "all",
+  "vim_mode": true,
+  "relative_line_numbers": true,
+  "vim": {
+    "use_system_clipboard": "always",
+    "use_smartcase_find": true,
+    "toggle_relative_line_numbers": true,
+    "highlight_on_yank_duration": 300
+  },
+  "scrollbar": {
+    "show": "always",
+    "cursors": true,
+    "git_diff": true,
+    "search_results": true,
+    "selected_symbol": true,
+    "diagnostics": "error"
+  },
+  "cursor_blink": true,
+  "show_completion_documentation": true,
+  "show_completions_on_input": true,
+  "tab_size": 2,
+  "hard_tabs": false,
+  "use_autoclose": true,
+  "use_auto_surround": true,
+  "preferred_line_length": 120,
+  "soft_wrap": "editor_width",
+  "show_wrap_guides": true,
+  "wrap_guides": [120],
+  "indent_guides": {
+    "enabled": true,
+    "line_width": 1,
+    "active_line_width": 2,
+    "coloring": "indent_aware"
+  },
+  "format_on_save": "on",
+  "formatter": "auto",
+  "remove_trailing_whitespace_on_save": true,
+  "ensure_final_newline_on_save": true,
+  "edit_predictions": {
+    "disabled_globs": ["**/.env*", "**/*.pem", "**/*.key", "**/*.cert", "**/*.crt", "**/.dev.vars", "**/secrets.yml"]
+  },
+  "features": {
+    "edit_prediction_provider": "supermaven"
+  },
+  "agent": {
+    "always_allow_tool_actions": true,
+    "default_profile": "write",
+    "default_model": {
+      "provider": "zed.dev",
+      "model": "claude-3-5-sonnet"
+    }
+  },
+  "file_scan_exclusions": [
+    "**/.git",
+    "**/.svn",
+    "**/.hg",
+    "**/CVS",
+    "**/.DS_Store",
+    "**/Thumbs.db",
+    "**/node_modules",
+    "**/dist",
+    "**/build",
+    "**/.next",
+    "**/.nuxt",
+    "**/target",
+    "**/.idea",
+    "**/.vscode"
+  ],
+  "file_types": {
+    "PHP": ["*.php"],
+    "Blade": ["*.blade.php"]
+  },
+  "terminal": {
+    "shell": {
+      "program": "zsh"
+    },
+    "font_size": 14,
+    "font_family": "JetBrains Mono",
+    "working_directory": "current_project_directory",
+    "blinking": "terminal_controlled",
+    "copy_on_select": true,
+    "dock": "bottom",
+    "default_height": 320,
+    "button": true
+  },
+  "telemetry": {
+    "diagnostics": false,
+    "metrics": false
+  },
+  "project_panel": {
+    "button": true,
+    "dock": "left",
+    "git_status": true,
+    "indent_size": 20,
+    "file_icons": true,
+    "folder_icons": true,
+    "default_width": 240,
+    "auto_reveal_entries": true
+  },
+  "tabs": {
+    "close_position": "right",
+    "file_icons": true,
+    "git_status": true
+  },
+  "outline_panel": {
+    "button": true,
+    "dock": "right",
+    "default_width": 300
+  },
+  "collaboration_panel": {
+    "dock": "left"
+  },
+  "autosave": "on_focus_change",
+  "git": {
+    "git_gutter": "tracked_files",
+    "inline_blame": {
+      "enabled": true
+    }
+  },
+  "show_whitespaces": "selection",
+  "scroll_beyond_last_line": "off",
+  "vertical_scroll_margin": 3,
+  "horizontal_scroll_margin": 10,
+  "seed_search_query_from_cursor": "always",
+  "use_on_type_format": false,
+  "auto_install_extensions": {
+    "html": true,
+    "dockerfile": true,
+    "toml": true,
+    "yaml": true,
+    "xml": true,
+    "sql": true,
+    "php": true,
+    "java": true,
+    "catppuccin": true,
+    "catppuccin-icons": true,
+    "material-icon-theme": true,
+    "tokyo-night": true,
+    "latex": true,
+    "mcp-server-context7": true
+  },
+  "languages": {
+    "JavaScript": {
+      "tab_size": 2,
+      "formatter": {
+        "language_server": {
+          "name": "prettier"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "TypeScript": {
+      "tab_size": 2,
+      "formatter": {
+        "language_server": {
+          "name": "prettier"
+        }
+      },
+      "code_actions_on_format": {
+        "source.fixAll.eslint": true
+      }
+    },
+    "JSON": {
+      "tab_size": 2,
+      "formatter": {
+        "language_server": {
+          "name": "prettier"
+        }
+      }
+    },
+    "Python": {
+      "tab_size": 4,
+      "formatter": {
+        "language_server": {
+          "name": "ruff"
+        }
+      }
+    },
+    "Rust": {
+      "tab_size": 4,
+      "formatter": {
+        "language_server": {
+          "name": "rust-analyzer"
+        }
+      }
+    },
+    "Go": {
+      "tab_size": 4,
+      "formatter": {
+        "language_server": {
+          "name": "gopls"
+        }
+      }
+    },
+    "Java": {
+      "tab_size": 4,
+      "formatter": {
+        "external": {
+          "command": "google-java-format",
+          "arguments": ["-"]
+        }
+      }
+    },
+    "HTML": {
+      "tab_size": 2,
+      "formatter": {
+        "language_server": {
+          "name": "prettier"
+        }
+      }
+    },
+    "CSS": {
+      "tab_size": 2,
+      "formatter": {
+        "language_server": {
+          "name": "prettier"
+        }
+      }
+    },
+    "PHP": {
+      "language_servers": ["phpactor", "..."],
+      "formatter": {
+        "external": {
+          "command": "npx",
+          "arguments": ["prettier", "--stdin-filepath", "{buffer_path}"]
+        }
+      }
+    }
+  },
+  "lsp": {
+    "rust-analyzer": {
+      "initialization_options": {
+        "check": {
+          "command": "clippy"
+        }
+      }
+    }
+  },
+  "journal": {
+    "hour_format": "hour24"
+  },
+  "show_call_status_icon": true,
+  "calls": {
+    "mute_on_join": false,
+    "share_on_join": false
+  },
+  "auto_update": true
+}

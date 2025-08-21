@@ -287,6 +287,10 @@ alias gs='git status'
 alias gd='git diff'
 alias gl='git log --oneline --graph --decorate'
 
+# Battery monitoring
+alias battery='battery-status'
+alias batteryv='battery-status -v'  # verbose output
+
 # ============================================================================
 # Shell Options
 # ============================================================================

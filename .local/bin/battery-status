@@ -1,0 +1,104 @@
+#!/usr/bin/env python3
+"""
+Battery Status Monitor for macOS
+Shows current battery charging/discharging wattage, voltage, and amperage
+"""
+
+import subprocess
+import re
+import sys
+
+def get_battery_info():
+    """Get battery information from ioreg"""
+    cmd = "ioreg -r -c AppleSmartBattery"
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+    return result.stdout
+
+def parse_value(data, key):
+    """Parse a numeric value from the ioreg output"""
+    pattern = rf'"{key}"\s*=\s*([0-9]+)'
+    match = re.search(pattern, data)
+    if match:
+        return match.group(1)
+    return None
+
+def parse_bool_value(data, key):
+    """Parse a boolean value from the ioreg output"""
+    pattern = rf'"{key}"\s*=\s*(Yes|No)'
+    match = re.search(pattern, data)
+    if match:
+        return match.group(1)
+    return None
+
+def convert_signed_int64(value):
+    """Convert unsigned int64 to signed int64 (handle two's complement)"""
+    MAX_INT64 = 2**63 - 1
+    if value > MAX_INT64:
+        # It's a negative value in unsigned representation
+        return value - 2**64
+    return value
+
+def main():
+    try:
+        # Get battery data
+        battery_data = get_battery_info()
+        
+        # Extract values
+        voltage_str = parse_value(battery_data, "Voltage")
+        amperage_str = parse_value(battery_data, "Amperage")
+        instant_amperage_str = parse_value(battery_data, "InstantAmperage")
+        is_charging_str = parse_bool_value(battery_data, "IsCharging")
+        
+        # Use InstantAmperage if available, otherwise use Amperage
+        if instant_amperage_str and instant_amperage_str != "0":
+            amperage_str = instant_amperage_str
+        
+        if not voltage_str or not amperage_str:
+            print("Error: Could not read battery data")
+            sys.exit(1)
+        
+        # Convert values
+        voltage_mv = int(voltage_str)
+        amperage_raw = int(amperage_str)
+        
+        # Convert to proper units
+        voltage_v = voltage_mv / 1000.0
+        
+        # Handle signed integer conversion for amperage
+        amperage_ma = convert_signed_int64(amperage_raw)
+        amperage_a = amperage_ma / 1000.0
+        
+        # Calculate power (absolute value)
+        power_w = abs(voltage_v * amperage_a)
+        
+        # Determine charging status
+        is_charging = is_charging_str == "Yes"
+        
+        # Determine status
+        if is_charging:
+            status = f"⚡ Charging at {power_w:.1f}W"
+        elif amperage_a < 0:
+            status = f"🔋 Discharging at {power_w:.1f}W"
+        else:
+            status = "🔌 On AC Power (battery full/not charging)"
+        
+        # Simple one-line output by default
+        if len(sys.argv) == 1:
+            print(f"{status} ({voltage_v:.1f}V, {amperage_a:.2f}A)")
+        # Verbose output with -v flag
+        elif "-v" in sys.argv or "--verbose" in sys.argv:
+            print("Battery Status:")
+            print("=" * 40)
+            print(f"IsCharging: {is_charging_str}")
+            print(f"Voltage: {voltage_v:.2f} V")
+            print(f"Amperage: {amperage_a:.3f} A")
+            print(f"Power: {power_w:.2f} W")
+            print()
+            print(status)
+        
+    except Exception as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
+
+if __name__ == "__main__":
+    main()

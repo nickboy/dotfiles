@@ -1,0 +1,236 @@
+# 🏠 Nick's Dotfiles
+
+Personal dotfiles managed with [yadm](https://yadm.io/), containing configurations for macOS development environment.
+
+## 📦 What's Included
+
+### Core Configurations
+- **Shell**: Zsh configuration with zinit plugin manager
+- **Editor**: Neovim (LazyVim) and Zed configurations  
+- **Terminal**: tmux configuration
+- **Package Management**: Brewfile for Homebrew packages
+- **Git**: Global git configuration
+- **Tools**: ripgrep, bat configurations
+
+### 🤖 Automation Scripts
+- **Daily Maintenance**: Automated daily update scripts for Homebrew, zinit, and bob
+- **Battery Monitoring**: Battery status monitoring utilities
+
+## 🚀 Quick Start
+
+### Prerequisites
+- macOS (tested on macOS 14+)
+- [Homebrew](https://brew.sh/) installed
+- [yadm](https://yadm.io/) installed: `brew install yadm`
+
+### Installation
+
+1. **Clone the dotfiles repository:**
+```bash
+yadm clone https://github.com/nickboy/dotfiles.git
+```
+
+2. **Install Homebrew packages:**
+```bash
+brew bundle --file=~/Brewfile
+```
+
+3. **Set up daily maintenance automation (optional):**
+```bash
+# Run the installation script
+bash ~/install-daily-maintenance.sh
+
+# Or manually control with:
+~/daily-maintenance-control.sh status
+```
+
+## 📋 Daily Maintenance Automation
+
+### Overview
+Automates daily system maintenance tasks including:
+- Homebrew formula updates (`brew upgrade`)
+- Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
+- Zinit plugin updates (`zinit update`)
+- Bob (Neovim version manager) updates (`bob update`)
+
+### Features
+- ✅ Runs automatically at 9:00 AM daily via launchd
+- ✅ Comprehensive logging to `~/Library/Logs/`
+- ✅ Error handling and status reporting
+- ✅ Manual execution support
+- ✅ Easy enable/disable controls
+
+### Installation
+
+#### Automatic Installation
+```bash
+# Run the installer script
+bash ~/install-daily-maintenance.sh
+```
+
+#### Manual Installation
+```bash
+# 1. Make scripts executable
+chmod +x ~/daily-maintenance.sh
+chmod +x ~/daily-maintenance-control.sh
+
+# 2. Load the LaunchAgent
+launchctl load ~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+```
+
+### Usage
+
+Control the automation with the management script:
+
+```bash
+# Check status
+~/daily-maintenance-control.sh status
+
+# Run manually
+~/daily-maintenance-control.sh run
+
+# View logs
+~/daily-maintenance-control.sh logs
+
+# Stop automation
+~/daily-maintenance-control.sh stop
+
+# Start automation
+~/daily-maintenance-control.sh start
+
+# Edit the maintenance script
+~/daily-maintenance-control.sh edit
+```
+
+### Configuration
+
+#### Changing Schedule
+Edit `~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist`:
+```xml
+<key>StartCalendarInterval</key>
+<dict>
+    <key>Hour</key>
+    <integer>9</integer>  <!-- Change hour (0-23) -->
+    <key>Minute</key>
+    <integer>0</integer>   <!-- Change minute (0-59) -->
+</dict>
+```
+
+After editing, reload:
+```bash
+~/daily-maintenance-control.sh restart
+```
+
+#### Adding Commands
+Edit `~/daily-maintenance.sh` and add your commands following the existing pattern:
+```bash
+if ! run_command "Description" your-command --args; then
+    FAILED_COMMANDS+=("your-command")
+fi
+```
+
+#### Sudo Access
+If any commands require sudo, configure passwordless execution:
+1. Edit sudoers: `sudo visudo -f /etc/sudoers.d/daily-maintenance`
+2. Add: `yourusername ALL=(ALL) NOPASSWD: /path/to/command`
+
+### Troubleshooting
+
+#### Check if automation is running:
+```bash
+launchctl list | grep daily-maintenance
+```
+
+#### View recent logs:
+```bash
+tail -f ~/Library/Logs/daily-maintenance.log
+```
+
+#### View error logs:
+```bash
+tail -f ~/Library/Logs/daily-maintenance-error.log
+```
+
+#### Reset automation:
+```bash
+~/daily-maintenance-control.sh stop
+~/daily-maintenance-control.sh start
+```
+
+## 🔧 Manual Updates
+
+If you prefer to run updates manually:
+
+```bash
+# Homebrew updates
+brew upgrade
+brew upgrade --cask --greedy
+
+# Zinit updates (in zsh)
+zinit update
+
+# Bob updates
+bob update
+```
+
+## 📁 Repository Structure
+
+```
+~/
+├── .config/
+│   ├── nvim/          # Neovim configuration (LazyVim)
+│   ├── zed/           # Zed editor configuration
+│   ├── bat/           # Bat themes
+│   └── ripgrep/       # Ripgrep configuration
+├── .local/
+│   └── bin/           # User scripts
+│       └── battery-status
+├── Library/
+│   └── LaunchAgents/  # macOS launch agents
+│       └── com.nickboy.daily-maintenance.plist
+├── .gitconfig         # Git configuration
+├── .tmux.conf         # Tmux configuration
+├── .zshrc             # Zsh configuration
+├── Brewfile           # Homebrew bundle
+├── daily-maintenance.sh           # Main maintenance script
+├── daily-maintenance-control.sh   # Control script
+├── daily-maintenance-sudoers      # Sudoers template
+└── install-daily-maintenance.sh   # Installation script
+```
+
+## 🔄 Updating Dotfiles
+
+```bash
+# Pull latest changes
+yadm pull
+
+# Check status
+yadm status
+
+# Add and commit changes
+yadm add <file>
+yadm commit -m "Description of changes"
+yadm push
+```
+
+## 🤝 Contributing
+
+Feel free to fork and submit pull requests. Some guidelines:
+- Test changes locally before committing
+- Use conventional commit messages
+- Document any new scripts or configurations
+
+## 📝 License
+
+Personal dotfiles - use at your own risk. Feel free to take inspiration or copy what you need.
+
+## 🙏 Acknowledgments
+
+- [yadm](https://yadm.io/) for dotfile management
+- [LazyVim](https://www.lazyvim.org/) for Neovim configuration
+- [zinit](https://github.com/zdharma-continuum/zinit) for Zsh plugin management
+- [bob](https://github.com/MordechaiHadad/bob) for Neovim version management
+
+---
+
+*Last updated: September 2025*

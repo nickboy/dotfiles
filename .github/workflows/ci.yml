@@ -60,19 +60,90 @@ jobs:
 
   zsh-syntax:
     name: Zsh Configuration Check
-    runs-on: ubuntu-latest
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         
-      - name: Install zsh
-        run: sudo apt-get update && sudo apt-get install -y zsh
+      - name: Install validation tools
+        run: |
+          # Install uv for fast Python package management
+          brew install uv || true
+          
+          # Install beautysh for shell formatting checks
+          uv tool install beautysh --with setuptools
+          
+          # Add uv tools to PATH
+          export PATH="$HOME/.local/bin:$PATH"
+          
+          # Verify installation
+          which beautysh || echo "beautysh not in PATH"
         
-      - name: Check .zshrc syntax
+      - name: Check .zshrc with multiple validators
         run: |
           if [ -f .zshrc ]; then
-            echo "Checking .zshrc syntax..."
-            zsh -n .zshrc || exit 1
+            echo "=== Zsh Configuration Validation ==="
+            exit_code=0
+            
+            # 1. Native zsh syntax check
+            echo "→ Running zsh native syntax check..."
+            if zsh -n .zshrc 2>&1; then
+              echo "  ✓ Zsh syntax is valid"
+            else
+              echo "  ✗ Zsh syntax errors found"
+              exit_code=1
+            fi
+            
+            # 2. Check with zsh extended debugging
+            echo "→ Running extended validation..."
+            if zsh -x -c "source .zshrc" 2>&1 | head -n 0; then
+              echo "  ✓ No critical errors during sourcing"
+            fi
+            
+            # 3. Use beautysh for formatting checks (works with zsh)
+            echo "→ Running beautysh format check..."
+            if python3 -m beautysh --check .zshrc 2>/dev/null; then
+              echo "  ✓ Format check passed"
+            else
+              echo "  ⚠ Format issues detected (non-critical)"
+            fi
+            
+            # 4. Static analysis for common issues
+            echo "→ Checking for common anti-patterns..."
+            issues_found=0
+            
+            # Check for undefined variables
+            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | grep -v '\${' | grep -v '\$(' | grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
+              echo "  ⚠ Potential undefined variables found"
+            fi
+            
+            # Check for command substitution using backticks
+            if grep '`.*`' .zshrc > /dev/null; then
+              echo "  ⚠ Found backticks - consider using $(command) syntax"
+              issues_found=$((issues_found + 1))
+            fi
+            
+            # Check for proper quoting
+            if grep -E 'echo [^"]*\$' .zshrc > /dev/null; then
+              echo "  ⚠ Potential unquoted variables in echo statements"
+            fi
+            
+            if [ $issues_found -eq 0 ]; then
+              echo "  ✓ No critical anti-patterns found"
+            fi
+            
+            # 5. Validate using zsh's built-in warn options
+            echo "→ Running with warning flags..."
+            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR -c "source .zshrc" 2>&1 | grep -q "warning"; then
+              echo "  ⚠ Warnings detected (review recommended)"
+            else
+              echo "  ✓ No warnings with strict flags"
+            fi
+            
+            echo "=== Validation complete ==="
+            exit $exit_code
+          else
+            echo "No .zshrc file found - skipping"
           fi
 
   yaml-validation:

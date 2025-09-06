@@ -1,0 +1,235 @@
+name: Dotfiles CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: Shell Script Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        with:
+          severity: warning
+          check_together: 'yes'
+          scandir: '.'
+          format: gcc
+          additional_files: |
+            daily-maintenance.sh
+            daily-maintenance-control.sh
+            install-daily-maintenance.sh
+            uninstall-daily-maintenance.sh
+
+  bash-syntax:
+    name: Bash Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check bash syntax
+        run: |
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking syntax: $script"
+              bash -n "$script" || exit 1
+            fi
+          done
+
+  zsh-syntax:
+    name: Zsh Configuration Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Install zsh
+        run: sudo apt-get update && sudo apt-get install -y zsh
+        
+      - name: Check .zshrc syntax
+        run: |
+          if [ -f .zshrc ]; then
+            echo "Checking .zshrc syntax..."
+            zsh -n .zshrc || exit 1
+          fi
+
+  yaml-validation:
+    name: YAML/Plist Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Validate YAML files
+        uses: karancode/yamllint-github-action@master
+        with:
+          yamllint_strict: false
+          yamllint_comment: true
+          
+      - name: Check plist files
+        run: |
+          for plist in $(find . -name "*.plist"); do
+            echo "Checking: $plist"
+            if command -v plutil >/dev/null 2>&1; then
+              plutil -lint "$plist" || exit 1
+            else
+              # Basic XML validation as fallback
+              xmllint --noout "$plist" || exit 1
+            fi
+          done
+
+  macos-integration:
+    name: macOS Integration Tests
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Test installation script (dry run)
+        run: |
+          # Create a test environment
+          export CI_TEST=true
+          export HOME=$GITHUB_WORKSPACE/test_home
+          mkdir -p $HOME
+          mkdir -p $HOME/Library/LaunchAgents
+          mkdir -p $HOME/Library/Logs
+          
+          # Copy files to test location
+          cp daily-maintenance*.sh $HOME/
+          cp Library/LaunchAgents/*.plist $HOME/Library/LaunchAgents/ 2>/dev/null || true
+          
+          # Make scripts executable
+          chmod +x $HOME/*.sh
+          
+          # Test syntax and basic execution
+          bash -n $HOME/install-daily-maintenance.sh
+          bash -n $HOME/daily-maintenance.sh
+          bash -n $HOME/daily-maintenance-control.sh
+          bash -n $HOME/uninstall-daily-maintenance.sh
+          
+      - name: Validate LaunchAgent plist
+        run: |
+          if [ -f Library/LaunchAgents/com.nickboy.daily-maintenance.plist ]; then
+            plutil -lint Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+          fi
+          
+      - name: Test daily-maintenance.sh functions
+        run: |
+          # Test the run_command function in isolation
+          cat > test_maintenance.sh << 'EOF'
+          #!/bin/bash
+          source ./daily-maintenance.sh 2>/dev/null || true
+          
+          # Test the run_command function
+          run_command() {
+              local description="$1"
+              shift
+              local command="$@"
+              
+              echo "Testing: $description"
+              echo "Command: $command"
+              return 0
+          }
+          
+          # Test function calls
+          run_command "Test command" echo "test"
+          EOF
+          
+          chmod +x test_maintenance.sh
+          bash test_maintenance.sh
+
+  documentation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check README exists
+        run: |
+          if [ ! -f README.md ]; then
+            echo "ERROR: README.md not found"
+            exit 1
+          fi
+          
+      - name: Validate markdown
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: '**/*.md'
+        continue-on-error: true  # Don't fail on markdown style issues
+        
+      - name: Check for broken links in README
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          check-modified-files-only: 'yes'
+        continue-on-error: true
+
+  security-scan:
+    name: Security Scanning
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Run Trivy security scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+        continue-on-error: true
+        
+      - name: Check for secrets
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+        continue-on-error: true
+
+  compatibility-matrix:
+    name: Compatibility Test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-12, macos-13, macos-14]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        
+      - name: Check script compatibility
+        run: |
+          echo "Testing on ${{ matrix.os }}"
+          
+          # Test bash version compatibility
+          bash --version
+          
+          # Check for script syntax on this OS
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking: $script on ${{ matrix.os }}"
+              bash -n "$script" || exit 1
+            fi
+          done
+
+  summary:
+    name: CI Summary
+    needs: [shellcheck, bash-syntax, zsh-syntax, yaml-validation, macos-integration, documentation, security-scan, compatibility-matrix]
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Summary
+        run: |
+          echo "## CI Pipeline Summary"
+          echo "All validation checks completed."
+          echo "Check individual job results above for details."

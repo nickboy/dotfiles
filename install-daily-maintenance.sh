@@ -147,8 +147,9 @@ echo
 if [[ $REPLY =~ ^[Yy]$ ]]; then
     echo -e "${BLUE}Running test...${NC}"
     bash "$MAINTENANCE_SCRIPT"
+    TEST_EXIT_CODE=$?
     echo
-    print_status $? "Test completed"
+    print_status $TEST_EXIT_CODE "Test completed"
 fi
 
 echo

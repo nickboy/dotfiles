@@ -83,6 +83,25 @@ else
 fi
 echo
 
+# Test 4b: Zsh configuration validation
+echo -e "${YELLOW}4b. Zsh Configuration Validation${NC}"
+if [ -f ~/.zshrc ]; then
+    run_test "Zsh syntax check" "zsh -n ~/.zshrc"
+    
+    # Check for beautysh
+    if command -v beautysh >/dev/null 2>&1; then
+        run_test "Beautysh format check" "beautysh --check ~/.zshrc 2>/dev/null"
+    else
+        echo -e "${YELLOW}  beautysh not installed. Install with: uv tool install beautysh --with setuptools${NC}"
+    fi
+    
+    # Basic anti-pattern checks
+    run_test "No backticks in .zshrc" "! grep '\`.*\`' ~/.zshrc"
+else
+    echo -e "${YELLOW}  No .zshrc file found${NC}"
+fi
+echo
+
 # Test 5: Check for common issues
 echo -e "${YELLOW}5. Common Issues Check${NC}"
 

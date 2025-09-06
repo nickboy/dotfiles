@@ -127,11 +127,11 @@ zinit load zdharma-continuum/history-search-multi-word
 # Autosuggestions and completions
 zinit wait lucid for \
     atinit"zicompinit; zicdreplay" \
-        zsh-users/zsh-completions \
+    zsh-users/zsh-completions \
     atload"_zsh_autosuggest_start" \
-        zsh-users/zsh-autosuggestions \
+    zsh-users/zsh-autosuggestions \
     blockf \
-        zsh-users/zsh-completions
+    zsh-users/zsh-completions
 
 # Additional useful plugins
 zinit wait lucid for \
@@ -145,15 +145,15 @@ zinit wait lucid for \
 # Development tools
 zinit wait"1" lucid for \
     from'gh-r' sbin'* -> jq' \
-        @jqlang/jq \
+    @jqlang/jq \
     from'gh-r' sbin'fzf' \
-        junegunn/fzf
+    junegunn/fzf
 
 # Tmux and related tools (only if not already installed)
 if ! command -v tmux &> /dev/null; then
     zinit wait"2" lucid for \
         configure'--disable-utf8proc' make sbin'tmux' \
-            @tmux/tmux
+        @tmux/tmux
 fi
 
 # ============================================================================
@@ -166,16 +166,16 @@ eval "$(starship init zsh)"
 # Shell Integrations
 # ============================================================================
 
-# FZF Configuration  
+# FZF Configuration
 if command -v fzf &> /dev/null; then
     # Load FZF key-bindings and completion
     eval "$(fzf --zsh)"
-    
+
     # Use fd for better performance
     export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
     export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
-    
+
     # FZF Theme (TokyoNight Night - from BAT theme)
     export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
       --highlight-line \
@@ -199,25 +199,25 @@ if command -v fzf &> /dev/null; then
       --color=scrollbar:#565f89 \
       --color=separator:#ff9e64 \
       --color=spinner:#f7768e"
-    
+
     # Preview settings
     show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
     export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
     export FZF_ALT_C_OPTS="--preview 'eza --tree --icons=always --color=always {} | head -200'"
-    
+
     # FZF completion functions
     _fzf_compgen_path() {
         fd --hidden --exclude .git . "$1"
     }
-    
+
     _fzf_compgen_dir() {
         fd --type=d --hidden --exclude .git . "$1"
     }
-    
+
     _fzf_comprun() {
         local command=$1
         shift
-        
+
         case "$command" in
             cd)           fzf --preview 'eza --tree --icons=always --color=always {} | head -200' "$@" ;;
             export|unset) fzf --preview "eval 'echo \${}'" "$@" ;;
@@ -225,7 +225,7 @@ if command -v fzf &> /dev/null; then
             *)            fzf --preview "$show_file_or_dir_preview" "$@" ;;
         esac
     }
-    
+
     # FZF-git integration
     [[ -f ~/fzf-git.sh/fzf-git.sh ]] && source ~/fzf-git.sh/fzf-git.sh
 fi

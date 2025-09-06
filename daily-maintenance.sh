@@ -14,7 +14,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 run_command() {
     local description="$1"
     shift
-    local command="$@"
+    local command="$*"
     
     echo ""
     echo "----------------------------------------"

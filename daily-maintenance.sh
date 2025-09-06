@@ -47,8 +47,17 @@ fi
 
 # For zinit, we need to ensure it's available
 if [ -f "$HOME/.local/share/zinit/zinit.git/zinit.zsh" ] || [ -f "$HOME/.zinit/bin/zinit.zsh" ]; then
-    # Source zinit in a zsh subshell with proper quoting
-    if ! run_command "Zinit update" zsh -c 'source ~/.zshrc && zinit update'; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Zinit update"
+    echo "Command: zsh -i -c 'zinit update --all --quiet'"
+    echo -n "Status: "
+    
+    # Run zinit update directly to avoid parameter issues
+    if zsh -i -c 'zinit update --all --quiet' >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
         FAILED_COMMANDS+=("zinit update")
     fi
 else

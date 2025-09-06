@@ -1,5 +1,7 @@
 # 🏠 Nick's Dotfiles
 
+[![Dotfiles CI](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml)
+
 Personal dotfiles managed with [yadm](https://yadm.io/), containing configurations for macOS development environment.
 
 ## 📦 What's Included

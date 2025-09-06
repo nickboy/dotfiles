@@ -157,6 +157,22 @@ tail -f ~/Library/Logs/daily-maintenance-error.log
 ~/daily-maintenance-control.sh start
 ```
 
+### Uninstallation
+
+To completely remove the automation (while keeping the scripts):
+```bash
+bash ~/uninstall-daily-maintenance.sh
+```
+
+Or manually:
+```bash
+# Stop and unload the automation
+launchctl unload ~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+
+# Optional: Remove log files
+rm ~/Library/Logs/daily-maintenance*.log
+```
+
 ## 🔧 Manual Updates
 
 If you prefer to run updates manually:
@@ -195,7 +211,8 @@ bob update
 ├── daily-maintenance.sh           # Main maintenance script
 ├── daily-maintenance-control.sh   # Control script
 ├── daily-maintenance-sudoers      # Sudoers template
-└── install-daily-maintenance.sh   # Installation script
+├── install-daily-maintenance.sh   # Installation script
+└── uninstall-daily-maintenance.sh # Uninstallation script
 ```
 
 ## 🔄 Updating Dotfiles

@@ -52,7 +52,7 @@ bash ~/install-daily-maintenance.sh
 Automates daily system maintenance tasks including:
 - Homebrew formula updates (`brew upgrade`)
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
-- Zinit plugin updates (`zinit update`)
+- Zinit plugin updates (`zinit update --all --quiet`)
 - Bob (Neovim version manager) updates (`bob update`)
 
 ### Features
@@ -61,6 +61,9 @@ Automates daily system maintenance tasks including:
 - ✅ Error handling and status reporting
 - ✅ Manual execution support
 - ✅ Easy enable/disable controls
+- ✅ CI/CD pipeline with GitHub Actions
+- ✅ Pre-commit hooks for validation
+- ✅ Local test suite included
 
 ### Installation
 
@@ -185,7 +188,7 @@ brew upgrade
 brew upgrade --cask --greedy
 
 # Zinit updates (in zsh)
-zinit update
+zinit update --all
 
 # Bob updates
 bob update
@@ -214,7 +217,16 @@ bob update
 ├── daily-maintenance-control.sh   # Control script
 ├── daily-maintenance-sudoers      # Sudoers template
 ├── install-daily-maintenance.sh   # Installation script
-└── uninstall-daily-maintenance.sh # Uninstallation script
+├── uninstall-daily-maintenance.sh # Uninstallation script
+├── test-dotfiles.sh                # Local test suite
+├── .github/
+│   └── workflows/
+│       └── ci.yml                  # CI/CD pipeline
+├── .yadm/
+│   └── hooks/
+│       └── pre-commit              # Pre-commit validation
+├── README.md                       # This file
+└── CONTRIBUTING.md                 # Development guidelines
 ```
 
 ## 🔄 Updating Dotfiles

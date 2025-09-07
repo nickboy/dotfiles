@@ -1,0 +1,17 @@
+# Sudoers configuration for daily maintenance script
+# This allows specific commands to run without password prompt
+# 
+# To install this configuration:
+# 1. Run: sudo visudo -f /etc/sudoers.d/daily-maintenance
+# 2. Copy the lines below (uncommented) into the file
+# 3. Replace 'nickboy' with your actual username if different
+# 4. Replace the command paths with actual full paths (use 'which command_name')
+
+# Allow nickboy to run specific commands without password
+# nickboy ALL=(ALL) NOPASSWD: /usr/local/bin/bup
+# nickboy ALL=(ALL) NOPASSWD: /usr/local/bin/bcup
+# nickboy ALL=(ALL) NOPASSWD: /usr/local/bin/zi
+# nickboy ALL=(ALL) NOPASSWD: /usr/local/bin/bob
+
+# Alternative: Allow the entire script to run without password
+# nickboy ALL=(ALL) NOPASSWD: /Users/nickboy/daily-maintenance.sh

@@ -54,6 +54,8 @@ Automates daily system maintenance tasks including:
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Bob (Neovim version manager) updates (`bob update`)
+- LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
+- Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and clears cache
 
 ### Features
 - ✅ Runs automatically at 9:00 AM daily via launchd
@@ -64,6 +66,7 @@ Automates daily system maintenance tasks including:
 - ✅ CI/CD pipeline with GitHub Actions
 - ✅ Pre-commit hooks for validation
 - ✅ Local test suite included
+- ✅ No hardcoded paths - uses template system
 
 ### Installation
 
@@ -79,8 +82,11 @@ bash ~/install-daily-maintenance.sh
 chmod +x ~/daily-maintenance.sh
 chmod +x ~/daily-maintenance-control.sh
 
-# 2. Load the LaunchAgent
-launchctl load ~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+# 2. Generate plist from template (if needed)
+sed "s|{{HOME}}|$HOME|g" ~/Library/LaunchAgents/com.daily-maintenance.plist.template > ~/Library/LaunchAgents/com.daily-maintenance.plist
+
+# 3. Load the LaunchAgent
+launchctl load ~/Library/LaunchAgents/com.daily-maintenance.plist
 ```
 
 ### Usage
@@ -110,7 +116,7 @@ Control the automation with the management script:
 ### Configuration
 
 #### Changing Schedule
-Edit `~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist`:
+Edit `~/Library/LaunchAgents/com.daily-maintenance.plist`:
 ```xml
 <key>StartCalendarInterval</key>
 <dict>
@@ -172,7 +178,7 @@ bash ~/uninstall-daily-maintenance.sh
 Or manually:
 ```bash
 # Stop and unload the automation
-launchctl unload ~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
 
 # Optional: Remove log files
 rm ~/Library/Logs/daily-maintenance*.log
@@ -192,6 +198,9 @@ zinit update --all
 
 # Bob updates
 bob update
+
+# LazyVim updates (in Neovim)
+nvim --headless '+Lazy! sync' +qa
 ```
 
 ## 📁 Repository Structure
@@ -208,7 +217,8 @@ bob update
 │       └── battery-status
 ├── Library/
 │   └── LaunchAgents/  # macOS launch agents
-│       └── com.nickboy.daily-maintenance.plist
+│       ├── com.daily-maintenance.plist.template  # Template file
+│       └── com.daily-maintenance.plist           # Generated (gitignored)
 ├── .gitconfig         # Git configuration
 ├── .tmux.conf         # Tmux configuration
 ├── .zshrc             # Zsh configuration
@@ -244,10 +254,27 @@ yadm commit -m "Description of changes"
 yadm push
 ```
 
+## 🧪 Testing & Linting
+
+Run tests before committing:
+```bash
+# Run full test suite
+bash ~/test-dotfiles.sh
+
+# Install linters (using uv for speed)
+brew install uv
+uv tool install yamllint
+uv tool install beautysh --with setuptools
+
+# Run individual linters
+yamllint -d relaxed .github/workflows/ci.yml
+shellcheck *.sh  # If installed via brew
+```
+
 ## 🤝 Contributing
 
 Feel free to fork and submit pull requests. Some guidelines:
-- Test changes locally before committing
+- Run `test-dotfiles.sh` before committing
 - Use conventional commit messages
 - Document any new scripts or configurations
 

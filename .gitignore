@@ -5,3 +5,6 @@ vim/plugged/
 vim/undodir/
 git/gitconfig.local.symlink
 Brewfile.lock.json
+
+# Generated files from templates
+Library/LaunchAgents/com.daily-maintenance.plist

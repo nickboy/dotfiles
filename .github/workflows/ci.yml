@@ -378,7 +378,7 @@ jobs:
     name: Compatibility Test
     strategy:
       matrix:
-        os: [macos-13, macos-14, macos-15, macos-latest]
+        os: [macos-14, macos-15, macos-latest]
       fail-fast: false  # Continue testing other OS even if one fails
     runs-on: ${{ matrix.os }}
     steps:

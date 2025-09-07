@@ -20,7 +20,8 @@ LOG_DIR="$HOME/Library/Logs"
 # Files to check/install
 MAINTENANCE_SCRIPT="$SCRIPT_DIR/daily-maintenance.sh"
 CONTROL_SCRIPT="$SCRIPT_DIR/daily-maintenance-control.sh"
-PLIST_FILE="$LAUNCHAGENT_DIR/com.nickboy.daily-maintenance.plist"
+PLIST_TEMPLATE="$LAUNCHAGENT_DIR/com.daily-maintenance.plist.template"
+PLIST_FILE="$LAUNCHAGENT_DIR/com.daily-maintenance.plist"
 SUDOERS_TEMPLATE="$SCRIPT_DIR/daily-maintenance-sudoers"
 
 echo -e "${BLUE}========================================${NC}"
@@ -94,12 +95,19 @@ else
     print_status 0 "daily-maintenance-control.sh found"
 fi
 
-if [ ! -f "$PLIST_FILE" ]; then
-    print_status 1 "LaunchAgent plist not found"
+# Check for plist template or existing plist
+if [ -f "$PLIST_TEMPLATE" ]; then
+    print_status 0 "LaunchAgent plist template found"
+    # Generate plist from template
+    echo "Generating plist from template..."
+    sed "s|{{HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$PLIST_FILE"
+    print_status $? "Generated plist file"
+elif [ -f "$PLIST_FILE" ]; then
+    print_status 0 "LaunchAgent plist found"
+else
+    print_status 1 "Neither plist template nor plist file found"
     echo "  Please ensure you've cloned the dotfiles repository with yadm"
     exit 1
-else
-    print_status 0 "LaunchAgent plist found"
 fi
 
 echo

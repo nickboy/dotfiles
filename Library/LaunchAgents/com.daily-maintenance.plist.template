@@ -3,11 +3,11 @@
 <plist version="1.0">
 <dict>
     <key>Label</key>
-    <string>com.nickboy.daily-maintenance</string>
+    <string>com.daily-maintenance</string>
     
     <key>ProgramArguments</key>
     <array>
-        <string>/Users/nickboy/daily-maintenance.sh</string>
+        <string>{{HOME}}/daily-maintenance.sh</string>
     </array>
     
     <!-- Run daily at 9:00 AM -->
@@ -21,9 +21,9 @@
     
     <!-- Log output -->
     <key>StandardOutPath</key>
-    <string>/Users/nickboy/Library/Logs/daily-maintenance.log</string>
+    <string>{{HOME}}/Library/Logs/daily-maintenance.log</string>
     <key>StandardErrorPath</key>
-    <string>/Users/nickboy/Library/Logs/daily-maintenance-error.log</string>
+    <string>{{HOME}}/Library/Logs/daily-maintenance-error.log</string>
     
     <!-- Run even if computer was asleep at scheduled time -->
     <key>RunAtLoad</key>
@@ -31,7 +31,7 @@
     
     <!-- Set working directory -->
     <key>WorkingDirectory</key>
-    <string>/Users/nickboy</string>
+    <string>{{HOME}}</string>
     
     <!-- Environment variables -->
     <key>EnvironmentVariables</key>

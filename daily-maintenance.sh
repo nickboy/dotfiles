@@ -3,6 +3,22 @@
 # Daily Maintenance Script
 # This script runs various update and backup commands
 
+# Track last run time
+LAST_RUN_FILE="$HOME/.daily-maintenance-last-run"
+CURRENT_DATE=$(date +%Y-%m-%d)
+
+# Check if we're running from launchd with --auto flag
+if [[ "$1" == "--auto" ]]; then
+    # Check if already ran today
+    if [ -f "$LAST_RUN_FILE" ]; then
+        LAST_RUN=$(cat "$LAST_RUN_FILE")
+        if [ "$LAST_RUN" == "$CURRENT_DATE" ]; then
+            echo "Daily maintenance already completed today ($CURRENT_DATE)"
+            exit 0
+        fi
+    fi
+fi
+
 echo "========================================="
 echo "Starting daily maintenance: $(date)"
 echo "========================================="
@@ -90,15 +106,37 @@ else
     echo "Warning: Neovim not found, skipping LazyVim updates"
 fi
 
+# Clean up old Homebrew versions and cache
+if command -v brew >/dev/null 2>&1; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Homebrew cleanup"
+    echo "Command: brew cleanup --prune=all"
+    echo -n "Status: "
+    
+    # Run cleanup to remove old versions and clear cache
+    # --prune=all removes all cache entries
+    if brew cleanup --prune=all 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("brew cleanup")
+    fi
+fi
+
 echo ""
 echo "========================================="
 if [ ${#FAILED_COMMANDS[@]} -eq 0 ]; then
     echo "✓ Daily maintenance completed successfully!"
+    # Record successful run
+    echo "$CURRENT_DATE" > "$LAST_RUN_FILE"
 else
     echo "⚠ Daily maintenance completed with errors:"
     for cmd in "${FAILED_COMMANDS[@]}"; do
         echo "  - $cmd failed"
     done
+    # Still record the run even with errors
+    echo "$CURRENT_DATE" > "$LAST_RUN_FILE"
 fi
 echo "Time: $(date)"
 echo "=========================================="

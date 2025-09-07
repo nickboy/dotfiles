@@ -11,9 +11,9 @@ ERROR_LOG_PATH="$HOME/Library/Logs/daily-maintenance-error.log"
 case "$1" in
     status)
         echo "Checking daily maintenance status..."
-        if launchctl list | grep -q "com.nickboy.daily-maintenance"; then
+        if launchctl list | grep -q "com.daily-maintenance"; then
             echo "✓ Daily maintenance is ACTIVE"
-            launchctl list | grep "com.nickboy.daily-maintenance"
+            launchctl list | grep "com.daily-maintenance"
         else
             echo "✗ Daily maintenance is NOT ACTIVE"
         fi

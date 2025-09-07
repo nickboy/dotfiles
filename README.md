@@ -55,6 +55,7 @@ Automates daily system maintenance tasks including:
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Bob (Neovim version manager) updates (`bob update`)
 - LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
+- Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and clears cache
 
 ### Features
 - ✅ Runs automatically at 9:00 AM daily via launchd

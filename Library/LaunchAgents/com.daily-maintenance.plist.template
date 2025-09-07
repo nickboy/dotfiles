@@ -8,6 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>{{HOME}}/daily-maintenance.sh</string>
+        <string>--auto</string>
     </array>
     
     <!-- Run daily at 9:00 AM -->
@@ -25,9 +26,9 @@
     <key>StandardErrorPath</key>
     <string>{{HOME}}/Library/Logs/daily-maintenance-error.log</string>
     
-    <!-- Run even if computer was asleep at scheduled time -->
+    <!-- Run at login to catch up missed maintenance -->
     <key>RunAtLoad</key>
-    <false/>
+    <true/>
     
     <!-- Set working directory -->
     <key>WorkingDirectory</key>

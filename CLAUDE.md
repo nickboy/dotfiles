@@ -128,6 +128,11 @@ This document provides comprehensive information about the dotfiles repository m
 - `~/daily-maintenance-control.sh logs` - View logs
 - `~/daily-maintenance-control.sh stop/start` - Control automation
 
+**Shortcut Aliases** (in `.zshrc`):
+- `mr` - Maintenance run (manually execute all updates)
+- `ms` - Maintenance status (check if automation is active)
+- `ml` - Maintenance logs (view recent logs)
+
 **Logs Location**:
 - Main log: `~/Library/Logs/daily-maintenance.log`
 - Error log: `~/Library/Logs/daily-maintenance-error.log`
@@ -278,6 +283,33 @@ yadm status           # Check status
 yadm add <file>       # Track new file
 yadm commit -m "msg"  # Commit changes
 yadm push            # Push to GitHub
+```
+
+**Create Pull Requests with GitHub CLI**:
+Since yadm uses git under the hood, you can use GitHub CLI (`gh`) for PR operations:
+
+```bash
+# Create a feature branch
+yadm checkout -b feature-branch-name
+
+# Make changes and commit
+yadm add <files>
+yadm commit -m "feat: your commit message"
+
+# Push branch to remote
+yadm push -u origin feature-branch-name
+
+# Create PR using the git alias we've configured
+yadm pr create --title "PR title" --body "PR description"
+
+# Alternative: If alias not configured, set it up first
+yadm gitconfig alias.pr '!f() { GIT_DIR=$HOME/.local/share/yadm/repo.git GIT_WORK_TREE=$HOME gh pr "$@"; }; f'
+
+# Then use any gh pr commands with yadm
+yadm pr list              # List PRs
+yadm pr view              # View current PR
+yadm pr merge             # Merge PR
+yadm pr create --title "Title" --body "Description"
 ```
 
 ## Environment Details

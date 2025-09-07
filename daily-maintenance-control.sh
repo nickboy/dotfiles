@@ -3,7 +3,7 @@
 # Daily Maintenance Control Script
 # Use this to manage your automated daily maintenance
 
-PLIST_PATH="$HOME/Library/LaunchAgents/com.nickboy.daily-maintenance.plist"
+PLIST_PATH="$HOME/Library/LaunchAgents/com.daily-maintenance.plist"
 SCRIPT_PATH="$HOME/daily-maintenance.sh"
 LOG_PATH="$HOME/Library/Logs/daily-maintenance.log"
 ERROR_LOG_PATH="$HOME/Library/Logs/daily-maintenance-error.log"

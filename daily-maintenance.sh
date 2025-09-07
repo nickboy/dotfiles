@@ -68,6 +68,28 @@ if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob upd
     FAILED_COMMANDS+=("bob update")
 fi
 
+# Update LazyVim plugins
+if command -v nvim >/dev/null 2>&1; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: LazyVim plugin updates"
+    echo "Command: nvim --headless '+Lazy! sync' +qa"
+    echo -n "Status: "
+    
+    # Run Neovim in headless mode to update LazyVim plugins
+    # --headless: Run without UI
+    # '+Lazy! sync': Run Lazy sync command (! means no prompts)
+    # +qa: Quit all windows
+    if nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("LazyVim update")
+    fi
+else
+    echo "Warning: Neovim not found, skipping LazyVim updates"
+fi
+
 echo ""
 echo "========================================="
 if [ ${#FAILED_COMMANDS[@]} -eq 0 ]; then

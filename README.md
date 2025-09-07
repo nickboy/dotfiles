@@ -15,7 +15,9 @@ Personal dotfiles managed with [yadm](https://yadm.io/), containing configuratio
 - **Tools**: ripgrep, bat configurations
 
 ### 🤖 Automation Scripts
-- **Daily Maintenance**: Automated daily update scripts for Homebrew, zinit, and bob
+- **Daily Maintenance**: Automated daily update scripts for Homebrew, zinit, bob, LazyVim, and cleanup
+  - Automatic catch-up mechanism if laptop was off during scheduled time
+  - Quick access via shell aliases: `mr` (run), `ms` (status), `ml` (logs)
 - **Battery Monitoring**: Battery status monitoring utilities
 
 ## 🚀 Quick Start
@@ -59,9 +61,10 @@ Automates daily system maintenance tasks including:
 
 ### Features
 - ✅ Runs automatically at 9:00 AM daily via launchd
+- ✅ **Catch-up mechanism**: Runs at login if missed scheduled time
 - ✅ Comprehensive logging to `~/Library/Logs/`
 - ✅ Error handling and status reporting
-- ✅ Manual execution support
+- ✅ Manual execution support with convenient aliases
 - ✅ Easy enable/disable controls
 - ✅ CI/CD pipeline with GitHub Actions
 - ✅ Pre-commit hooks for validation
@@ -91,8 +94,15 @@ launchctl load ~/Library/LaunchAgents/com.daily-maintenance.plist
 
 ### Usage
 
-Control the automation with the management script:
+#### Quick Access Aliases (configured in .zshrc)
+```bash
+# Quick shortcuts for daily operations
+mr  # Run maintenance manually (skips date check)
+ms  # Check maintenance status
+ml  # View maintenance logs
+```
 
+#### Full Control Commands
 ```bash
 # Check status
 ~/daily-maintenance-control.sh status

@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Pre-commit hook for dotfiles
+# Runs tests before allowing commit
+
+echo "Running pre-commit tests..."
+
+# Run the test suite if it exists
+if [ -f "$HOME/test-dotfiles.sh" ]; then
+    bash "$HOME/test-dotfiles.sh"
+    if [ $? -ne 0 ]; then
+        echo "❌ Pre-commit tests failed. Please fix issues before committing."
+        exit 1
+    fi
+else
+    # Fallback to basic checks
+    echo "Running basic syntax checks..."
+    
+    # Check bash syntax for staged .sh files
+    for file in $(yadm diff --cached --name-only | grep '\.sh$'); do
+        if [ -f "$HOME/$file" ]; then
+            bash -n "$HOME/$file"
+            if [ $? -ne 0 ]; then
+                echo "❌ Syntax error in $file"
+                exit 1
+            fi
+        fi
+    done
+    
+    echo "✅ Basic checks passed"
+fi
+
+echo "✅ Pre-commit tests passed"
+exit 0

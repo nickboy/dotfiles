@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.nickboy.daily-maintenance</string>
+    
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/nickboy/daily-maintenance.sh</string>
+    </array>
+    
+    <!-- Run daily at 9:00 AM -->
+    <key>StartCalendarInterval</key>
+    <dict>
+        <key>Hour</key>
+        <integer>9</integer>
+        <key>Minute</key>
+        <integer>0</integer>
+    </dict>
+    
+    <!-- Log output -->
+    <key>StandardOutPath</key>
+    <string>/Users/nickboy/Library/Logs/daily-maintenance.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/nickboy/Library/Logs/daily-maintenance-error.log</string>
+    
+    <!-- Run even if computer was asleep at scheduled time -->
+    <key>RunAtLoad</key>
+    <false/>
+    
+    <!-- Set working directory -->
+    <key>WorkingDirectory</key>
+    <string>/Users/nickboy</string>
+    
+    <!-- Environment variables -->
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key>
+        <string>/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin</string>
+    </dict>
+</dict>
+</plist>

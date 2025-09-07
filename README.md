@@ -2,11 +2,13 @@
 
 [![Dotfiles CI](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml)
 
-Personal dotfiles managed with [yadm](https://yadm.io/), containing configurations for macOS development environment.
+Personal dotfiles managed with [yadm](https://yadm.io/), containing
+configurations for macOS development environment.
 
 ## 📦 What's Included
 
 ### Core Configurations
+
 - **Shell**: Zsh configuration with zinit plugin manager
 - **Editor**: Neovim (LazyVim) and Zed configurations  
 - **Terminal**: tmux configuration
@@ -15,7 +17,9 @@ Personal dotfiles managed with [yadm](https://yadm.io/), containing configuratio
 - **Tools**: ripgrep, bat configurations
 
 ### 🤖 Automation Scripts
-- **Daily Maintenance**: Automated daily update scripts for Homebrew, zinit, bob, LazyVim, and cleanup
+
+- **Daily Maintenance**: Automated daily update scripts for Homebrew, zinit,
+  bob, LazyVim, and cleanup
   - Automatic catch-up mechanism if laptop was off during scheduled time
   - Quick access via shell aliases: `mr` (run), `ms` (status), `ml` (logs)
 - **Battery Monitoring**: Battery status monitoring utilities
@@ -23,6 +27,7 @@ Personal dotfiles managed with [yadm](https://yadm.io/), containing configuratio
 ## 🚀 Quick Start
 
 ### Prerequisites
+
 - macOS (tested on macOS 14+)
 - [Homebrew](https://brew.sh/) installed
 - [yadm](https://yadm.io/) installed: `brew install yadm`
@@ -30,16 +35,19 @@ Personal dotfiles managed with [yadm](https://yadm.io/), containing configuratio
 ### Installation
 
 1. **Clone the dotfiles repository:**
+
 ```bash
 yadm clone https://github.com/nickboy/dotfiles.git
 ```
 
-2. **Install Homebrew packages:**
+1. **Install Homebrew packages:**
+
 ```bash
 brew bundle --file=~/Brewfile
 ```
 
-3. **Set up daily maintenance automation (optional):**
+1. **Set up daily maintenance automation (optional):**
+
 ```bash
 # Run the installation script
 bash ~/install-daily-maintenance.sh
@@ -51,15 +59,19 @@ bash ~/install-daily-maintenance.sh
 ## 📋 Daily Maintenance Automation
 
 ### Overview
+
 Automates daily system maintenance tasks including:
+
 - Homebrew formula updates (`brew upgrade`)
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Bob (Neovim version manager) updates (`bob update`)
 - LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
-- Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and clears cache
+- Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and
+  clears cache
 
 ### Features
+
 - ✅ Runs automatically at 9:00 AM daily via launchd
 - ✅ **Catch-up mechanism**: Runs at login if missed scheduled time
 - ✅ Comprehensive logging to `~/Library/Logs/`
@@ -71,22 +83,26 @@ Automates daily system maintenance tasks including:
 - ✅ Local test suite included
 - ✅ No hardcoded paths - uses template system
 
-### Installation
+### Daily Maintenance Installation
 
 #### Automatic Installation
+
 ```bash
 # Run the installer script
 bash ~/install-daily-maintenance.sh
 ```
 
 #### Manual Installation
+
 ```bash
 # 1. Make scripts executable
 chmod +x ~/daily-maintenance.sh
 chmod +x ~/daily-maintenance-control.sh
 
 # 2. Generate plist from template (if needed)
-sed "s|{{HOME}}|$HOME|g" ~/Library/LaunchAgents/com.daily-maintenance.plist.template > ~/Library/LaunchAgents/com.daily-maintenance.plist
+sed "s|{{HOME}}|$HOME|g" \
+  ~/Library/LaunchAgents/com.daily-maintenance.plist.template \
+  > ~/Library/LaunchAgents/com.daily-maintenance.plist
 
 # 3. Load the LaunchAgent
 launchctl load ~/Library/LaunchAgents/com.daily-maintenance.plist
@@ -95,6 +111,7 @@ launchctl load ~/Library/LaunchAgents/com.daily-maintenance.plist
 ### Usage
 
 #### Quick Access Aliases (configured in .zshrc)
+
 ```bash
 # Quick shortcuts for daily operations
 mr  # Run maintenance manually (skips date check)
@@ -103,6 +120,7 @@ ml  # View maintenance logs
 ```
 
 #### Full Control Commands
+
 ```bash
 # Check status
 ~/daily-maintenance-control.sh status
@@ -126,7 +144,9 @@ ml  # View maintenance logs
 ### Configuration
 
 #### Changing Schedule
+
 Edit `~/Library/LaunchAgents/com.daily-maintenance.plist`:
+
 ```xml
 <key>StartCalendarInterval</key>
 <dict>
@@ -138,12 +158,15 @@ Edit `~/Library/LaunchAgents/com.daily-maintenance.plist`:
 ```
 
 After editing, reload:
+
 ```bash
 ~/daily-maintenance-control.sh restart
 ```
 
 #### Adding Commands
+
 Edit `~/daily-maintenance.sh` and add your commands following the existing pattern:
+
 ```bash
 if ! run_command "Description" your-command --args; then
     FAILED_COMMANDS+=("your-command")
@@ -151,28 +174,34 @@ fi
 ```
 
 #### Sudo Access
+
 If any commands require sudo, configure passwordless execution:
+
 1. Edit sudoers: `sudo visudo -f /etc/sudoers.d/daily-maintenance`
 2. Add: `yourusername ALL=(ALL) NOPASSWD: /path/to/command`
 
 ### Troubleshooting
 
-#### Check if automation is running:
+#### Check if automation is running
+
 ```bash
 launchctl list | grep daily-maintenance
 ```
 
-#### View recent logs:
+#### View recent logs
+
 ```bash
 tail -f ~/Library/Logs/daily-maintenance.log
 ```
 
-#### View error logs:
+#### View error logs
+
 ```bash
 tail -f ~/Library/Logs/daily-maintenance-error.log
 ```
 
-#### Reset automation:
+#### Reset automation
+
 ```bash
 ~/daily-maintenance-control.sh stop
 ~/daily-maintenance-control.sh start
@@ -181,11 +210,13 @@ tail -f ~/Library/Logs/daily-maintenance-error.log
 ### Uninstallation
 
 To completely remove the automation (while keeping the scripts):
+
 ```bash
 bash ~/uninstall-daily-maintenance.sh
 ```
 
 Or manually:
+
 ```bash
 # Stop and unload the automation
 launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
@@ -215,7 +246,7 @@ nvim --headless '+Lazy! sync' +qa
 
 ## 📁 Repository Structure
 
-```
+```text
 ~/
 ├── .config/
 │   ├── nvim/          # Neovim configuration (LazyVim)
@@ -267,6 +298,7 @@ yadm push
 ## 🧪 Testing & Linting
 
 Run tests before committing:
+
 ```bash
 # Run full test suite
 bash ~/test-dotfiles.sh
@@ -284,13 +316,15 @@ shellcheck *.sh  # If installed via brew
 ## 🤝 Contributing
 
 Feel free to fork and submit pull requests. Some guidelines:
+
 - Run `test-dotfiles.sh` before committing
 - Use conventional commit messages
 - Document any new scripts or configurations
 
 ## 📝 License
 
-Personal dotfiles - use at your own risk. Feel free to take inspiration or copy what you need.
+Personal dotfiles - use at your own risk. Feel free to take inspiration or
+copy what you need.
 
 ## 🙏 Acknowledgments
 
@@ -301,4 +335,4 @@ Personal dotfiles - use at your own risk. Feel free to take inspiration or copy 
 
 ---
 
-*Last updated: September 2025*
+**Last updated: September 2025**

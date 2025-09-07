@@ -378,7 +378,7 @@ jobs:
     name: Compatibility Test
     strategy:
       matrix:
-        os: [macos-latest, macos-13]
+        os: [macos-13, macos-14, macos-15, macos-latest]
       fail-fast: false  # Continue testing other OS even if one fails
     runs-on: ${{ matrix.os }}
     steps:
@@ -388,8 +388,14 @@ jobs:
       - name: Check script compatibility
         run: |
           echo "Testing on ${{ matrix.os }}"
-
+          
+          # Show detailed system info
+          echo "System information:"
+          sw_vers || true
+          echo "Architecture: $(uname -m)"
+          
           # Test bash version compatibility
+          echo "Bash version:"
           bash --version
 
           # Check for script syntax on this OS

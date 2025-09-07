@@ -256,9 +256,20 @@ yamllint -d relaxed .github/workflows/ci.yml
 # Run shell script lint (if shellcheck is installed)
 shellcheck *.sh
 
+# Run markdown lint (for documentation validation)
+npm install -g markdownlint-cli  # Install if needed
+markdownlint '**/*.md' --ignore node_modules
+
 # Run test suite
 bash ~/test-dotfiles.sh
 ```
+
+**Markdown formatting standards**:
+- Headings must be surrounded by blank lines (MD022)
+- Code blocks must be surrounded by blank lines (MD031)
+- Lists must be surrounded by blank lines (MD032)
+- Use consistent heading style (ATX-style with #)
+- Proper line length (120 characters recommended)
 
 **Add a new Homebrew package**:
 1. Edit `~/Brewfile`

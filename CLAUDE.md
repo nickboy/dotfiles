@@ -1,10 +1,12 @@
 # Nick's Dotfiles Documentation for AI Assistants
 
-This document provides comprehensive information about the dotfiles repository managed with [yadm](https://yadm.io/). It's designed to help AI assistants quickly understand the development environment and automation setup.
+This document provides comprehensive information about the dotfiles repository
+managed with [yadm](https://yadm.io/). It's designed to help AI assistants
+quickly understand the development environment and automation setup.
 
 ## Repository Information
 
-- **Repository URL**: https://github.com/nickboy/dotfiles.git
+- **Repository URL**: <https://github.com/nickboy/dotfiles.git>
 - **Management Tool**: yadm (Yet Another Dotfiles Manager)
 - **Primary OS**: macOS (Darwin 25.0.0)
 - **Last Updated**: September 2025
@@ -12,9 +14,10 @@ This document provides comprehensive information about the dotfiles repository m
 ## System Architecture Overview
 
 ### Core Technologies
+
 - **Shell**: Zsh with Oh-My-Zsh framework and Zinit plugin manager
 - **Terminal Multiplexer**: tmux with Tokyo Night theme
-- **Primary Editors**: 
+- **Primary Editors**:
   - Neovim (LazyVim configuration)
   - Zed (with vim mode enabled)
 - **Package Management**: Homebrew (Apple Silicon optimized at `/opt/homebrew`)
@@ -22,6 +25,7 @@ This document provides comprehensive information about the dotfiles repository m
 - **Prompt**: Starship
 
 ### Development Tools
+
 - **Languages**: Python 3.13, Go, Rust, Julia, Node.js, Java (OpenJDK), Ruby
 - **Linters/Formatters**: Ruff (Python), ShellCheck, Prettier, rust-analyzer
 - **Search Tools**: ripgrep, fd, fzf with custom TokyoNight theme
@@ -29,7 +33,7 @@ This document provides comprehensive information about the dotfiles repository m
 
 ## File Structure
 
-```
+```text
 ~/
 ├── Configuration Files
 │   ├── .zshrc                    # Zsh configuration with Zinit
@@ -77,6 +81,7 @@ This document provides comprehensive information about the dotfiles repository m
 ### Shell Environment (.zshrc)
 
 **Architecture**:
+
 1. Early environment setup (PATH, compilation flags)
 2. Oh-My-Zsh framework loading (minimal plugins)
 3. Zinit plugin manager with lazy loading
@@ -84,6 +89,7 @@ This document provides comprehensive information about the dotfiles repository m
 5. Modern CLI aliases
 
 **Key Features**:
+
 - Smart plugin loading with Zinit for fast startup
 - FZF with TokyoNight theme and preview windows
 - Zoxide for intelligent directory navigation
@@ -91,6 +97,7 @@ This document provides comprehensive information about the dotfiles repository m
 - Battery monitoring alias
 
 **PATH Priority**:
+
 1. `/opt/homebrew/bin` (Apple Silicon Homebrew)
 2. `~/.local/bin` (user scripts)
 3. `~/.cargo/bin` (Rust)
@@ -99,11 +106,13 @@ This document provides comprehensive information about the dotfiles repository m
 ### Editor Configuration
 
 **Neovim**:
+
 - Base: LazyVim distribution
 - Location: `~/.config/nvim/`
 - Version Manager: bob
 
 **Zed** (`~/.config/zed/settings.json`):
+
 - Vim mode enabled with relative line numbers
 - Theme: One Dark
 - Font: JetBrains Mono
@@ -115,6 +124,7 @@ This document provides comprehensive information about the dotfiles repository m
 ### Automation System
 
 **Daily Maintenance** (Runs at 9:00 AM):
+
 1. Homebrew formula updates
 2. Homebrew cask updates (greedy)
 3. Zinit plugin updates
@@ -123,12 +133,20 @@ This document provides comprehensive information about the dotfiles repository m
 6. Homebrew cleanup (removes old versions and cache)
 
 **Control Commands**:
+
 - `~/daily-maintenance-control.sh status` - Check automation status
 - `~/daily-maintenance-control.sh run` - Run manually
 - `~/daily-maintenance-control.sh logs` - View logs
 - `~/daily-maintenance-control.sh stop/start` - Control automation
 
+**Shortcut Aliases** (in `.zshrc`):
+
+- `mr` - Maintenance run (manually execute all updates)
+- `ms` - Maintenance status (check if automation is active)
+- `ml` - Maintenance logs (view recent logs)
+
 **Logs Location**:
+
 - Main log: `~/Library/Logs/daily-maintenance.log`
 - Error log: `~/Library/Logs/daily-maintenance-error.log`
 
@@ -137,7 +155,7 @@ This document provides comprehensive information about the dotfiles repository m
 - Pager: delta with syntax highlighting
 - Merge conflict style: zdiff3
 - Credential helper: Git Credential Manager
-- User: Nick Liu (nickboy@users.noreply.github.com)
+- User: Nick Liu (`nickboy@users.noreply.github.com`)
 
 ### Tmux Configuration
 
@@ -154,12 +172,15 @@ This document provides comprehensive information about the dotfiles repository m
 ## Development Workflow
 
 ### Testing
+
 Run before committing:
+
 ```bash
 bash ~/test-dotfiles.sh
 ```
 
 Tests include:
+
 - Shell script syntax validation
 - ShellCheck analysis
 - Zsh configuration validation
@@ -169,6 +190,7 @@ Tests include:
 ### CI/CD Pipeline
 
 GitHub Actions workflow (`.github/workflows/ci.yml`):
+
 - **Lint checks**: ShellCheck, YAML, Markdown
 - **Syntax validation**: Bash, Zsh
 - **Security scanning**: Trivy, Trufflehog
@@ -176,12 +198,14 @@ GitHub Actions workflow (`.github/workflows/ci.yml`):
 - **Documentation validation**
 
 ### Pre-commit Hook
+
 Located at `.yadm/hooks/pre-commit`
 Runs validation before allowing commits
 
 ## Installed Tools (Brewfile)
 
 ### CLI Tools
+
 - **Search/Find**: ripgrep, fd, fzf, ffind, ast-grep
 - **File Management**: eza, bat, chafa (image viewer), viu
 - **Development**: git-delta, lazygit, neovim, tmux
@@ -191,6 +215,7 @@ Runs validation before allowing commits
 - **Utilities**: thefuck, tlrc, wget, yadm, zoxide
 
 ### GUI Applications (Casks)
+
 - **Password**: 1Password + CLI
 - **Browsers**: Arc
 - **Development**: Ghostty, Warp (terminals)
@@ -202,7 +227,9 @@ Runs validation before allowing commits
 ## Custom Scripts
 
 ### battery-status
+
 Python script at `~/.local/bin/battery-status`
+
 - Shows battery charging/discharging wattage
 - Displays voltage and amperage
 - Usage: `battery` or `battery -v` for verbose
@@ -225,13 +252,32 @@ Python script at `~/.local/bin/battery-status`
    - Run `bash ~/test-dotfiles.sh` before committing
    - Check syntax with appropriate tools
    - Ensure LaunchAgent plists are valid
+   - **IMPORTANT**: Always run markdown lint before committing:
+
+     ```bash
+     npx markdownlint-cli '**/*.md' --ignore node_modules
+     ```
+
+   - Fix ALL lint errors - no exceptions
 
 4. **Zsh-specific notes**:
    - Zinit manages most plugins
    - Oh-My-Zsh provides the framework
    - Don't duplicate plugin loading
 
-5. **Updates and maintenance**:
+5. **Lint-free commits** (MANDATORY):
+   - Every commit MUST pass markdown linting
+   - Run `npx markdownlint-cli README.md CLAUDE.md` before ANY commit
+   - Common errors to avoid:
+     - MD022: Headings need blank lines around them
+     - MD031: Code blocks need blank lines around them
+     - MD032: Lists need blank lines around them
+     - MD013: Keep lines under 80 characters when possible
+   - Never commit with lint errors present
+   - **IMPORTANT**: Use `yadm` commands (not `git`) for all operations
+   - **DO NOT** include Claude co-author or AI-generated tags in commit messages
+
+6. **Updates and maintenance**:
    - Daily automation handles most updates
    - Manual control via `daily-maintenance-control.sh`
    - Logs are in `~/Library/Logs/`
@@ -239,6 +285,7 @@ Python script at `~/.local/bin/battery-status`
 ### Common Tasks
 
 **Run linters before committing**:
+
 ```bash
 # Install linters with uv (fast Python package manager)
 brew install uv  # If not installed
@@ -251,33 +298,78 @@ yamllint -d relaxed .github/workflows/ci.yml
 # Run shell script lint (if shellcheck is installed)
 shellcheck *.sh
 
+# Run markdown lint (for documentation validation)
+npm install -g markdownlint-cli  # Install if needed
+markdownlint '**/*.md' --ignore node_modules
+
 # Run test suite
 bash ~/test-dotfiles.sh
 ```
 
+**Markdown formatting standards**:
+
+- Headings must be surrounded by blank lines (MD022)
+- Code blocks must be surrounded by blank lines (MD031)
+- Lists must be surrounded by blank lines (MD032)
+- Use consistent heading style (ATX-style with #)
+- Proper line length (120 characters recommended)
+
 **Add a new Homebrew package**:
+
 1. Edit `~/Brewfile`
 2. Run `brew bundle`
 
 **Modify daily maintenance**:
+
 1. Edit `~/daily-maintenance.sh`
 2. Test with `~/daily-maintenance-control.sh run`
 3. Check logs for errors
 
 **Update Neovim configuration**:
+
 1. Edit files in `~/.config/nvim/`
 2. Restart Neovim to apply changes
 
 **Change Zed settings**:
+
 1. Edit `~/.config/zed/settings.json`
 2. Changes apply automatically
 
 **Manage dotfiles with yadm**:
+
 ```bash
 yadm status           # Check status
 yadm add <file>       # Track new file
 yadm commit -m "msg"  # Commit changes
 yadm push            # Push to GitHub
+```
+
+**Create Pull Requests with GitHub CLI**:
+Since yadm uses git under the hood, you can use GitHub CLI (`gh`) for PR operations:
+
+```bash
+# Create a feature branch
+yadm checkout -b feature-branch-name
+
+# Make changes and commit
+yadm add <files>
+yadm commit -m "feat: your commit message"
+
+# Push branch to remote
+yadm push -u origin feature-branch-name
+
+# Create PR using the git alias we've configured
+yadm pr create --title "PR title" --body "PR description"
+
+# Alternative: If alias not configured, set it up first
+yadm gitconfig alias.pr '!f() { GIT_DIR=$HOME/.local/share/yadm/repo.git \
+  GIT_WORK_TREE=$HOME gh pr "$@"; }; f'
+
+# Then use any gh pr commands with yadm
+yadm pr list              # List PRs
+yadm pr view              # View current PR
+yadm pr merge             # Merge PR
+yadm pr create --title "Title" --body "Description"
 ```
 
 ## Environment Details
@@ -298,10 +390,12 @@ yadm push            # Push to GitHub
 
 ## Contact & Support
 
-- Repository: https://github.com/nickboy/dotfiles
+- Repository: <https://github.com/nickboy/dotfiles>
 - Issues: Report at repository issues page
 - CI Status: Check GitHub Actions tab
 
 ---
 
-*This documentation is specifically designed for AI assistants to quickly understand and work with this dotfiles setup. Always verify current state with `yadm status` and check actual file contents when making modifications.*
+*This documentation is specifically designed for AI assistants to quickly
+understand and work with this dotfiles setup. Always verify current state with
+`yadm status` and check actual file contents when making modifications.*

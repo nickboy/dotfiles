@@ -291,6 +291,11 @@ alias gl='git log --oneline --graph --decorate'
 alias battery='battery-status'
 alias batteryv='battery-status -v'  # verbose output
 
+# Daily maintenance shortcuts
+alias mr='~/daily-maintenance-control.sh run'      # maintenance run
+alias ms='~/daily-maintenance-control.sh status'   # maintenance status
+alias ml='~/daily-maintenance-control.sh logs'     # maintenance logs
+
 # ============================================================================
 # Shell Options
 # ============================================================================

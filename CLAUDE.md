@@ -274,6 +274,8 @@ Python script at `~/.local/bin/battery-status`
      - MD032: Lists need blank lines around them
      - MD013: Keep lines under 80 characters when possible
    - Never commit with lint errors present
+   - **IMPORTANT**: Use `yadm` commands (not `git`) for all operations
+   - **DO NOT** include Claude co-author or AI-generated tags in commit messages
 
 6. **Updates and maintenance**:
    - Daily automation handles most updates

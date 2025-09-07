@@ -238,6 +238,23 @@ Python script at `~/.local/bin/battery-status`
 
 ### Common Tasks
 
+**Run linters before committing**:
+```bash
+# Install linters with uv (fast Python package manager)
+brew install uv  # If not installed
+uv tool install yamllint
+uv tool install beautysh --with setuptools
+
+# Run YAML lint
+yamllint -d relaxed .github/workflows/ci.yml
+
+# Run shell script lint (if shellcheck is installed)
+shellcheck *.sh
+
+# Run test suite
+bash ~/test-dotfiles.sh
+```
+
 **Add a new Homebrew package**:
 1. Edit `~/Brewfile`
 2. Run `brew bundle`

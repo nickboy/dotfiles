@@ -388,12 +388,12 @@ jobs:
       - name: Check script compatibility
         run: |
           echo "Testing on ${{ matrix.os }}"
-          
+
           # Show detailed system info
           echo "System information:"
           sw_vers || true
           echo "Architecture: $(uname -m)"
-          
+
           # Test bash version compatibility
           echo "Bash version:"
           bash --version

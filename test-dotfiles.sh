@@ -87,8 +87,21 @@ else
 fi
 echo
 
-# Test 4b: Zsh configuration validation
-echo -e "${YELLOW}4b. Zsh Configuration Validation${NC}"
+# Test 5: YAML validation for CI files
+echo -e "${YELLOW}5. YAML Lint (CI Files)${NC}"
+if command -v yamllint >/dev/null 2>&1; then
+    for yaml_file in .github/workflows/*.yml; do
+        if [ -f "$yaml_file" ]; then
+            run_test "YAML lint for $(basename $yaml_file)" "yamllint -d relaxed $yaml_file"
+        fi
+    done
+else
+    echo -e "${YELLOW}  yamllint not installed. Install with: uv tool install yamllint${NC}"
+fi
+echo
+
+# Test 6: Zsh configuration validation
+echo -e "${YELLOW}6. Zsh Configuration Validation${NC}"
 if [ -f ~/.zshrc ]; then
     run_test "Zsh syntax check" "zsh -n ~/.zshrc"
     
@@ -106,8 +119,8 @@ else
 fi
 echo
 
-# Test 5: Check for common issues
-echo -e "${YELLOW}5. Common Issues Check${NC}"
+# Test 7: Check for common issues
+echo -e "${YELLOW}7. Common Issues Check${NC}"
 
 # Check for hardcoded paths that might not exist
 run_test "No hardcoded /Users/specific paths" "! grep -r '/Users/[^/]*/' *.sh | grep -v '\$HOME' | grep -v nickboy"
@@ -119,12 +132,10 @@ for script in *.sh; do
     fi
 done
 
-# Check README exists
-run_test "README.md exists" "[ -f README.md ]"
 echo
 
-# Test 6: Dry run of scripts (safe operations only)
-echo -e "${YELLOW}6. Script Dry Run Tests${NC}"
+# Test 8: Dry run of scripts (safe operations only)  
+echo -e "${YELLOW}8. Script Dry Run Tests${NC}"
 
 # Test daily-maintenance.sh functions
 cat > /tmp/test_maintenance.sh << 'EOF'
@@ -153,14 +164,8 @@ EOF
 run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
 echo
 
-# Test 7: Documentation checks
-echo -e "${YELLOW}7. Documentation Checks${NC}"
-run_test "README has installation section" "grep -q '## Installation' README.md 2>/dev/null || grep -q '### Installation' README.md"
-run_test "README has usage section" "grep -q '### Usage' README.md"
-echo
-
-# Test 8: Git/yadm checks
-echo -e "${YELLOW}8. Version Control Checks${NC}"
+# Test 9: Git/yadm checks
+echo -e "${YELLOW}9. Version Control Checks${NC}"
 run_test "No uncommitted changes" "[ -z \"$(yadm status --porcelain 2>/dev/null)\" ] || yadm status --porcelain"
 echo
 

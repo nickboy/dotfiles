@@ -254,10 +254,27 @@ yadm commit -m "Description of changes"
 yadm push
 ```
 
+## 🧪 Testing & Linting
+
+Run tests before committing:
+```bash
+# Run full test suite
+bash ~/test-dotfiles.sh
+
+# Install linters (using uv for speed)
+brew install uv
+uv tool install yamllint
+uv tool install beautysh --with setuptools
+
+# Run individual linters
+yamllint -d relaxed .github/workflows/ci.yml
+shellcheck *.sh  # If installed via brew
+```
+
 ## 🤝 Contributing
 
 Feel free to fork and submit pull requests. Some guidelines:
-- Test changes locally before committing
+- Run `test-dotfiles.sh` before committing
 - Use conventional commit messages
 - Document any new scripts or configurations
 

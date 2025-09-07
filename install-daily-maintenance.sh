@@ -130,7 +130,7 @@ echo
 # Check if automation is already running
 echo -e "${YELLOW}Checking existing installation...${NC}"
 
-if launchctl list | grep -q "com.nickboy.daily-maintenance"; then
+if launchctl list | grep -q "com.daily-maintenance"; then
     echo -e "${YELLOW}⚠${NC} Daily maintenance automation is already installed and running"
     read -p "Do you want to reload it? (y/n) " -n 1 -r
     echo

@@ -270,11 +270,11 @@ jobs:
             fi
           done
 
-          # Copy plist if it exists
-          if [ -f "Library/LaunchAgents/com.nickboy.daily-maintenance.plist" ]; then
-            cp Library/LaunchAgents/*.plist $TEST_HOME/Library/LaunchAgents/
+          # Copy plist template if it exists
+          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
+            cp Library/LaunchAgents/*.plist.template $TEST_HOME/Library/LaunchAgents/
           else
-            echo "Warning: plist file not found"
+            echo "Warning: plist template file not found"
           fi
 
           # Test syntax for files that exist
@@ -287,10 +287,15 @@ jobs:
             fi
           done
 
-      - name: Validate LaunchAgent plist
+      - name: Validate LaunchAgent plist template
         run: |
-          if [ -f Library/LaunchAgents/com.nickboy.daily-maintenance.plist ]; then
-            plutil -lint Library/LaunchAgents/com.nickboy.daily-maintenance.plist
+          if [ -f Library/LaunchAgents/com.daily-maintenance.plist.template ]; then
+            # Create temp file with substituted values for validation
+            sed "s|{{HOME}}|$HOME|g" Library/LaunchAgents/com.daily-maintenance.plist.template > /tmp/test.plist
+            plutil -lint /tmp/test.plist
+            rm /tmp/test.plist
+          else
+            echo "Warning: plist template not found"
           fi
 
       - name: Test daily-maintenance.sh functions

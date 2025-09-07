@@ -56,17 +56,21 @@ for script in daily-maintenance*.sh install-daily-maintenance.sh uninstall-daily
 done
 echo
 
-# Test 3: Validate plist file
-echo -e "${YELLOW}3. LaunchAgent Plist Validation${NC}"
-PLIST="Library/LaunchAgents/com.nickboy.daily-maintenance.plist"
-if [ -f "$PLIST" ]; then
+# Test 3: Validate plist template
+echo -e "${YELLOW}3. LaunchAgent Plist Template Validation${NC}"
+PLIST_TEMPLATE="Library/LaunchAgents/com.daily-maintenance.plist.template"
+if [ -f "$PLIST_TEMPLATE" ]; then
+    # Create temp file with substituted values for validation
+    TEMP_PLIST="/tmp/test-plist-$$"
+    sed "s|{{HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$TEMP_PLIST"
     if command -v plutil >/dev/null 2>&1; then
-        run_test "Plist validation" "plutil -lint '$PLIST'"
+        run_test "Plist template validation" "plutil -lint '$TEMP_PLIST'"
     else
-        run_test "Plist XML validation" "xmllint --noout '$PLIST'"
+        run_test "Plist template XML validation" "xmllint --noout '$TEMP_PLIST'"
     fi
+    rm -f "$TEMP_PLIST"
 else
-    echo -e "${YELLOW}  Plist file not found${NC}"
+    echo -e "${YELLOW}  Plist template file not found${NC}"
 fi
 echo
 

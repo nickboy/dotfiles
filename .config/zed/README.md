@@ -8,6 +8,7 @@
 ## 🚀 在新電腦上設定
 
 ### 1. 安裝 Zed
+
 ```bash
 # macOS
 brew install --cask zed
@@ -17,6 +18,7 @@ brew install --cask zed
 ```
 
 ### 2. 使用 yadm 同步配置
+
 ```bash
 # 安裝 yadm（如果還沒有）
 brew install yadm
@@ -28,12 +30,14 @@ yadm clone https://github.com/YOUR_USERNAME/dotfiles.git
 ```
 
 ### 3. 安裝必要的字體
+
 ```bash
 # JetBrains Mono（主要字體）
 brew install --cask font-jetbrains-mono
 ```
 
 ### 4. 安裝格式化工具
+
 ```bash
 # Google Java Format
 brew install google-java-format
@@ -52,6 +56,7 @@ npm install -g prettier
 以下擴展會在首次開啟 Zed 時自動安裝：
 
 ### 語言支援
+
 - `html` - HTML 語言支援
 - `php` - PHP 語言支援
 - `java` - Java 語言支援

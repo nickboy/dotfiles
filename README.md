@@ -230,9 +230,11 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Key Bindings
 
 #### Prefix Key
+
 - **Prefix**: `Ctrl-a` (remapped from default `Ctrl-b`)
 
 #### Window & Pane Management
+
 | Keybinding | Action |
 |------------|--------|
 | `Ctrl-a + \\` | Split window horizontally |
@@ -242,6 +244,7 @@ rm ~/Library/Logs/daily-maintenance*.log
 | `Ctrl-a + r` | Reload tmux configuration |
 
 #### Navigation
+
 | Keybinding | Action |
 |------------|--------|
 | `Ctrl-h/j/k/l` | Navigate between panes (vim-tmux-navigator) |
@@ -252,6 +255,7 @@ rm ~/Library/Logs/daily-maintenance*.log
 | `Ctrl-a + [number]` | Jump to window by number |
 
 #### Copy Mode
+
 | Keybinding | Action |
 |------------|--------|
 | `Ctrl-a + [` | Enter copy mode |
@@ -369,4 +373,4 @@ copy what you need.
 
 ---
 
-**Last updated: September 2025**
+Last updated: September 2025

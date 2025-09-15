@@ -10,8 +10,8 @@ configurations for macOS development environment.
 ### Core Configurations
 
 - **Shell**: Zsh configuration with zinit plugin manager
-- **Editor**: Neovim (LazyVim) and Zed configurations  
-- **Terminal**: tmux configuration
+- **Editor**: Neovim (LazyVim) and Zed configurations
+- **Terminal**: Enhanced tmux configuration with Tokyo Night theme
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
 - **Tools**: ripgrep, bat configurations
@@ -224,6 +224,40 @@ launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
 # Optional: Remove log files
 rm ~/Library/Logs/daily-maintenance*.log
 ```
+
+## 🖥️ Tmux Configuration
+
+### Key Bindings
+
+#### Prefix Key
+- **Prefix**: `Ctrl-a` (remapped from default `Ctrl-b`)
+
+#### Window & Pane Management
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + \\` | Split window horizontally |
+| `Ctrl-a + -` | Split window vertically |
+| `Ctrl-a + h/j/k/l` | Resize panes (left/down/up/right) |
+| `Ctrl-a + m` | Toggle pane zoom (maximize/restore) |
+| `Ctrl-a + r` | Reload tmux configuration |
+
+#### Navigation
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-h/j/k/l` | Navigate between panes (vim-tmux-navigator) |
+| `Ctrl-a + Ctrl-h` | Previous window |
+| `Ctrl-a + Ctrl-l` | Next window |
+| `Ctrl-a + <` | Swap window with previous |
+| `Ctrl-a + >` | Swap window with next |
+| `Ctrl-a + [number]` | Jump to window by number |
+
+#### Copy Mode
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + [` | Enter copy mode |
+| `v` (in copy mode) | Begin selection |
+| `y` (in copy mode) | Copy selection |
+| `q` (in copy mode) | Exit copy mode |
 
 ## 🔧 Manual Updates
 

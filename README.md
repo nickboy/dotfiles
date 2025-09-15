@@ -227,6 +227,14 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ## 🖥️ Tmux Configuration
 
+### Setup
+
+TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
+
+1. Start tmux: `tmux new -s main`
+2. Install plugins: Press `Ctrl-a + I` (capital I)
+3. Plugins will be installed automatically
+
 ### Key Bindings
 
 #### Prefix Key

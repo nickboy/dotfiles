@@ -62,6 +62,8 @@ brew "thefuck"
 brew "tlrc"
 # Terminal multiplexer
 brew "tmux"
+# Plugin manager for tmux
+brew "tpm"
 # Simple terminal image viewer written in Rust
 brew "viu"
 # Internet file retriever

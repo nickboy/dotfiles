@@ -8,6 +8,8 @@ brew "bat"
 brew "python@3.13"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
+# Cross-platform make
+brew "cmake"
 # Dependency Manager for PHP
 brew "composer"
 # Modern, maintained replacement for ls
@@ -56,6 +58,10 @@ brew "ruff"
 brew "rust"
 # Rust toolchain installer
 brew "rustup"
+# Static analysis and linting for Bash/Shell scripts
+brew "shellcheck"
+# Cross-platform prompt for any shell
+brew "starship"
 # Programmatically correct mistyped console commands
 brew "thefuck"
 # Official tldr client written in Rust
@@ -68,10 +74,18 @@ brew "tpm"
 brew "viu"
 # Internet file retriever
 brew "wget"
+# An extremely fast Python package installer and resolver, written in Rust
+brew "uv"
 # Yet Another Dotfiles Manager
 brew "yadm"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
+# GitHub command-line tool
+brew "gh"
+# Neovim version manager
+brew "bob"
+# Powerful, clean, object-oriented scripting language
+brew "ruby"
 # Drop in replacement for ueberzug written in C++
 brew "jstkdng/programs/ueberzugpp"
 # Password manager that keeps all passwords secure behind one password
@@ -107,3 +121,7 @@ cask "spotify"
 cask "surfshark"
 # Rust-based terminal
 cask "warp"
+# Multiplayer code editor
+cask "zed"
+# Open-source code editor
+cask "visual-studio-code"

@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+# Yadm bootstrap script - runs after cloning dotfiles
+
+set -e
+
+echo "🚀 Starting yadm bootstrap..."
+
+# Create necessary directories
+echo "📁 Creating required directories..."
+mkdir -p ~/.config
+mkdir -p ~/.local/bin
+mkdir -p ~/Library/LaunchAgents
+
+# Setup Ghostty configuration symlink
+echo "👻 Setting up Ghostty configuration..."
+if [ -f "$HOME/.config/ghostty/config" ]; then
+    GHOSTTY_APP_CONFIG="$HOME/Library/Application Support/com.mitchellh.ghostty"
+
+    # Create Ghostty app config directory if it doesn't exist
+    mkdir -p "$GHOSTTY_APP_CONFIG"
+
+    # Remove existing config if it's not a symlink
+    if [ -f "$GHOSTTY_APP_CONFIG/config" ] && [ ! -L "$GHOSTTY_APP_CONFIG/config" ]; then
+        echo "  Backing up existing Ghostty config..."
+        mv "$GHOSTTY_APP_CONFIG/config" "$GHOSTTY_APP_CONFIG/config.backup.$(date +%s)"
+    fi
+
+    # Create symlink if it doesn't exist
+    if [ ! -L "$GHOSTTY_APP_CONFIG/config" ]; then
+        echo "  Creating symlink for Ghostty config..."
+        ln -sf "$HOME/.config/ghostty/config" "$GHOSTTY_APP_CONFIG/config"
+    else
+        echo "  Ghostty symlink already exists"
+    fi
+else
+    echo "  Warning: Ghostty config not found in ~/.config/ghostty/"
+fi
+
+# Install Homebrew if not present
+if ! command -v brew &> /dev/null; then
+    echo "🍺 Installing Homebrew..."
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+    # Add Homebrew to PATH for Apple Silicon
+    if [ -f "/opt/homebrew/bin/brew" ]; then
+        eval "$(/opt/homebrew/bin/brew shellenv)"
+    fi
+fi
+
+# Install Brewfile packages
+if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
+    echo "📦 Installing Brewfile packages..."
+    echo "  Note: Some casks may require sudo password. Run 'brew bundle' manually if needed."
+    brew bundle --file="$HOME/Brewfile" --no-lock || true
+fi
+
+# Setup tmux plugin manager
+if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
+    echo "🔌 Installing tmux plugin manager..."
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+fi
+
+# Install Zinit if not present
+if [ ! -d "$HOME/.local/share/zinit/zinit.git" ]; then
+    echo "⚡ Installing Zinit..."
+    bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
+fi
+
+# Install daily maintenance automation
+if [ -f "$HOME/install-daily-maintenance.sh" ]; then
+    echo "🔧 Setting up daily maintenance automation..."
+    bash "$HOME/install-daily-maintenance.sh"
+fi
+
+# Make all scripts executable
+echo "🔐 Setting executable permissions..."
+chmod +x ~/daily-maintenance*.sh 2>/dev/null || true
+chmod +x ~/install-daily-maintenance.sh 2>/dev/null || true
+chmod +x ~/uninstall-daily-maintenance.sh 2>/dev/null || true
+chmod +x ~/test-dotfiles.sh 2>/dev/null || true
+chmod +x ~/.local/bin/* 2>/dev/null || true
+
+echo "✅ Bootstrap complete!"
+echo ""
+echo "📝 Next steps:"
+echo "  1. Restart your terminal or run: source ~/.zshrc"
+echo "  2. Run tmux and press Ctrl-A + I to install plugins"
+echo "  3. Open Neovim to install LazyVim plugins"
+echo "  4. Check daily maintenance status: ~/daily-maintenance-control.sh status"

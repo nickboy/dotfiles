@@ -8,3 +8,6 @@ Brewfile.lock.json
 
 # Generated files from templates
 Library/LaunchAgents/com.daily-maintenance.plist
+
+# Neovim auto-generated files
+.config/nvim/lazy-lock.json

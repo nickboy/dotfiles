@@ -10,8 +10,8 @@ configurations for macOS development environment.
 ### Core Configurations
 
 - **Shell**: Zsh configuration with zinit plugin manager
-- **Editor**: Neovim (LazyVim) and Zed configurations
-- **Terminal**: Enhanced tmux configuration with Tokyo Night theme
+- **Editor**: Neovim (LazyVim) and Zed configurations  
+- **Terminal**: tmux and Ghostty configurations
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
 - **Tools**: ripgrep, bat configurations
@@ -40,7 +40,15 @@ configurations for macOS development environment.
 yadm clone https://github.com/nickboy/dotfiles.git
 ```
 
-1. **Install Homebrew packages:**
+The bootstrap script will automatically run after cloning to:
+
+- Set up configuration symlinks (e.g., Ghostty)
+- Install Homebrew (if not present)
+- Install packages from Brewfile
+- Set up tmux and zinit plugin managers
+- Configure daily maintenance automation
+
+1. **Install remaining Homebrew packages (if bootstrap didn't complete):**
 
 ```bash
 brew bundle --file=~/Brewfile

@@ -48,10 +48,14 @@ quickly understand the development environment and automation setup.
 │   │   └── lua/config/           # Neovim configs
 │   ├── zed/                      # Zed editor settings
 │   │   └── settings.json         # Comprehensive Zed configuration
+│   ├── ghostty/                  # Ghostty terminal configuration
+│   │   └── config                # Symlinked to Application Support
 │   ├── bat/                      # Bat themes
 │   │   └── themes/tokyonight_night.tmTheme
-│   └── ripgrep/                  # Ripgrep configuration
-│       └── config                # Search exclusions and settings
+│   ├── ripgrep/                  # Ripgrep configuration
+│   │   └── config                # Search exclusions and settings
+│   └── yadm/
+│       └── bootstrap             # Auto-runs after yadm clone
 │
 ├── .local/bin/                   # User scripts
 │   └── battery-status            # Battery monitoring utility (Python)

@@ -233,6 +233,52 @@ launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
 rm ~/Library/Logs/daily-maintenance*.log
 ```
 
+## 🖥️ Tmux Configuration
+
+### Setup
+
+TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
+
+1. Start tmux: `tmux new -s main`
+2. Install plugins: Press `Ctrl-a + I` (capital I)
+3. Plugins will be installed automatically
+
+### Key Bindings
+
+#### Prefix Key
+
+- **Prefix**: `Ctrl-a` (remapped from default `Ctrl-b`)
+
+#### Window & Pane Management
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + \\` | Split window horizontally |
+| `Ctrl-a + -` | Split window vertically |
+| `Ctrl-a + h/j/k/l` | Resize panes (left/down/up/right) |
+| `Ctrl-a + m` | Toggle pane zoom (maximize/restore) |
+| `Ctrl-a + r` | Reload tmux configuration |
+
+#### Navigation
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-h/j/k/l` | Navigate between panes (vim-tmux-navigator) |
+| `Ctrl-a + Ctrl-h` | Previous window |
+| `Ctrl-a + Ctrl-l` | Next window |
+| `Ctrl-a + <` | Swap window with previous |
+| `Ctrl-a + >` | Swap window with next |
+| `Ctrl-a + [number]` | Jump to window by number |
+
+#### Copy Mode
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + [` | Enter copy mode |
+| `v` (in copy mode) | Begin selection |
+| `y` (in copy mode) | Copy selection |
+| `q` (in copy mode) | Exit copy mode |
+
 ## 🔧 Manual Updates
 
 If you prefer to run updates manually:

@@ -1,4 +1,8 @@
 .DS_Store
+
+# Git configuration (machine-specific)
+.gitconfig
+
 .bin/assets/corona
 .config/vifm/vifminfo
 vim/plugged/

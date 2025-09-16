@@ -1,0 +1,28 @@
+theme = "Catppuccin Mocha"
+font-family = "Hack Nerd Font Mono"
+font-size = 14
+font-thicken = true
+
+# Performance
+scrollback-limit = 10000
+
+# Window settings
+window-padding-x = 10
+window-padding-y = 10
+window-decoration = true
+window-theme = auto
+
+# Cursor settings
+cursor-style = block
+cursor-blink = true
+
+# Modern terminal features
+copy-on-select = true
+clipboard-read = allow
+clipboard-write = allow
+
+# Custom keybinds
+keybind = shift+enter=text:\n
+keybind = cmd+k=clear_screen
+keybind = cmd+shift+d=split_right
+keybind = cmd+d=split_down

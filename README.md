@@ -10,8 +10,8 @@ configurations for macOS development environment.
 ### Core Configurations
 
 - **Shell**: Zsh configuration with zinit plugin manager
-- **Editor**: Neovim (LazyVim) and Zed configurations  
-- **Terminal**: tmux and Ghostty configurations
+- **Editor**: Neovim (LazyVim) and Zed configurations
+- **Terminal**: tmux and Ghostty configurations (with transparency and Claude Code integration)
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
 - **Tools**: ripgrep, bat configurations
@@ -233,6 +233,27 @@ launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
 rm ~/Library/Logs/daily-maintenance*.log
 ```
 
+## 👻 Ghostty Terminal Configuration
+
+### Features
+
+- **Transparency**: Background opacity (0.88) with blur effect for macOS liquid visuals
+- **Shell Integration**: Enhanced shell integration for better Claude Code support
+- **Smart Clipboard**: Protected paste with bracketed paste mode
+- **Custom Keybinds**: Split panes with `Cmd+D` (down) and `Cmd+Shift+D` (right)
+- **Theme**: Catppuccin Mocha with Hack Nerd Font
+
+### Key Settings
+
+- Transparent background with blur for modern macOS aesthetic
+- Shell integration with working directory tracking (OSC 7)
+- Enhanced clipboard features with paste protection
+- Mouse support with focus-follows-mouse
+- Link clicking enabled
+
+Note: After modifying Ghostty config, restart the application for transparency
+changes to take effect.
+
 ## 🖥️ Tmux Configuration
 
 ### Setup
@@ -305,6 +326,7 @@ nvim --headless '+Lazy! sync' +qa
 ├── .config/
 │   ├── nvim/          # Neovim configuration (LazyVim)
 │   ├── zed/           # Zed editor configuration
+│   ├── ghostty/       # Ghostty terminal configuration
 │   ├── bat/           # Bat themes
 │   └── ripgrep/       # Ripgrep configuration
 ├── .local/

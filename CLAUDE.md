@@ -225,7 +225,6 @@ Runs validation before allowing commits
 - **Development**: Ghostty, Warp (terminals)
 - **Media**: IINA, Spotify
 - **Utilities**: BetterDisplay, Raycast, Rectangle Pro, SoundSource
-- **VPN**: NordVPN, Surfshark
 - **Fonts**: Hack Nerd Font
 
 ## Custom Scripts

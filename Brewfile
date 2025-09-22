@@ -72,6 +72,10 @@ brew "tlrc"
 brew "tmux"
 # Plugin manager for tmux
 brew "tpm"
+# Smart session manager for tmux
+brew "sesh"
+# Universal command argument completion
+brew "carapace"
 # Simple terminal image viewer written in Rust
 brew "viu"
 # Internet file retriever

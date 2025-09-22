@@ -249,6 +249,17 @@ zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --i
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:descriptions' format '[%d]'
 
+# Sesh completion
+if command -v sesh &> /dev/null; then
+    eval "$(sesh completion zsh)"
+fi
+
+# Carapace - universal command completions
+if command -v carapace &> /dev/null; then
+    export CARAPACE_BRIDGES='zsh,fish,bash'  # Bridge completions from other shells
+    source <(carapace _carapace)
+fi
+
 # Zoxide (better cd)
 if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
@@ -282,6 +293,32 @@ alias c='clear'
 alias cd='z'  # Use zoxide for cd
 alias python='python3'
 alias pip='pip3'
+
+# Sesh smart session manager function
+s() {
+  if [ $# -eq 0 ]; then
+    # No arguments: show interactive picker (without icons to avoid parsing issues)
+    local selected=$(sesh list | fzf \
+      --height 50% \
+      --border rounded \
+      --border-label ' sesh sessions ' \
+      --prompt '⚡ ' \
+      --header 'Tips: Start typing to filter | Enter to connect | Esc to cancel' \
+      --preview 'sesh preview {}' \
+      --preview-window right:55%)
+
+    [[ -z "$selected" ]] && return 0
+    sesh connect "$selected"
+  else
+    # Arguments provided: pass directly to sesh
+    sesh connect "$@"
+  fi
+}
+
+# Sesh aliases for quick access
+alias sl='sesh list --icons'  # List all sessions with icons
+alias sn='sesh connect $(basename $PWD)'  # New session named after current dir
+alias sls='sesh list -t --icons'  # List only tmux sessions
 
 # Git extras (in addition to OMZ git plugin)
 alias gs='git status'

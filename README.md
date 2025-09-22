@@ -11,10 +11,10 @@ configurations for macOS development environment.
 
 - **Shell**: Zsh configuration with zinit plugin manager
 - **Editor**: Neovim (LazyVim) and Zed configurations
-- **Terminal**: tmux and Ghostty configurations (with transparency and Claude Code integration)
+- **Terminal**: tmux with sesh session manager and Ghostty configs
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Tools**: ripgrep, bat configurations
+- **Tools**: ripgrep, bat configurations, Carapace (universal command completions)
 
 ### 🤖 Automation Scripts
 
@@ -235,7 +235,7 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ## 👻 Ghostty Terminal Configuration
 
-### Features
+### Ghostty Features
 
 - **Transparency**: Background opacity (0.88) with blur effect for macOS liquid visuals
 - **Shell Integration**: Enhanced shell integration for better Claude Code support
@@ -290,6 +290,53 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 | `Ctrl-a + <` | Swap window with previous |
 | `Ctrl-a + >` | Swap window with next |
 | `Ctrl-a + [number]` | Jump to window by number |
+
+#### Session Management (sesh)
+
+Sesh is a smart tmux session manager integrated with zoxide.
+
+**Shell Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `s` | Interactive session picker with fzf preview |
+| `s myproject` | Connect to existing session or create from path |
+| `sn` | Create session named after current directory |
+| `sl` | List all sessions with icons |
+| `sls` | List only tmux sessions |
+
+**Inside tmux:**
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + T` | Open advanced sesh session switcher |
+
+**Session switcher controls** (when using `Ctrl-a + T`):
+
+- `Tab/Shift-Tab`: Navigate sessions
+- `Enter`: Connect to selected
+- `Ctrl-a`: Show all sessions
+- `Ctrl-t`: Show tmux sessions only
+- `Ctrl-g`: Show config sessions
+- `Ctrl-x`: Show zoxide directories
+- `Ctrl-f`: Find directories
+- `Ctrl-d`: Kill selected session
+
+**Workflow examples:**
+
+```bash
+# Start your day - pick a project
+s
+
+# Quick project switch inside tmux
+Ctrl-a + T
+
+# New project session
+cd ~/projects/my-app && sn
+
+# Clone repo and create session
+sesh clone https://github.com/user/repo
+```
 
 #### Copy Mode
 

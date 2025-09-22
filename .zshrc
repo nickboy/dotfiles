@@ -275,6 +275,7 @@ alias tree='eza --tree --icons=always --color=always'
 alias cat='bat'
 alias vim='nvim'
 alias vi='nvim'
+alias ps='procs'
 
 # Shortcuts
 alias c='clear'

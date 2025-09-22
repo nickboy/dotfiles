@@ -296,23 +296,23 @@ alias pip='pip3'
 
 # Sesh smart session manager function
 s() {
-  if [ $# -eq 0 ]; then
-    # No arguments: show interactive picker (without icons to avoid parsing issues)
-    local selected=$(sesh list | fzf \
-      --height 50% \
-      --border rounded \
-      --border-label ' sesh sessions ' \
-      --prompt '⚡ ' \
-      --header 'Tips: Start typing to filter | Enter to connect | Esc to cancel' \
-      --preview 'sesh preview {}' \
-      --preview-window right:55%)
+    if [ $# -eq 0 ]; then
+        # No arguments: show interactive picker (without icons to avoid parsing issues)
+        local selected=$(sesh list | fzf \
+                --height 50% \
+                --border rounded \
+                --border-label ' sesh sessions ' \
+                --prompt '⚡ ' \
+                --header 'Tips: Start typing to filter | Enter to connect | Esc to cancel' \
+                --preview 'sesh preview {}' \
+            --preview-window right:55%)
 
-    [[ -z "$selected" ]] && return 0
-    sesh connect "$selected"
-  else
-    # Arguments provided: pass directly to sesh
-    sesh connect "$@"
-  fi
+        [[ -z "$selected" ]] && return 0
+        sesh connect "$selected"
+    else
+        # Arguments provided: pass directly to sesh
+        sesh connect "$@"
+    fi
 }
 
 # Sesh aliases for quick access

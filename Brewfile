@@ -46,6 +46,8 @@ brew "perl"
 brew "pipx"
 # Theme for zsh
 brew "powerlevel10k"
+# Modern replacement for ps written in Rust
+brew "procs"
 # Static type checker for Python
 brew "pyright"
 # Search tool like grep and The Silver Searcher
@@ -70,6 +72,10 @@ brew "tlrc"
 brew "tmux"
 # Plugin manager for tmux
 brew "tpm"
+# Smart session manager for tmux
+brew "sesh"
+# Universal command argument completion
+brew "carapace"
 # Simple terminal image viewer written in Rust
 brew "viu"
 # Internet file retriever

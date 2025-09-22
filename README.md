@@ -10,11 +10,11 @@ configurations for macOS development environment.
 ### Core Configurations
 
 - **Shell**: Zsh configuration with zinit plugin manager
-- **Editor**: Neovim (LazyVim) and Zed configurations  
-- **Terminal**: tmux and Ghostty configurations
+- **Editor**: Neovim (LazyVim) and Zed configurations
+- **Terminal**: tmux with sesh session manager and Ghostty configs
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Tools**: ripgrep, bat configurations
+- **Tools**: ripgrep, bat configurations, Carapace (universal command completions)
 
 ### 🤖 Automation Scripts
 
@@ -233,6 +233,27 @@ launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
 rm ~/Library/Logs/daily-maintenance*.log
 ```
 
+## 👻 Ghostty Terminal Configuration
+
+### Ghostty Features
+
+- **Transparency**: Background opacity (0.88) with blur effect for macOS liquid visuals
+- **Shell Integration**: Enhanced shell integration for better Claude Code support
+- **Smart Clipboard**: Protected paste with bracketed paste mode
+- **Custom Keybinds**: Split panes with `Cmd+D` (down) and `Cmd+Shift+D` (right)
+- **Theme**: Catppuccin Mocha with Hack Nerd Font
+
+### Key Settings
+
+- Transparent background with blur for modern macOS aesthetic
+- Shell integration with working directory tracking (OSC 7)
+- Enhanced clipboard features with paste protection
+- Mouse support with focus-follows-mouse
+- Link clicking enabled
+
+Note: After modifying Ghostty config, restart the application for transparency
+changes to take effect.
+
 ## 🖥️ Tmux Configuration
 
 ### Setup
@@ -270,6 +291,53 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 | `Ctrl-a + >` | Swap window with next |
 | `Ctrl-a + [number]` | Jump to window by number |
 
+#### Session Management (sesh)
+
+Sesh is a smart tmux session manager integrated with zoxide.
+
+**Shell Commands:**
+
+| Command | Description |
+|---------|-------------|
+| `s` | Interactive session picker with fzf preview |
+| `s myproject` | Connect to existing session or create from path |
+| `sn` | Create session named after current directory |
+| `sl` | List all sessions with icons |
+| `sls` | List only tmux sessions |
+
+**Inside tmux:**
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + T` | Open advanced sesh session switcher |
+
+**Session switcher controls** (when using `Ctrl-a + T`):
+
+- `Tab/Shift-Tab`: Navigate sessions
+- `Enter`: Connect to selected
+- `Ctrl-a`: Show all sessions
+- `Ctrl-t`: Show tmux sessions only
+- `Ctrl-g`: Show config sessions
+- `Ctrl-x`: Show zoxide directories
+- `Ctrl-f`: Find directories
+- `Ctrl-d`: Kill selected session
+
+**Workflow examples:**
+
+```bash
+# Start your day - pick a project
+s
+
+# Quick project switch inside tmux
+Ctrl-a + T
+
+# New project session
+cd ~/projects/my-app && sn
+
+# Clone repo and create session
+sesh clone https://github.com/user/repo
+```
+
 #### Copy Mode
 
 | Keybinding | Action |
@@ -305,6 +373,7 @@ nvim --headless '+Lazy! sync' +qa
 ├── .config/
 │   ├── nvim/          # Neovim configuration (LazyVim)
 │   ├── zed/           # Zed editor configuration
+│   ├── ghostty/       # Ghostty terminal configuration
 │   ├── bat/           # Bat themes
 │   └── ripgrep/       # Ripgrep configuration
 ├── .local/

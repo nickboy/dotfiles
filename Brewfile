@@ -111,8 +111,6 @@ cask "ghostty"
 cask "git-credential-manager"
 # Free and open-source media player
 cask "iina"
-# VPN client for secure internet access and private browsing
-cask "nordvpn"
 # Control your tools with a few keystrokes
 cask "raycast"
 # Window snapping tool
@@ -123,8 +121,6 @@ cask "setapp"
 cask "soundsource"
 # Music streaming service
 cask "spotify"
-# VPN client for secure internet access and private browsing
-cask "surfshark"
 # Rust-based terminal
 cask "warp"
 # Multiplayer code editor

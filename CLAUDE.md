@@ -16,7 +16,7 @@ quickly understand the development environment and automation setup.
 ### Core Technologies
 
 - **Shell**: Zsh with Oh-My-Zsh framework and Zinit plugin manager
-- **Terminal Multiplexer**: tmux with Tokyo Night theme
+- **Terminal Multiplexer**: tmux with Tokyo Night theme and sesh session manager
 - **Primary Editors**:
   - Neovim (LazyVim configuration)
   - Zed (with vim mode enabled)
@@ -167,6 +167,7 @@ quickly understand the development environment and automation setup.
 - Splits: `\` horizontal, `-` vertical
 - Vi mode enabled
 - Mouse support enabled
+- Session management: sesh (Ctrl-A + T for session switcher)
 - Plugins via TPM:
   - vim-tmux-navigator
   - tmux-resurrect (session persistence)
@@ -212,7 +213,7 @@ Runs validation before allowing commits
 
 - **Search/Find**: ripgrep, fd, fzf, ffind, ast-grep
 - **File Management**: eza, bat, chafa (image viewer), viu
-- **Development**: git-delta, lazygit, neovim, tmux
+- **Development**: git-delta, lazygit, neovim, tmux, sesh
 - **Languages**: Python 3.13, Go, Rust, Julia, Node.js, Java, Perl, Ruby
 - **Package Managers**: Composer (PHP), LuaRocks, pipx, cargo
 - **Linters**: ruff, pyright, shellcheck
@@ -285,6 +286,30 @@ Python script at `~/.local/bin/battery-status`
    - Daily automation handles most updates
    - Manual control via `daily-maintenance-control.sh`
    - Logs are in `~/Library/Logs/`
+
+### Modern CLI Tools Reference
+
+**Use these modern tools instead of traditional ones**:
+
+```bash
+# Search file contents (instead of grep)
+rg "pattern"                   # ripgrep - faster than grep
+rg -i "case_insensitive"       # Case insensitive search
+rg -t py "def.*function"       # Search only Python files
+rg --hidden "pattern"          # Include hidden files
+
+# Find files (instead of find)
+fd "filename"                  # fd - simpler and faster than find
+fd -e py                       # Find all Python files
+fd -H "hidden"                 # Include hidden files
+fd -t f "test.*\.sh$"         # Find test shell scripts
+
+# Search code semantically
+ast-grep 'function $NAME() { $$$ }' # AST-based search
+
+# Interactive file search
+ffind                          # Interactive file finder
+```
 
 ### Common Tasks
 

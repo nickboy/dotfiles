@@ -239,6 +239,64 @@ jobs:
             xmllint --noout "$plist" || exit 1
           done
 
+  bootstrap-test:
+    name: Bootstrap Script Test
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Copy bootstrap script to test location
+        run: |
+          # Create test home directory structure
+          export TEST_HOME=$GITHUB_WORKSPACE/test_home
+          mkdir -p $TEST_HOME/.config/yadm
+
+          # Copy bootstrap script if it exists
+          if [ -f ".config/yadm/bootstrap" ]; then
+            cp .config/yadm/bootstrap $TEST_HOME/.config/yadm/bootstrap
+            chmod +x $TEST_HOME/.config/yadm/bootstrap
+          else
+            echo "Warning: bootstrap script not found at .config/yadm/bootstrap"
+            exit 1
+          fi
+
+          # Copy test-bootstrap.sh if it exists
+          if [ -f "test-bootstrap.sh" ]; then
+            cp test-bootstrap.sh $TEST_HOME/test-bootstrap.sh
+            chmod +x $TEST_HOME/test-bootstrap.sh
+          fi
+
+          # Copy other required files for bootstrap testing
+          for file in Brewfile .tmux.conf daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh; do
+            if [ -f "$file" ]; then
+              cp "$file" "$TEST_HOME/"
+            fi
+          done
+
+          # Copy config files
+          if [ -d ".config/ghostty" ]; then
+            mkdir -p $TEST_HOME/.config/ghostty
+            cp .config/ghostty/* $TEST_HOME/.config/ghostty/ 2>/dev/null || true
+          fi
+
+      - name: Run bootstrap tests
+        run: |
+          export HOME=$GITHUB_WORKSPACE/test_home
+          cd $HOME
+
+          # Run the bootstrap test script
+          if [ -f "test-bootstrap.sh" ]; then
+            echo "Running bootstrap test suite..."
+            bash test-bootstrap.sh
+          else
+            echo "test-bootstrap.sh not found, running basic tests..."
+            # Fallback to basic tests
+            echo "Testing bootstrap syntax..."
+            bash -n .config/yadm/bootstrap
+            echo "Bootstrap syntax check passed"
+          fi
+
   macos-integration:
     name: macOS Integration Tests
     runs-on: macos-latest
@@ -414,7 +472,7 @@ jobs:
 
   summary:
     name: CI Summary
-    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, yaml-validation, macos-integration, documentation, security-scan, compatibility-matrix]
+    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, yaml-validation, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:

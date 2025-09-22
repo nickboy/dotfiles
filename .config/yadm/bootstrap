@@ -60,6 +60,14 @@ if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
 fi
 
+# Install tmux plugins automatically
+echo "📦 Installing tmux plugins..."
+if [ -f "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins"
+else
+    echo "  Note: Run 'Ctrl-A + I' inside tmux to install plugins"
+fi
+
 # Install Zinit if not present
 if [ ! -d "$HOME/.local/share/zinit/zinit.git" ]; then
     echo "⚡ Installing Zinit..."
@@ -84,6 +92,5 @@ echo "✅ Bootstrap complete!"
 echo ""
 echo "📝 Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
-echo "  2. Run tmux and press Ctrl-A + I to install plugins"
-echo "  3. Open Neovim to install LazyVim plugins"
-echo "  4. Check daily maintenance status: ~/daily-maintenance-control.sh status"
+echo "  2. Open Neovim to install LazyVim plugins"
+echo "  3. Check daily maintenance status: ~/daily-maintenance-control.sh status"

@@ -178,29 +178,18 @@ if command -v fzf &> /dev/null; then
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
     export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
 
-    # FZF Theme (TokyoNight Night - from BAT theme)
+    # Load Catppuccin Mocha theme
+    if [ -f "$HOME/.config/fzf/catppuccin-mocha.sh" ]; then
+        source "$HOME/.config/fzf/catppuccin-mocha.sh"
+    fi
+
+    # Additional FZF options (non-color)
     export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
       --highlight-line \
       --info=inline-right \
       --ansi \
       --layout=reverse \
-      --border=none \
-      --color=bg+:#282833 \
-      --color=bg:#1a1b26 \
-      --color=border:#7aa2f7 \
-      --color=fg:#c0caf5 \
-      --color=gutter:#1a1b26 \
-      --color=header:#ff9e64 \
-      --color=hl+:#7dcfff \
-      --color=hl:#7aa2f7 \
-      --color=info:#565f89 \
-      --color=marker:#f7768e \
-      --color=pointer:#f7768e \
-      --color=prompt:#7dcfff \
-      --color=query:#c0caf5:regular \
-      --color=scrollbar:#565f89 \
-      --color=separator:#ff9e64 \
-      --color=spinner:#f7768e"
+      --border=rounded"
 
     # Preview settings
     show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
@@ -354,7 +343,7 @@ setopt COMPLETE_IN_WORD # Complete from cursor position
 # ============================================================================
 
 # Bat theme
-export BAT_THEME=tokyonight_night
+export BAT_THEME="Catppuccin Mocha"
 
 # ============================================================================
 # Local/Private Configuration

@@ -74,6 +74,50 @@ if [ ! -d "$HOME/.local/share/zinit/zinit.git" ]; then
     bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
 fi
 
+# Install/Update Catppuccin themes (always fetch latest)
+echo "🎨 Installing/Updating Catppuccin themes..."
+
+# FZF Catppuccin theme
+echo "  Downloading FZF Catppuccin Mocha theme..."
+mkdir -p ~/.config/fzf
+curl -sL -o ~/.config/fzf/catppuccin-mocha.sh \
+    https://raw.githubusercontent.com/catppuccin/fzf/main/themes/catppuccin-fzf-mocha.sh || \
+    echo "    ⚠️  Failed to download FZF theme"
+
+# Bat Catppuccin theme
+echo "  Downloading Bat Catppuccin Mocha theme..."
+BAT_CONFIG_DIR="$(bat --config-dir 2>/dev/null || echo "$HOME/.config/bat")"
+BAT_THEME_DIR="$BAT_CONFIG_DIR/themes"
+mkdir -p "$BAT_THEME_DIR"
+# Create syntaxes directory to avoid warning
+mkdir -p "$BAT_CONFIG_DIR/syntaxes"
+curl -sL -o "$BAT_THEME_DIR/Catppuccin Mocha.tmTheme" \
+    "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme" || \
+    echo "    ⚠️  Failed to download Bat theme"
+# Rebuild bat cache if bat is installed
+if command -v bat &> /dev/null; then
+    bat cache --build >/dev/null 2>&1 || echo "    ⚠️  Failed to rebuild bat cache"
+fi
+
+# Delta Catppuccin theme
+echo "  Downloading Delta Catppuccin theme..."
+mkdir -p ~/.config/delta
+curl -sL -o ~/.config/delta/catppuccin.gitconfig \
+    https://raw.githubusercontent.com/catppuccin/delta/main/catppuccin.gitconfig || \
+    echo "    ⚠️  Failed to download Delta theme"
+
+# Eza Catppuccin theme (for macOS)
+echo "  Downloading Eza Catppuccin Mocha theme..."
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    EZA_CONFIG="$HOME/Library/Application Support/eza"
+else
+    EZA_CONFIG="$HOME/.config/eza"
+fi
+mkdir -p "$EZA_CONFIG"
+curl -sL -o "$EZA_CONFIG/theme.yml" \
+    https://raw.githubusercontent.com/catppuccin/eza/main/themes/mocha/catppuccin-mocha-mauve.yml || \
+    echo "    ⚠️  Failed to download Eza theme"
+
 # Install daily maintenance automation
 if [ -f "$HOME/install-daily-maintenance.sh" ]; then
     echo "🔧 Setting up daily maintenance automation..."

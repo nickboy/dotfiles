@@ -1,7 +1,7 @@
 {
   "icon_theme": "Material Icon Theme",
   "base_keymap": "VSCode",
-  "theme": "One Dark",
+  "theme": "Catppuccin Mocha",
   "ui_font_family": "JetBrains Mono",
   "buffer_font_family": "JetBrains Mono",
   "ui_font_size": 16,

@@ -16,7 +16,7 @@ quickly understand the development environment and automation setup.
 ### Core Technologies
 
 - **Shell**: Zsh with Oh-My-Zsh framework and Zinit plugin manager
-- **Terminal Multiplexer**: tmux with Tokyo Night theme and sesh session manager
+- **Terminal Multiplexer**: tmux with Catppuccin theme and sesh session manager
 - **Primary Editors**:
   - Neovim (LazyVim configuration)
   - Zed (with vim mode enabled)
@@ -172,7 +172,7 @@ quickly understand the development environment and automation setup.
   - vim-tmux-navigator
   - tmux-resurrect (session persistence)
   - tmux-continuum (auto-save)
-  - Tokyo Night theme
+  - Catppuccin theme
 
 ## Development Workflow
 

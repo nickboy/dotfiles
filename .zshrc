@@ -147,9 +147,7 @@ zinit wait lucid for \
 # Development tools
 zinit wait"1" lucid for \
     from'gh-r' sbin'* -> jq' \
-    @jqlang/jq \
-    from'gh-r' sbin'fzf' \
-    junegunn/fzf
+    @jqlang/jq
 
 # Tmux and related tools (only if not already installed)
 if ! command -v tmux &> /dev/null; then
@@ -157,12 +155,6 @@ if ! command -v tmux &> /dev/null; then
         configure'--disable-utf8proc' make sbin'tmux' \
         @tmux/tmux
 fi
-
-# ============================================================================
-# Prompt (Starship)
-# ============================================================================
-
-eval "$(starship init zsh)"
 
 # ============================================================================
 # Shell Integrations
@@ -176,31 +168,32 @@ if command -v fzf &> /dev/null; then
     # Use fd for better performance
     export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
     export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-    export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+    # Exclude cache and dependency directories for faster directory navigation
+    export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix \
+        --exclude .git \
+        --exclude node_modules \
+        --exclude .npm \
+        --exclude .cache \
+        --exclude .hawtjni \
+        --exclude '__pycache__' \
+        --exclude '.cargo/registry' \
+        --exclude 'Library/Caches' \
+        --exclude '.gradle'"
 
-    # FZF Theme (TokyoNight Night - from BAT theme)
-    export FZF_DEFAULT_OPTS="$FZF_DEFAULT_OPTS \
-      --highlight-line \
-      --info=inline-right \
-      --ansi \
-      --layout=reverse \
-      --border=none \
-      --color=bg+:#282833 \
-      --color=bg:#1a1b26 \
-      --color=border:#7aa2f7 \
-      --color=fg:#c0caf5 \
-      --color=gutter:#1a1b26 \
-      --color=header:#ff9e64 \
-      --color=hl+:#7dcfff \
-      --color=hl:#7aa2f7 \
-      --color=info:#565f89 \
-      --color=marker:#f7768e \
-      --color=pointer:#f7768e \
-      --color=prompt:#7dcfff \
-      --color=query:#c0caf5:regular \
-      --color=scrollbar:#565f89 \
-      --color=separator:#ff9e64 \
-      --color=spinner:#f7768e"
+    # Load Catppuccin Mocha theme
+    if [ -f "$HOME/.config/fzf/catppuccin-mocha.sh" ]; then
+        source "$HOME/.config/fzf/catppuccin-mocha.sh"
+        # Remove background colors for transparency (remove bg:#1E1E2E)
+        export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS//bg:#1E1E2E,/}"
+    fi
+
+    # Additional FZF options (non-color) - ensure proper spacing
+    export FZF_DEFAULT_OPTS="${FZF_DEFAULT_OPTS} \
+--highlight-line \
+--info=inline-right \
+--ansi \
+--layout=reverse \
+--border=rounded"
 
     # Preview settings
     show_file_or_dir_preview="if [ -d {} ]; then eza --tree --icons=always --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
@@ -349,12 +342,22 @@ setopt AUTO_MENU        # Show completion menu on tab
 setopt AUTO_LIST        # List choices on ambiguous completion
 setopt COMPLETE_IN_WORD # Complete from cursor position
 
+# Exclude patterns for recursive glob - affects cd **<Tab>
+# This prevents slow cache directories from appearing in completion
+zstyle ':completion:*:cd:*' ignored-patterns '(*/.git|*/.npm|*/node_modules|*/.cache|*/__pycache__|*/.hawtjni|*/Library/Caches|*/.gradle)'
+
 # ============================================================================
 # Environment Specific Settings
 # ============================================================================
 
 # Bat theme
-export BAT_THEME=tokyonight_night
+export BAT_THEME="Catppuccin Mocha"
+
+# ============================================================================
+# Prompt (Starship) - Load AFTER all shell integrations to avoid conflicts
+# ============================================================================
+
+eval "$(starship init zsh)"
 
 # ============================================================================
 # Local/Private Configuration

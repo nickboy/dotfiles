@@ -1,4 +1,3 @@
-tap "homebrew/bundle"
 tap "jstkdng/programs"
 # Code searching, linting, rewriting
 brew "ast-grep"

@@ -1,0 +1,29 @@
+# Yadm ignore file - files/directories not to track
+
+# Downloaded theme files (fetched by bootstrap)
+.config/fzf/catppuccin-mocha.sh
+.config/bat/themes/*.tmTheme
+.config/delta/catppuccin.gitconfig
+Library/Application Support/eza/theme.yml
+
+# Generated plist (created from template)
+Library/LaunchAgents/com.daily-maintenance.plist
+
+# Cache and temporary files
+.cache/
+*.log
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Private/sensitive files
+.ssh/
+.gnupg/
+.env
+.secrets
+
+# Build artifacts
+*.pyc
+__pycache__/
+node_modules/

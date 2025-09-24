@@ -264,32 +264,54 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 2. Install plugins: Press `Ctrl-a + I` (capital I)
 3. Plugins will be installed automatically
 
+### Configuration Features
+
+- **Window/Pane Numbering**: Starts at 1 instead of 0 for easier keyboard access
+- **Mouse Support**: Enabled for pane selection and scrolling
+- **Vi Mode**: Vi-style key bindings for copy mode
+- **Auto-renumber**: Windows automatically renumber when one is closed
+- **Theme**: Catppuccin Mocha theme with custom status bar
+- **Session Persistence**: Auto-saves and restores sessions via tmux-resurrect/continuum
+
 ### Key Bindings
 
 #### Prefix Key
 
 - **Prefix**: `Ctrl-a` (remapped from default `Ctrl-b`)
 
-#### Window & Pane Management
+#### Window Management
+
+| Keybinding | Action |
+|------------|--------|
+| `Ctrl-a + 1-9` | Switch to window by number (1-indexed) |
+| `Ctrl-a + n` | Next window |
+| `Ctrl-a + p` | Previous window |
+| `Ctrl-a + l` | Last active window |
+| `Ctrl-a + w` | Choose window from list |
+| `Ctrl-a + c` | Create new window |
+| `Ctrl-a + ,` | Rename current window |
+| `Ctrl-a + &` | Kill current window |
+| `Ctrl-a + T` | Open sesh session switcher (custom) |
+
+#### Pane Management
 
 | Keybinding | Action |
 |------------|--------|
 | `Ctrl-a + \\` | Split window horizontally |
 | `Ctrl-a + -` | Split window vertically |
-| `Ctrl-a + h/j/k/l` | Resize panes (left/down/up/right) |
-| `Ctrl-a + m` | Toggle pane zoom (maximize/restore) |
+| `Ctrl-a + h/j/k/l` | Navigate between panes (vim-style) |
+| `Ctrl-a + x` | Kill current pane |
+| `Ctrl-a + z` | Toggle pane zoom (maximize/restore) |
+| `Ctrl-a + Space` | Toggle between pane layouts |
+| `Ctrl-a + {` | Move pane left |
+| `Ctrl-a + }` | Move pane right |
 | `Ctrl-a + r` | Reload tmux configuration |
 
-#### Navigation
+#### Seamless Navigation
 
 | Keybinding | Action |
 |------------|--------|
-| `Ctrl-h/j/k/l` | Navigate between panes (vim-tmux-navigator) |
-| `Ctrl-a + Ctrl-h` | Previous window |
-| `Ctrl-a + Ctrl-l` | Next window |
-| `Ctrl-a + <` | Swap window with previous |
-| `Ctrl-a + >` | Swap window with next |
-| `Ctrl-a + [number]` | Jump to window by number |
+| `Ctrl-h/j/k/l` | Navigate between tmux panes and vim splits seamlessly |
 
 #### Session Management (sesh)
 

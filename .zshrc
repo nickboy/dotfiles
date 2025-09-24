@@ -12,13 +12,12 @@ export LANG=en_US.UTF-8
 # PATH Configuration (Consolidated and deduplicated)
 # ============================================================================
 
-# Homebrew (Apple Silicon) - Set first for priority
+# Homebrew (Apple Silicon)
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
 # User binaries
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
 # System paths
 export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
@@ -29,6 +28,9 @@ export PATH="/Library/TeX/texbin:$PATH"
 
 # Initialize Homebrew environment (this also sets PATH, MANPATH, INFOPATH)
 eval "$(/opt/homebrew/bin/brew shellenv)"
+
+# Bob Neovim (MUST be absolutely last after brew shellenv to have highest priority)
+export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
 # Compilation flags for macOS
 export LDFLAGS="-L/opt/homebrew/lib"

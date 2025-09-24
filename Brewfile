@@ -70,8 +70,6 @@ brew "thefuck"
 brew "tlrc"
 # Terminal multiplexer
 brew "tmux"
-# Plugin manager for tmux
-brew "tpm"
 # Smart session manager for tmux
 brew "sesh"
 # Universal command argument completion

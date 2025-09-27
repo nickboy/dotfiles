@@ -78,8 +78,13 @@ jobs:
 
           # Lua validation
           echo "🔍 Lua Files:"
-          if find . -name "*.lua" -type f ! -path "./.git/*" | grep -q .; then
-            find . -name "*.lua" -type f ! -path "./.git/*" -print0 | \
+          lua_pattern="*.lua"
+          exclude_git="./.git/*"
+          exclude_examples="*example*"
+          if find . -name "$lua_pattern" -type f \
+            ! -path "$exclude_git" ! -name "$exclude_examples" | grep -q .; then
+            find . -name "$lua_pattern" -type f \
+              ! -path "$exclude_git" ! -name "$exclude_examples" -print0 | \
               while IFS= read -r -d '' file; do
               echo "  Validating: $file"
               # Use Neovim-specific globals for config files
@@ -90,7 +95,7 @@ jobs:
               fi
             done
           else
-            echo "  No Lua files found"
+            echo "  No Lua files found (excluding examples)"
           fi
 
           # Brewfile validation

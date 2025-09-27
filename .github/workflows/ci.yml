@@ -62,21 +62,24 @@ jobs:
 
           # JSON validation
           echo "🔍 JSON Files:"
-          find . -name "*.json" -type f ! -path "./.git/*" | while read -r file; do
+          find . -name "*.json" -type f ! -path "./.git/*" | \
+            while read -r file; do
             echo "  Validating: $file"
             python -m json.tool "$file" >/dev/null
           done
 
           # TOML validation
           echo "🔍 TOML Files:"
-          find . -name "*.toml" -type f ! -path "./.git/*" | while read -r file; do
+          find . -name "*.toml" -type f ! -path "./.git/*" | \
+            while read -r file; do
             echo "  Validating: $file"
             python -c "import tomli; tomli.load(open('$file', 'rb'))"
           done
 
           # Lua validation
           echo "🔍 Lua Files:"
-          find . -name "*.lua" -type f ! -path "./.git/*" | while read -r file; do
+          find . -name "*.lua" -type f ! -path "./.git/*" | \
+            while read -r file; do
             echo "  Validating: $file"
             luacheck --globals vim "$file"
           done
@@ -85,7 +88,9 @@ jobs:
           if [ -f "Brewfile" ]; then
             echo "🔍 Brewfile:"
             grep -E '^(tap|brew|cask)\s+' Brewfile >/dev/null
-            [ $(grep -E '^(brew|cask)\s+' Brewfile | sort | uniq -d | wc -l) -eq 0 ]
+            duplicates=$(grep -E '^(brew|cask)\s+' Brewfile | \
+              sort | uniq -d | wc -l)
+            [ "$duplicates" -eq 0 ]
           fi
 
       - name: Check file permissions
@@ -199,7 +204,8 @@ jobs:
             else
               echo "  ⚠ Format issues detected"
               # Show the diff for debugging
-              PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>&1 | grep -A5 -B5 "@@" || true
+              PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>&1 | \
+                grep -A5 -B5 "@@" || true
               exit_code=1
             fi
 
@@ -208,7 +214,9 @@ jobs:
             issues_found=0
 
             # Check for undefined variables
-            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | grep -v '\${' | grep -v '\$(' | grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
+            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | \
+               grep -v '\${' | grep -v '\$(' | \
+               grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
               echo "  ⚠ Potential undefined variables found"
             fi
 
@@ -229,7 +237,8 @@ jobs:
 
             # 5. Validate using zsh's built-in warn options
             echo "→ Running with warning flags..."
-            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR -c "source .zshrc" 2>&1 | grep -q "warning"; then
+            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR \
+                -c "source .zshrc" 2>&1 | grep -q "warning"; then
               echo "  ⚠ Warnings detected (review recommended)"
             else
               echo "  ✓ No warnings with strict flags"
@@ -260,14 +269,18 @@ jobs:
             echo "🔍 Running Go validation suite..."
 
             # Install tools
-            go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-            go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+            go install \
+              github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+            go install \
+              github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 
             # Validate
-            gofmt -l . | grep -q . && { echo "❌ Unformatted files"; exit 1; } || echo "✅ Format check"
+            gofmt -l . | grep -q . && \
+              { echo "❌ Unformatted files"; exit 1; } || echo "✅ Format check"
             go vet ./... && echo "✅ Go vet passed"
             golangci-lint run --timeout=5m && echo "✅ Linting passed"
-            gosec ./... >/dev/null 2>&1 && echo "✅ Security scan passed" || echo "⚠️  Security issues found"
+            gosec ./... >/dev/null 2>&1 && \
+              echo "✅ Security scan passed" || echo "⚠️  Security issues found"
           else
             echo "⏭️  No Go files found"
           fi
@@ -285,11 +298,12 @@ jobs:
           pip install yamllint
 
           # Check if there are any YAML files to validate
-          yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*")
+          yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            ! -path "./.git/*")
           if [ -n "$yaml_files" ]; then
             echo "Validating YAML files:"
             echo "$yaml_files"
-            yamllint -d relaxed $yaml_files || true  # Don't fail on style issues
+            yamllint -d relaxed $yaml_files || true  # Don't fail
           else
             echo "No YAML files found to validate"
           fi
@@ -336,7 +350,9 @@ jobs:
           fi
 
           # Copy other required files for bootstrap testing
-          for file in Brewfile .tmux.conf daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh; do
+          for file in Brewfile .tmux.conf daily-maintenance.sh \
+                      daily-maintenance-control.sh \
+                      install-daily-maintenance.sh; do
             if [ -f "$file" ]; then
               cp "$file" "$TEST_HOME/"
             fi
@@ -386,7 +402,9 @@ jobs:
           ls -la *.sh 2>/dev/null || echo "No .sh files found"
 
           # Copy files to test location if they exist
-          for file in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh test-dotfiles.sh; do
+          for file in daily-maintenance.sh daily-maintenance-control.sh \
+                      install-daily-maintenance.sh \
+                      uninstall-daily-maintenance.sh test-dotfiles.sh; do
             if [ -f "$file" ]; then
               echo "Copying $file to $TEST_HOME/"
               cp "$file" "$TEST_HOME/"
@@ -397,14 +415,18 @@ jobs:
           done
 
           # Copy plist template if it exists
-          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
-            cp Library/LaunchAgents/*.plist.template $TEST_HOME/Library/LaunchAgents/
+          template_file="Library/LaunchAgents/com.daily-maintenance.plist.template"
+          if [ -f "$template_file" ]; then
+            cp Library/LaunchAgents/*.plist.template \
+              $TEST_HOME/Library/LaunchAgents/
           else
             echo "Warning: plist template file not found"
           fi
 
           # Test syntax for files that exist
-          for script in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh; do
+          for script in daily-maintenance.sh daily-maintenance-control.sh \
+                        install-daily-maintenance.sh \
+                        uninstall-daily-maintenance.sh; do
             if [ -f "$TEST_HOME/$script" ]; then
               echo "Testing syntax: $script"
               bash -n "$TEST_HOME/$script"
@@ -415,9 +437,12 @@ jobs:
 
       - name: Validate LaunchAgent plist template
         run: |
-          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
+          template_file="Library/LaunchAgents/com.daily-maintenance.plist.template"
+          if [ -f "$template_file" ]; then
             # Create temp file with substituted values for validation
-            sed "s|{{HOME}}|$HOME|g" Library/LaunchAgents/com.daily-maintenance.plist.template > /tmp/test.plist
+            sed "s|{{HOME}}|$HOME|g" \
+              Library/LaunchAgents/com.daily-maintenance.plist.template \
+              > /tmp/test.plist
             plutil -lint /tmp/test.plist
             rm /tmp/test.plist
           else
@@ -540,7 +565,9 @@ jobs:
 
   summary:
     name: CI Summary
-    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, go-validation, yaml-validation, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
+    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, go-validation,
+            yaml-validation, bootstrap-test, macos-integration, documentation,
+            security-scan, compatibility-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:

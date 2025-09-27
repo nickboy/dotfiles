@@ -15,6 +15,7 @@ configurations for macOS development environment.
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
 - **Tools**: ripgrep, bat configurations, Carapace (universal command completions)
+- **Claude Code**: Integrated statusline with ccusage for cost tracking
 
 ### 🤖 Automation Scripts
 

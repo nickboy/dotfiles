@@ -9,6 +9,8 @@ brew "python@3.13"
 brew "chafa"
 # Cross-platform make
 brew "cmake"
+# Claude Code usage and cost tracker
+brew "ccusage"
 # Dependency Manager for PHP
 brew "composer"
 # Modern, maintained replacement for ls

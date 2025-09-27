@@ -78,12 +78,17 @@ jobs:
 
           # Lua validation
           echo "🔍 Lua Files:"
-          lua_files=$(find . -name "*.lua" -type f ! -path "./.git/*")
-          if [ -n "$lua_files" ]; then
-            while IFS= read -r file; do
+          if find . -name "*.lua" -type f ! -path "./.git/*" | grep -q .; then
+            find . -name "*.lua" -type f ! -path "./.git/*" -print0 | \
+              while IFS= read -r -d '' file; do
               echo "  Validating: $file"
-              luacheck --globals vim "$file"
-            done <<< "$lua_files"
+              # Use Neovim-specific globals for config files
+              if [[ "$file" == *"nvim"* ]]; then
+                luacheck --globals vim require --std luajit "$file"
+              else
+                luacheck "$file"
+              fi
+            done
           else
             echo "  No Lua files found"
           fi

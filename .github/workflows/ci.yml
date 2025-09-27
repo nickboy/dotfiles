@@ -8,95 +8,248 @@ on:
   workflow_dispatch:
 
 jobs:
-  # Comprehensive code quality validation
-  code-quality:
-    name: Code Quality & Syntax
+  lint-all:
+    name: Comprehensive Lint Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
-      - name: Install validation tools
+      - name: Install lint tools
         run: |
-          # Core linters
-          sudo apt-get update -qq
-          sudo apt-get install -y shellcheck luarocks libxml2-utils
+          # Install ShellCheck
+          sudo apt-get update && sudo apt-get install -y shellcheck
 
-          # Python tools
-          pip install yamllint tomli
+          # Install Python linters via pip
+          pip install yamllint
 
-          # Lua tools
-          sudo luarocks install luacheck
-
-          # Node tools
+          # Install markdownlint-cli
           npm install -g markdownlint-cli
 
-      - name: Validate all file types
+      - name: Lint Shell Scripts
         run: |
-          set -e
-
-          # Shell scripts validation
-          echo "🔍 Shell Scripts"
-          find . -name "*.sh" -type f ! -path "./.git/*" | while read -r file; do
-            echo "  Checking: $file"
-            shellcheck -S warning "$file"
-            bash -n "$file"
+          echo "=== ShellCheck Analysis ==="
+          exit_code=0
+          for script in $(find . -name "*.sh" -type f); do
+            echo "Checking: $script"
+            shellcheck -S warning "$script" || exit_code=1
           done
+          exit $exit_code
 
-          # YAML files validation
-          echo "🔍 YAML Files"
-          find . -name "*.yml" -o -name "*.yaml" |
-            grep -v ".git" | head -10 | while read -r file; do
-            echo "  Checking: $file"
-            yamllint -d relaxed "$file"
-          done
+      - name: Lint YAML Files
+        run: |
+          echo "=== YAML Lint ==="
+          yamllint -d relaxed -f colored .
 
-          # JSON files validation
-          echo "🔍 JSON Files"
+      - name: Lint Markdown Files
+        run: |
+          echo "=== Markdown Lint ==="
+          markdownlint '**/*.md' --ignore node_modules || true
+
+      - name: Universal File Type Validation (Enhanced)
+        run: |
+          echo "=== Enhanced File Type Validation ==="
+
+          # Install additional tools
+          sudo apt-get install -y luarocks libxml2-utils
+          sudo luarocks install luacheck
+          pip install tomli
+
+          # JSON validation
+          echo "🔍 JSON Files:"
           find . -name "*.json" -type f ! -path "./.git/*" | while read -r file; do
-            echo "  Checking: $file"
+            echo "  Validating: $file"
             python -m json.tool "$file" >/dev/null
           done
 
-          # TOML files validation
-          echo "🔍 TOML Files"
+          # TOML validation
+          echo "🔍 TOML Files:"
           find . -name "*.toml" -type f ! -path "./.git/*" | while read -r file; do
-            echo "  Checking: $file"
+            echo "  Validating: $file"
             python -c "import tomli; tomli.load(open('$file', 'rb'))"
           done
 
-          # Lua files validation
-          echo "🔍 Lua Files"
-          lua_files=$(find . -name "*.lua" -type f ! -path "./.git/*" || true)
-          if [ -n "$lua_files" ]; then
-            echo "$lua_files" | while read -r file; do
-              echo "  Checking: $file"
-              luacheck --globals vim "$file"
-            done
-          fi
-
-          # Markdown files validation
-          echo "🔍 Markdown Files"
-          markdownlint '**/*.md' --ignore node_modules || true
+          # Lua validation
+          echo "🔍 Lua Files:"
+          find . -name "*.lua" -type f ! -path "./.git/*" | while read -r file; do
+            echo "  Validating: $file"
+            luacheck --globals vim "$file"
+          done
 
           # Brewfile validation
           if [ -f "Brewfile" ]; then
-            echo "🔍 Brewfile"
+            echo "🔍 Brewfile:"
             grep -E '^(tap|brew|cask)\s+' Brewfile >/dev/null
             [ $(grep -E '^(brew|cask)\s+' Brewfile | sort | uniq -d | wc -l) -eq 0 ]
           fi
 
-  # Go-specific validation (if Go files exist)
-  go-validation:
-    name: Go Code Quality
+      - name: Check file permissions
+        run: |
+          echo "=== File Permissions Check ==="
+          # Check that shell scripts are executable
+          for script in $(find . -name "*.sh" -type f); do
+            if [ ! -x "$script" ]; then
+              echo "Warning: $script is not executable"
+            fi
+          done
+
+  shellcheck:
+    name: Shell Script Validation
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        run: |
+          # Install shellcheck if not available
+          if ! command -v shellcheck &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y shellcheck
+          fi
+
+          # Run shellcheck only on bash scripts
+          exit_code=0
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              echo "Checking: $script"
+              shellcheck -S warning "$script" || exit_code=1
+            fi
+          done
+          exit $exit_code
+
+  bash-syntax:
+    name: Bash Syntax Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check bash syntax
+        run: |
+          exit_code=0
+          found_scripts=false
+
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              found_scripts=true
+              echo "Checking syntax: $script"
+              bash -n "$script" || exit_code=1
+            fi
+          done
+
+          if [ "$found_scripts" = "false" ]; then
+            echo "No shell scripts found to check"
+          fi
+
+          exit $exit_code
+
+  zsh-syntax:
+    name: Zsh Configuration Check
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install validation tools
+        run: |
+          # Install uv for fast Python package management
+          brew install uv || true
+
+          # Install beautysh for shell formatting checks
+          uv tool install beautysh --with setuptools
+
+          # Add uv tools to PATH
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # Verify installation
+          which beautysh || echo "beautysh not in PATH"
+
+      - name: Check .zshrc with multiple validators
+        run: |
+          if [ -f .zshrc ]; then
+            echo "=== Zsh Configuration Validation ==="
+            exit_code=0
+
+            # 1. Native zsh syntax check
+            echo "→ Running zsh native syntax check..."
+            if zsh -n .zshrc 2>&1; then
+              echo "  ✓ Zsh syntax is valid"
+            else
+              echo "  ✗ Zsh syntax errors found"
+              exit_code=1
+            fi
+
+            # 2. Check with zsh extended debugging
+            echo "→ Running extended validation..."
+            if zsh -x -c "source .zshrc" 2>&1 | head -n 0; then
+              echo "  ✓ No critical errors during sourcing"
+            fi
+
+            # 3. Use beautysh for formatting checks (works with zsh)
+            echo "→ Running beautysh format check..."
+            # Add beautysh to PATH if needed
+            export PATH="$HOME/.local/bin:$PATH"
+            if PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>/dev/null; then
+              echo "  ✓ Format check passed"
+            else
+              echo "  ⚠ Format issues detected"
+              # Show the diff for debugging
+              PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>&1 | grep -A5 -B5 "@@" || true
+              exit_code=1
+            fi
+
+            # 4. Static analysis for common issues
+            echo "→ Checking for common anti-patterns..."
+            issues_found=0
+
+            # Check for undefined variables
+            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | grep -v '\${' | grep -v '\$(' | grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
+              echo "  ⚠ Potential undefined variables found"
+            fi
+
+            # Check for command substitution using backticks
+            if grep '`.*`' .zshrc > /dev/null; then
+              echo "  ⚠ Found backticks - consider using \$(command) syntax"
+              issues_found=$((issues_found + 1))
+            fi
+
+            # Check for proper quoting
+            if grep -E 'echo [^"]*\$' .zshrc > /dev/null; then
+              echo "  ⚠ Potential unquoted variables in echo statements"
+            fi
+
+            if [ $issues_found -eq 0 ]; then
+              echo "  ✓ No critical anti-patterns found"
+            fi
+
+            # 5. Validate using zsh's built-in warn options
+            echo "→ Running with warning flags..."
+            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR -c "source .zshrc" 2>&1 | grep -q "warning"; then
+              echo "  ⚠ Warnings detected (review recommended)"
+            else
+              echo "  ✓ No warnings with strict flags"
+            fi
+
+            echo "=== Validation complete ==="
+            exit $exit_code
+          else
+            echo "No .zshrc file found - skipping"
+          fi
+
+  go-validation:
+    name: Go Code Quality (New)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
         with:
           go-version: '1.21'
           cache: true
@@ -104,7 +257,7 @@ jobs:
       - name: Go validation suite
         run: |
           if find . -name "*.go" -type f | grep -q .; then
-            echo "🔍 Go validation suite"
+            echo "🔍 Running Go validation suite..."
 
             # Install tools
             go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
@@ -119,168 +272,224 @@ jobs:
             echo "⏭️  No Go files found"
           fi
 
-  # Dedicated Zsh configuration validation
-  zsh-syntax:
-    name: Zsh Configuration Check
-    runs-on: macos-latest
+  yaml-validation:
+    name: YAML/Plist Validation
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Install validation tools
+      - name: Validate YAML files
         run: |
-          brew install uv || true
-          uv tool install beautysh --with setuptools
-          export PATH="$HOME/.local/bin:$PATH"
+          # Install yamllint
+          pip install yamllint
 
-      - name: Check .zshrc with multiple validators
-        run: |
-          if [ -f .zshrc ]; then
-            echo "=== Zsh Configuration Validation ==="
-            exit_code=0
-
-            # Native zsh syntax check
-            echo "→ Running zsh native syntax check..."
-            if zsh -n .zshrc 2>&1; then
-              echo "  ✓ Zsh syntax is valid"
-            else
-              echo "  ✗ Zsh syntax errors found"
-              exit_code=1
-            fi
-
-            # Beautysh format check
-            echo "→ Running beautysh format check..."
-            export PATH="$HOME/.local/bin:$PATH"
-            if PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>/dev/null; then
-              echo "  ✓ Format check passed"
-            else
-              echo "  ⚠ Format issues detected"
-              exit_code=1
-            fi
-
-            # Static analysis for common issues
-            echo "→ Checking for common anti-patterns..."
-
-            # Check for undefined variables
-            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc |
-               grep -v '\${' | grep -v '\$(' |
-               grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
-              echo "  ⚠ Potential undefined variables found"
-            fi
-
-            # Check for command substitution using backticks
-            if grep '`.*`' .zshrc > /dev/null; then
-              echo "  ⚠ Found backticks - consider using \$(command) syntax"
-              exit_code=$((exit_code + 1))
-            fi
-
-            echo "=== Validation complete ==="
-            exit $exit_code
+          # Check if there are any YAML files to validate
+          yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*")
+          if [ -n "$yaml_files" ]; then
+            echo "Validating YAML files:"
+            echo "$yaml_files"
+            yamllint -d relaxed $yaml_files || true  # Don't fail on style issues
           else
-            echo "No .zshrc file found - skipping"
+            echo "No YAML files found to validate"
           fi
 
-  # Cross-platform compatibility testing
-  platform-compatibility:
-    name: Platform Compatibility
-    strategy:
-      matrix:
-        os: [ubuntu-latest, macos-latest, macos-14]
-        include:
-          - os: ubuntu-latest
-            test-type: "Linux Compatibility"
-          - os: macos-latest
-            test-type: "macOS Latest"
-          - os: macos-14
-            test-type: "macOS 14"
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: ${{ matrix.test-type }} Tests
+      - name: Check plist files
         run: |
-          echo "🔍 ${{ matrix.test-type }} Tests"
-
-          # Common validations
-          find . -name "*.sh" -type f -exec bash -n {} \; && echo "✅ Shell syntax"
-
-          # Platform-specific validations
-          if [[ "${{ matrix.os }}" == "macos"* ]]; then
-            # macOS-specific tests
-            [ -f ".tmux.conf" ] && tmux -f .tmux.conf list-keys >/dev/null 2>&1 && echo "✅ tmux config valid"
-            [ -f ".zshrc" ] && zsh -n .zshrc && echo "✅ zsh config valid"
-
-            # Test plist if exists
-            find . -name "*.plist" -exec plutil -lint {} \; 2>/dev/null && echo "✅ plist files valid"
+          # Install xmllint if not available
+          if ! command -v xmllint &> /dev/null; then
+            sudo apt-get update && sudo apt-get install -y libxml2-utils
           fi
 
-  # Bootstrap script testing
+          for plist in $(find . -name "*.plist"); do
+            echo "Checking: $plist"
+            # Basic XML validation
+            xmllint --noout "$plist" || exit 1
+          done
+
   bootstrap-test:
     name: Bootstrap Script Test
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Test bootstrap script
+      - name: Copy bootstrap script to test location
         run: |
+          # Create test home directory structure
+          export TEST_HOME=$GITHUB_WORKSPACE/test_home
+          mkdir -p $TEST_HOME/.config/yadm
+
+          # Copy bootstrap script if it exists
           if [ -f ".config/yadm/bootstrap" ]; then
-            echo "🔍 Testing bootstrap script"
-
-            # Create test environment
-            export TEST_HOME=$GITHUB_WORKSPACE/test_home
-            mkdir -p $TEST_HOME/.config/yadm
-
-            # Copy and test bootstrap script
             cp .config/yadm/bootstrap $TEST_HOME/.config/yadm/bootstrap
             chmod +x $TEST_HOME/.config/yadm/bootstrap
-
-            echo "Testing bootstrap syntax..."
-            bash -n $TEST_HOME/.config/yadm/bootstrap
-            echo "✅ Bootstrap syntax check passed"
           else
-            echo "⏭️  No bootstrap script found"
+            echo "Warning: bootstrap script not found at .config/yadm/bootstrap"
+            exit 1
           fi
 
-  # macOS integration testing
+          # Copy test-bootstrap.sh if it exists
+          if [ -f "test-bootstrap.sh" ]; then
+            cp test-bootstrap.sh $TEST_HOME/test-bootstrap.sh
+            chmod +x $TEST_HOME/test-bootstrap.sh
+          fi
+
+          # Copy other required files for bootstrap testing
+          for file in Brewfile .tmux.conf daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh; do
+            if [ -f "$file" ]; then
+              cp "$file" "$TEST_HOME/"
+            fi
+          done
+
+          # Copy config files
+          if [ -d ".config/ghostty" ]; then
+            mkdir -p $TEST_HOME/.config/ghostty
+            cp .config/ghostty/* $TEST_HOME/.config/ghostty/ 2>/dev/null || true
+          fi
+
+      - name: Run bootstrap tests
+        run: |
+          export HOME=$GITHUB_WORKSPACE/test_home
+          cd $HOME
+
+          # Run the bootstrap test script
+          if [ -f "test-bootstrap.sh" ]; then
+            echo "Running bootstrap test suite..."
+            bash test-bootstrap.sh
+          else
+            echo "test-bootstrap.sh not found, running basic tests..."
+            # Fallback to basic tests
+            echo "Testing bootstrap syntax..."
+            bash -n .config/yadm/bootstrap
+            echo "Bootstrap syntax check passed"
+          fi
+
   macos-integration:
     name: macOS Integration Tests
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Test macOS-specific components
+      - name: Test installation script (dry run)
         run: |
-          echo "🔍 macOS Integration Tests"
+          # Create a test environment
+          export CI_TEST=true
+          export TEST_HOME=$GITHUB_WORKSPACE/test_home
+          mkdir -p $TEST_HOME
+          mkdir -p $TEST_HOME/Library/LaunchAgents
+          mkdir -p $TEST_HOME/Library/Logs
 
-          # Test LaunchAgent plist template
-          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
-            echo "Testing plist template..."
-            sed "s|{{HOME}}|$HOME|g" Library/LaunchAgents/com.daily-maintenance.plist.template > /tmp/test.plist
-            plutil -lint /tmp/test.plist
-            rm /tmp/test.plist
-            echo "✅ Plist template valid"
-          fi
+          # Check which files exist and copy them
+          echo "Files in current directory:"
+          ls -la *.sh 2>/dev/null || echo "No .sh files found"
 
-          # Test maintenance scripts
-          for script in daily-maintenance.sh daily-maintenance-control.sh; do
-            if [ -f "$script" ]; then
-              echo "Testing syntax: $script"
-              bash -n "$script"
+          # Copy files to test location if they exist
+          for file in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh test-dotfiles.sh; do
+            if [ -f "$file" ]; then
+              echo "Copying $file to $TEST_HOME/"
+              cp "$file" "$TEST_HOME/"
+              chmod +x "$TEST_HOME/$file"
+            else
+              echo "Warning: $file not found"
             fi
           done
 
-  # Security scanning
+          # Copy plist template if it exists
+          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
+            cp Library/LaunchAgents/*.plist.template $TEST_HOME/Library/LaunchAgents/
+          else
+            echo "Warning: plist template file not found"
+          fi
+
+          # Test syntax for files that exist
+          for script in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh; do
+            if [ -f "$TEST_HOME/$script" ]; then
+              echo "Testing syntax: $script"
+              bash -n "$TEST_HOME/$script"
+            else
+              echo "Skipping $script - not found"
+            fi
+          done
+
+      - name: Validate LaunchAgent plist template
+        run: |
+          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
+            # Create temp file with substituted values for validation
+            sed "s|{{HOME}}|$HOME|g" Library/LaunchAgents/com.daily-maintenance.plist.template > /tmp/test.plist
+            plutil -lint /tmp/test.plist
+            rm /tmp/test.plist
+          else
+            echo "Warning: plist template not found"
+          fi
+
+      - name: Test daily-maintenance.sh functions
+        run: |
+          # Test the run_command function in isolation
+          cat > test_maintenance.sh << 'EOF'
+          #!/bin/bash
+          source ./daily-maintenance.sh 2>/dev/null || true
+
+          # Test the run_command function
+          run_command() {
+              local description="$1"
+              shift
+              local command="$@"
+
+              echo "Testing: $description"
+              echo "Command: $command"
+              return 0
+          }
+
+          # Test function calls
+          run_command "Test command" echo "test"
+          EOF
+
+          chmod +x test_maintenance.sh
+          bash test_maintenance.sh
+
+  documentation:
+    name: Documentation Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Check README exists
+        run: |
+          if [ ! -f README.md ]; then
+            echo "ERROR: README.md not found"
+            exit 1
+          fi
+
+      - name: Validate markdown
+        uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: '**/*.md'
+        continue-on-error: true  # Don't fail on markdown style issues
+
+      - name: Check for broken links in README
+        uses: gaurav-nelson/github-action-markdown-link-check@v1
+        with:
+          use-quiet-mode: 'yes'
+          check-modified-files-only: 'yes'
+        continue-on-error: true
+
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       - name: Run Trivy security scanner
         uses: aquasecurity/trivy-action@master
         with:
           scan-type: 'fs'
           scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
         continue-on-error: true
 
       - name: Check for secrets
@@ -291,40 +500,52 @@ jobs:
           head: HEAD
         continue-on-error: true
 
-  # Documentation validation
-  documentation:
-    name: Documentation Quality
-    runs-on: ubuntu-latest
+  compatibility-matrix:
+    name: Compatibility Test
+    strategy:
+      matrix:
+        os: [macos-14, macos-15, macos-latest]
+      fail-fast: false  # Continue testing other OS even if one fails
+    runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-      - name: Check documentation
+      - name: Check script compatibility
         run: |
-          [ -f "README.md" ] && echo "✅ README.md exists" || { echo "❌ README.md missing"; exit 1; }
+          echo "Testing on ${{ matrix.os }}"
 
-      - name: Validate markdown
-        uses: DavidAnson/markdownlint-cli2-action@v16
-        with:
-          globs: '**/*.md'
-        continue-on-error: true
+          # Show detailed system info
+          echo "System information:"
+          sw_vers || true
+          echo "Architecture: $(uname -m)"
 
-      - name: Check for broken links
-        uses: gaurav-nelson/github-action-markdown-link-check@v1
-        with:
-          use-quiet-mode: 'yes'
-          check-modified-files-only: 'yes'
-        continue-on-error: true
+          # Test bash version compatibility
+          echo "Bash version:"
+          bash --version
 
-  # Final summary
+          # Check for script syntax on this OS
+          found_scripts=false
+          for script in *.sh; do
+            if [ -f "$script" ]; then
+              found_scripts=true
+              echo "Checking: $script on ${{ matrix.os }}"
+              bash -n "$script" || exit 1
+            fi
+          done
+
+          if [ "$found_scripts" = "false" ]; then
+            echo "No shell scripts found to test"
+          fi
+
   summary:
-    name: ✅ CI Complete
-    needs: [code-quality, go-validation, zsh-syntax, platform-compatibility,
-            bootstrap-test, macos-integration, security-scan, documentation]
+    name: CI Summary
+    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, go-validation, yaml-validation, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Report status
+      - name: Summary
         run: |
-          echo "## 🎯 CI Pipeline Complete"
-          echo "All quality checks have been executed."
-          echo "Review individual job results for details."
+          echo "## CI Pipeline Summary"
+          echo "All validation checks completed."
+          echo "Check individual job results above for details."

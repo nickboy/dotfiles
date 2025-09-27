@@ -74,6 +74,19 @@ jobs:
             fi
           }
 
+          # Special function for Lua files (luacheck needs different syntax)
+          check_lua_files() {
+            local files=$(find . -name "*.lua" -type f 2>/dev/null | grep -v -E '\.(git|node_modules)/' || true)
+            if [ -n "$files" ]; then
+              echo "Found Lua files:"
+              echo "$files" | sed 's/^/  - /'
+              echo "Running luacheck on all Lua files..."
+              echo "$files" | xargs luacheck --globals vim || return 1
+            else
+              echo "No Lua files found - skipping"
+            fi
+          }
+
           # Install validation tools
           echo "Installing validation tools..."
           sudo apt-get update -qq
@@ -84,17 +97,27 @@ jobs:
           # Validate different file types
           exit_code=0
 
-          # Lua files (Neovim configs)
+          # Lua files (Neovim configs) - use special function
           echo -e "\n🔍 Lua Files:"
-          check_files "*.lua" "Lua" "luacheck --globals vim" || exit_code=1
+          check_lua_files || exit_code=1
 
           # JSON files
           echo -e "\n🔍 JSON Files:"
-          check_files "*.json" "JSON" "python -m json.tool > /dev/null" || exit_code=1
+          check_files "*.json" "JSON" "python -m json.tool" || exit_code=1
 
-          # TOML files
+          # TOML files (special handling needed)
           echo -e "\n🔍 TOML Files:"
-          check_files "*.toml" "TOML" "python -c \"import tomli; tomli.load(open('\$1', 'rb'))\"" || exit_code=1
+          toml_files=$(find . -name "*.toml" -type f 2>/dev/null | grep -v -E '\.(git|node_modules)/' || true)
+          if [ -n "$toml_files" ]; then
+            echo "Found TOML files:"
+            echo "$toml_files" | sed 's/^/  - /'
+            echo "$toml_files" | while IFS= read -r file; do
+              echo "Validating: $file"
+              python -c "import tomli; tomli.load(open('$file', 'rb'))" || exit_code=1
+            done
+          else
+            echo "No TOML files found - skipping"
+          fi
 
           # Special files validation
           echo -e "\n🔍 Special Configuration Files:"

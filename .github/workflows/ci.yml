@@ -78,11 +78,15 @@ jobs:
 
           # Lua validation
           echo "🔍 Lua Files:"
-          find . -name "*.lua" -type f ! -path "./.git/*" | \
-            while read -r file; do
-            echo "  Validating: $file"
-            luacheck --globals vim "$file"
-          done
+          lua_files=$(find . -name "*.lua" -type f ! -path "./.git/*")
+          if [ -n "$lua_files" ]; then
+            while IFS= read -r file; do
+              echo "  Validating: $file"
+              luacheck --globals vim "$file"
+            done <<< "$lua_files"
+          else
+            echo "  No Lua files found"
+          fi
 
           # Brewfile validation
           if [ -f "Brewfile" ]; then

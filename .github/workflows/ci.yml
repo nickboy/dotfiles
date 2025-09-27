@@ -51,6 +51,169 @@ jobs:
           echo "=== Markdown Lint ==="
           markdownlint '**/*.md' --ignore node_modules || true
 
+      - name: Universal File Type Validation
+        run: |
+          echo "=== Universal File Type Validation ==="
+
+          # Function to safely check files
+          check_files() {
+            local pattern="$1"
+            local description="$2"
+            local validator="$3"
+
+            local files=$(find . -name "$pattern" -type f 2>/dev/null | grep -v -E '\.(git|node_modules)/' || true)
+            if [ -n "$files" ]; then
+              echo "Found $description files:"
+              echo "$files" | sed 's/^/  - /'
+              echo "$files" | while IFS= read -r file; do
+                echo "Validating: $file"
+                eval "$validator \"$file\"" || return 1
+              done
+            else
+              echo "No $description files found - skipping"
+            fi
+          }
+
+          # Install validation tools
+          echo "Installing validation tools..."
+          sudo apt-get update -qq
+          sudo apt-get install -y luarocks libxml2-utils >/dev/null 2>&1
+          sudo luarocks install luacheck >/dev/null 2>&1
+          pip install tomli >/dev/null 2>&1
+
+          # Validate different file types
+          exit_code=0
+
+          # Lua files (Neovim configs)
+          echo -e "\n🔍 Lua Files:"
+          check_files "*.lua" "Lua" "luacheck --globals vim" || exit_code=1
+
+          # JSON files
+          echo -e "\n🔍 JSON Files:"
+          check_files "*.json" "JSON" "python -m json.tool > /dev/null" || exit_code=1
+
+          # TOML files
+          echo -e "\n🔍 TOML Files:"
+          check_files "*.toml" "TOML" "python -c \"import tomli; tomli.load(open('\$1', 'rb'))\"" || exit_code=1
+
+          # Special files validation
+          echo -e "\n🔍 Special Configuration Files:"
+
+          # Brewfile validation
+          if [ -f "Brewfile" ]; then
+            echo "Validating Brewfile..."
+            if grep -E '^(tap|brew|cask)\s+' Brewfile >/dev/null && \
+               [ $(grep -E '^(brew|cask)\s+' Brewfile | sort | uniq -d | wc -l) -eq 0 ]; then
+              echo "✓ Brewfile is valid"
+            else
+              echo "✗ Brewfile has issues"
+              exit_code=1
+            fi
+          fi
+
+          # Dynamic dotfiles validation (only check files that exist)
+          for config_file in .tmux.conf .zshrc .gitconfig; do
+            if [ -f "$config_file" ]; then
+              echo "Validating $config_file..."
+              case "$config_file" in
+                .tmux.conf)
+                  if command -v tmux >/dev/null 2>&1; then
+                    tmux -f "$config_file" list-keys >/dev/null 2>&1 && echo "✓ $config_file syntax valid" || echo "⚠ $config_file may have issues"
+                  else
+                    echo "⚠ tmux not available for validation"
+                  fi
+                  ;;
+                .gitconfig)
+                  git config --file "$config_file" --list >/dev/null 2>&1 && echo "✓ $config_file syntax valid" || { echo "✗ $config_file has errors"; exit_code=1; }
+                  ;;
+                .zshrc)
+                  # Basic syntax check only
+                  bash -n "$config_file" 2>/dev/null && echo "✓ $config_file basic syntax valid" || echo "⚠ $config_file may have issues"
+                  ;;
+              esac
+            fi
+          done
+
+          exit $exit_code
+
+  go-lint:
+    name: Go Code Validation
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+
+      - name: Go Code Validation
+        run: |
+          echo "=== Go Code Validation ==="
+
+          # Check if any Go files exist
+          go_files=$(find . -name "*.go" -type f 2>/dev/null | grep -v vendor/ || true)
+          go_modules=$(find . -name "go.mod" -type f 2>/dev/null || true)
+
+          if [ -n "$go_files" ]; then
+            echo "Found Go files:"
+            echo "$go_files" | sed 's/^/  - /'
+
+            # Setup Go environment
+            export PATH=$PATH:$(go env GOPATH)/bin
+
+            # Install linting tools
+            echo "Installing Go linting tools..."
+            curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin v1.54.2 >/dev/null 2>&1
+
+            # Run comprehensive Go validation
+            exit_code=0
+
+            # 1. Format check
+            echo "🔍 Checking Go formatting..."
+            unformatted=$(gofmt -l . 2>/dev/null | grep -v vendor/ || true)
+            if [ -n "$unformatted" ]; then
+              echo "✗ Unformatted Go files found:"
+              echo "$unformatted" | sed 's/^/  - /'
+              exit_code=1
+            else
+              echo "✓ All Go files are properly formatted"
+            fi
+
+            # 2. Go vet (static analysis)
+            echo "🔍 Running go vet..."
+            if go vet ./... 2>/dev/null; then
+              echo "✓ go vet passed"
+            else
+              echo "✗ go vet found issues"
+              exit_code=1
+            fi
+
+            # 3. Linting (if available)
+            echo "🔍 Running golangci-lint..."
+            if golangci-lint run --timeout=5m 2>/dev/null; then
+              echo "✓ golangci-lint passed"
+            else
+              echo "⚠ golangci-lint found issues (non-blocking)"
+            fi
+
+            # 4. Security check (if go.mod exists)
+            if [ -n "$go_modules" ]; then
+              echo "🔍 Running security scan..."
+              go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest >/dev/null 2>&1
+              if gosec ./... >/dev/null 2>&1; then
+                echo "✓ Security scan passed"
+              else
+                echo "⚠ Security issues found (review recommended)"
+              fi
+            fi
+
+            exit $exit_code
+          else
+            echo "No Go files found - skipping Go validation"
+          fi
+
       - name: Check file permissions
         run: |
           echo "=== File Permissions Check ==="
@@ -472,7 +635,7 @@ jobs:
 
   summary:
     name: CI Summary
-    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, yaml-validation, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
+    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, yaml-validation, go-lint, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:

@@ -15,6 +15,8 @@ brew "chafa"
 brew "choose-rust"
 # Cross-platform make
 brew "cmake"
+# Claude Code usage and cost tracker
+brew "ccusage"
 # Dependency Manager for PHP
 brew "composer"
 # Command-line DNS client for humans

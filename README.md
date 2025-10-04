@@ -16,6 +16,7 @@ configurations for macOS development environment.
 - **Git**: Global git configuration
 - **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, doggo, sd, hyperfine, tokei, xh
 - **Completions**: Carapace (universal command completions)
+- **Claude Code**: Integrated statusline with ccusage for cost tracking
 
 ### 🤖 Automation Scripts
 

@@ -51,6 +51,62 @@ jobs:
           echo "=== Markdown Lint ==="
           markdownlint '**/*.md' --ignore node_modules || true
 
+      - name: Universal File Type Validation (Enhanced)
+        run: |
+          echo "=== Enhanced File Type Validation ==="
+
+          # Install additional tools
+          sudo apt-get install -y luarocks libxml2-utils
+          sudo luarocks install luacheck
+          pip install tomli
+
+          # JSON validation
+          echo "🔍 JSON Files:"
+          find . -name "*.json" -type f ! -path "./.git/*" | \
+            while read -r file; do
+            echo "  Validating: $file"
+            python -m json.tool "$file" >/dev/null
+          done
+
+          # TOML validation
+          echo "🔍 TOML Files:"
+          find . -name "*.toml" -type f ! -path "./.git/*" | \
+            while read -r file; do
+            echo "  Validating: $file"
+            python -c "import tomli; tomli.load(open('$file', 'rb'))"
+          done
+
+          # Lua validation
+          echo "🔍 Lua Files:"
+          lua_pattern="*.lua"
+          exclude_git="./.git/*"
+          exclude_examples="*example*"
+          if find . -name "$lua_pattern" -type f \
+            ! -path "$exclude_git" ! -name "$exclude_examples" | grep -q .; then
+            find . -name "$lua_pattern" -type f \
+              ! -path "$exclude_git" ! -name "$exclude_examples" -print0 | \
+              while IFS= read -r -d '' file; do
+              echo "  Validating: $file"
+              # Use Neovim-specific globals for config files
+              if [[ "$file" == *"nvim"* ]]; then
+                luacheck --globals vim require --std luajit "$file"
+              else
+                luacheck "$file"
+              fi
+            done
+          else
+            echo "  No Lua files found (excluding examples)"
+          fi
+
+          # Brewfile validation
+          if [ -f "Brewfile" ]; then
+            echo "🔍 Brewfile:"
+            grep -E '^(tap|brew|cask)\s+' Brewfile >/dev/null
+            duplicates=$(grep -E '^(brew|cask)\s+' Brewfile | \
+              sort | uniq -d | wc -l)
+            [ "$duplicates" -eq 0 ]
+          fi
+
       - name: Check file permissions
         run: |
           echo "=== File Permissions Check ==="
@@ -75,7 +131,7 @@ jobs:
             sudo apt-get update && sudo apt-get install -y shellcheck
           fi
 
-          # Run shellcheck only on bash scripts, excluding .zshrc and other non-bash files
+          # Run shellcheck only on bash scripts
           exit_code=0
           for script in *.sh; do
             if [ -f "$script" ]; then
@@ -162,7 +218,8 @@ jobs:
             else
               echo "  ⚠ Format issues detected"
               # Show the diff for debugging
-              PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>&1 | grep -A5 -B5 "@@" || true
+              PYTHONWARNINGS="ignore" beautysh --check .zshrc 2>&1 | \
+                grep -A5 -B5 "@@" || true
               exit_code=1
             fi
 
@@ -171,13 +228,15 @@ jobs:
             issues_found=0
 
             # Check for undefined variables
-            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | grep -v '\${' | grep -v '\$(' | grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
+            if grep -E '\$[a-zA-Z_][a-zA-Z0-9_]*' .zshrc | \
+               grep -v '\${' | grep -v '\$(' | \
+               grep -v '\$PATH' | grep -v '\$HOME' > /dev/null; then
               echo "  ⚠ Potential undefined variables found"
             fi
 
             # Check for command substitution using backticks
             if grep '`.*`' .zshrc > /dev/null; then
-              echo "  ⚠ Found backticks - consider using $(command) syntax"
+              echo "  ⚠ Found backticks - consider using \$(command) syntax"
               issues_found=$((issues_found + 1))
             fi
 
@@ -192,7 +251,8 @@ jobs:
 
             # 5. Validate using zsh's built-in warn options
             echo "→ Running with warning flags..."
-            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR -c "source .zshrc" 2>&1 | grep -q "warning"; then
+            if zsh -o WARN_CREATE_GLOBAL -o WARN_NESTED_VAR \
+                -c "source .zshrc" 2>&1 | grep -q "warning"; then
               echo "  ⚠ Warnings detected (review recommended)"
             else
               echo "  ✓ No warnings with strict flags"
@@ -202,6 +262,41 @@ jobs:
             exit $exit_code
           else
             echo "No .zshrc file found - skipping"
+          fi
+
+  go-validation:
+    name: Go Code Quality (New)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache: true
+
+      - name: Go validation suite
+        run: |
+          if find . -name "*.go" -type f | grep -q .; then
+            echo "🔍 Running Go validation suite..."
+
+            # Install tools
+            go install \
+              github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+            go install \
+              github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+
+            # Validate
+            gofmt -l . | grep -q . && \
+              { echo "❌ Unformatted files"; exit 1; } || echo "✅ Format check"
+            go vet ./... && echo "✅ Go vet passed"
+            golangci-lint run --timeout=5m && echo "✅ Linting passed"
+            gosec ./... >/dev/null 2>&1 && \
+              echo "✅ Security scan passed" || echo "⚠️  Security issues found"
+          else
+            echo "⏭️  No Go files found"
           fi
 
   yaml-validation:
@@ -217,11 +312,12 @@ jobs:
           pip install yamllint
 
           # Check if there are any YAML files to validate
-          yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) ! -path "./.git/*")
+          yaml_files=$(find . -type f \( -name "*.yml" -o -name "*.yaml" \) \
+            ! -path "./.git/*")
           if [ -n "$yaml_files" ]; then
             echo "Validating YAML files:"
             echo "$yaml_files"
-            yamllint -d relaxed $yaml_files || true  # Don't fail on style issues
+            yamllint -d relaxed $yaml_files || true  # Don't fail
           else
             echo "No YAML files found to validate"
           fi
@@ -268,7 +364,9 @@ jobs:
           fi
 
           # Copy other required files for bootstrap testing
-          for file in Brewfile .tmux.conf daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh; do
+          for file in Brewfile .tmux.conf daily-maintenance.sh \
+                      daily-maintenance-control.sh \
+                      install-daily-maintenance.sh; do
             if [ -f "$file" ]; then
               cp "$file" "$TEST_HOME/"
             fi
@@ -318,7 +416,9 @@ jobs:
           ls -la *.sh 2>/dev/null || echo "No .sh files found"
 
           # Copy files to test location if they exist
-          for file in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh test-dotfiles.sh; do
+          for file in daily-maintenance.sh daily-maintenance-control.sh \
+                      install-daily-maintenance.sh \
+                      uninstall-daily-maintenance.sh test-dotfiles.sh; do
             if [ -f "$file" ]; then
               echo "Copying $file to $TEST_HOME/"
               cp "$file" "$TEST_HOME/"
@@ -329,14 +429,18 @@ jobs:
           done
 
           # Copy plist template if it exists
-          if [ -f "Library/LaunchAgents/com.daily-maintenance.plist.template" ]; then
-            cp Library/LaunchAgents/*.plist.template $TEST_HOME/Library/LaunchAgents/
+          template_file="Library/LaunchAgents/com.daily-maintenance.plist.template"
+          if [ -f "$template_file" ]; then
+            cp Library/LaunchAgents/*.plist.template \
+              $TEST_HOME/Library/LaunchAgents/
           else
             echo "Warning: plist template file not found"
           fi
 
           # Test syntax for files that exist
-          for script in daily-maintenance.sh daily-maintenance-control.sh install-daily-maintenance.sh uninstall-daily-maintenance.sh; do
+          for script in daily-maintenance.sh daily-maintenance-control.sh \
+                        install-daily-maintenance.sh \
+                        uninstall-daily-maintenance.sh; do
             if [ -f "$TEST_HOME/$script" ]; then
               echo "Testing syntax: $script"
               bash -n "$TEST_HOME/$script"
@@ -347,9 +451,12 @@ jobs:
 
       - name: Validate LaunchAgent plist template
         run: |
-          if [ -f Library/LaunchAgents/com.daily-maintenance.plist.template ]; then
+          template_file="Library/LaunchAgents/com.daily-maintenance.plist.template"
+          if [ -f "$template_file" ]; then
             # Create temp file with substituted values for validation
-            sed "s|{{HOME}}|$HOME|g" Library/LaunchAgents/com.daily-maintenance.plist.template > /tmp/test.plist
+            sed "s|{{HOME}}|$HOME|g" \
+              Library/LaunchAgents/com.daily-maintenance.plist.template \
+              > /tmp/test.plist
             plutil -lint /tmp/test.plist
             rm /tmp/test.plist
           else
@@ -472,7 +579,9 @@ jobs:
 
   summary:
     name: CI Summary
-    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, yaml-validation, bootstrap-test, macos-integration, documentation, security-scan, compatibility-matrix]
+    needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, go-validation,
+            yaml-validation, bootstrap-test, macos-integration, documentation,
+            security-scan, compatibility-matrix]
     runs-on: ubuntu-latest
     if: always()
     steps:

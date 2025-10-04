@@ -277,6 +277,7 @@ fi
 # Modern replacements
 alias ls='eza --icons=always --color=always'
 alias ll='eza -la --icons=always --color=always'
+alias lt='eza -l --grid --header --icons=always --color=always'
 alias tree='eza --tree --icons=always --color=always'
 alias cat='bat'
 alias vim='nvim'

@@ -9,12 +9,13 @@ configurations for macOS development environment.
 
 ### Core Configurations
 
-- **Shell**: Zsh configuration with zinit plugin manager
+- **Shell**: Zsh configuration with zinit plugin manager and Oh-My-Zsh plugins
 - **Editor**: Neovim (LazyVim) and Zed configurations
 - **Terminal**: tmux with sesh session manager and Ghostty configs
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Tools**: ripgrep, bat configurations, Carapace (universal command completions)
+- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, doggo, sd, hyperfine, tokei, xh
+- **Completions**: Carapace (universal command completions)
 
 ### 🤖 Automation Scripts
 
@@ -368,6 +369,73 @@ sesh clone https://github.com/user/repo
 | `v` (in copy mode) | Begin selection |
 | `y` (in copy mode) | Copy selection |
 | `q` (in copy mode) | Exit copy mode |
+
+## 🛠️ Modern CLI Tools
+
+This dotfiles setup includes modern Rust-based replacements for traditional Unix tools:
+
+| Traditional | Modern Tool | Description | Alias |
+|------------|-------------|-------------|-------|
+| `ls` | **eza** | Modern ls with git integration, icons | `ls`, `ll`, `lt`, `tree` |
+| `cat` | **bat** | Cat with syntax highlighting | `cat` |
+| `grep` | **ripgrep** | Faster grep with smart defaults | `rg` |
+| `find` | **fd** | Simpler, faster find | `fd` |
+| `du` | **dust** | Intuitive disk usage with tree view | `du` |
+| `df` | **duf** | Pretty disk usage with colors | `df` |
+| `top`/`htop` | **btop** | Beautiful resource monitor | `top`, `htop` |
+| `dig` | **doggo** | User-friendly DNS client | `dog` |
+| `sed` | **sd** | Simpler find & replace | `replace` |
+| `ps` | **procs** | Modern process viewer | `ps` |
+| `cut` | **choose** | Human-friendly field selection | (use `choose` directly) |
+| `time` | **hyperfine** | Command benchmarking tool | `bench` |
+| `hexdump` | **hexyl** | Colored hex viewer | `hex` |
+| `curl` | **xh** | Fast HTTP client | `http`, `https` |
+| - | **tokei** | Code statistics tool | `count` |
+| `man` | **tlrc** | Quick command examples | `help`, `cheat` |
+
+### Shell Enhancements
+
+- **z-shell/zsh-eza**: Smart eza aliases with git status, icons, and grouping
+- **Oh-My-Zsh Plugins** (via Zinit):
+  - `sudo` - Press ESC ESC to add sudo to previous command
+  - `extract` - Universal archive extraction
+  - `copypath` / `copyfile` - Quick clipboard operations
+  - `jsontools` - JSON formatting and validation
+  - `encode64` - Base64 encoding/decoding
+
+### Usage Examples
+
+```bash
+# Modern file listing with git status
+ls              # eza with icons, git status, directories first
+ll              # Long format with headers
+lt              # Grid view with details
+tree            # Tree view
+
+# Disk analysis
+dust            # Visual tree of disk usage
+duf             # Pretty disk space report
+
+# System monitoring
+btop            # Beautiful resource monitor
+
+# DNS queries
+dog google.com  # Colorful DNS lookup
+
+# HTTP requests
+http GET https://api.example.com/users
+xh POST https://api.example.com/data key=value
+
+# Benchmarking
+bench 'command1' 'command2'  # Compare performance
+
+# Code statistics
+count .         # Count lines of code by language
+
+# Quick help
+help tar        # Show tar examples
+cheat docker    # Docker command examples
+```
 
 ## 🔧 Manual Updates
 

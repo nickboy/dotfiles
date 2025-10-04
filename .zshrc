@@ -119,8 +119,8 @@ zinit snippet OMZP::sudo  # ESC ESC to add sudo - needs key binding
 
 # eza aliases plugin - configure params before loading
 export _EZA_PARAMS=(
-  '--git' '--icons=always' '--group' '--group-directories-first'
-  '--time-style=long-iso' '--color-scale=all' '--color=always'
+    '--git' '--icons=always' '--group' '--group-directories-first'
+    '--time-style=long-iso' '--color-scale=all' '--color=always'
 )
 zinit light z-shell/zsh-eza
 

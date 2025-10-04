@@ -1,16 +1,28 @@
 tap "jstkdng/programs"
 # Code searching, linting, rewriting
 brew "ast-grep"
+# Network bandwidth utilization tool
+brew "bandwhich"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
+# Resource monitor (modern top/htop replacement)
+brew "btop"
 # Interpreted, interactive, object-oriented programming language
 brew "python@3.13"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
+# Human-friendly cut alternative
+brew "choose-rust"
 # Cross-platform make
 brew "cmake"
 # Dependency Manager for PHP
 brew "composer"
+# Command-line DNS client for humans
+brew "doggo"
+# Disk usage analyzer (modern du replacement)
+brew "duf"
+# Disk usage tree (modern du replacement)
+brew "dust"
 # Modern, maintained replacement for ls
 brew "eza"
 # Simple, fast and user-friendly alternative to find
@@ -25,8 +37,14 @@ brew "fzf"
 brew "git-delta"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
+# Hex viewer (modern hexdump replacement)
+brew "hexyl"
+# Command-line benchmarking tool
+brew "hyperfine"
 # Fast, Dynamic Programming Language
 brew "julia"
+# Just a command runner
+brew "just"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Package manager for the Lua programming language
@@ -51,6 +69,8 @@ brew "procs"
 brew "pyright"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
+# Intuitive find & replace CLI (sed alternative)
+brew "sd"
 # Tool to find ROP sequences in PE/Elf/Mach-O x86/x64 binaries
 brew "rp"
 # Extremely fast Python linter, written in Rust
@@ -67,6 +87,8 @@ brew "starship"
 brew "thefuck"
 # Official tldr client written in Rust
 brew "tlrc"
+# Count lines of code quickly
+brew "tokei"
 # Terminal multiplexer
 brew "tmux"
 # Smart session manager for tmux
@@ -77,6 +99,8 @@ brew "carapace"
 brew "viu"
 # Internet file retriever
 brew "wget"
+# HTTPie-like HTTP client written in Rust
+brew "xh"
 # An extremely fast Python package installer and resolver, written in Rust
 brew "uv"
 # Yet Another Dotfiles Manager

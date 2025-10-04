@@ -115,6 +115,14 @@ zinit snippet OMZP::dotenv
 zinit snippet OMZP::rake
 zinit snippet OMZP::rbenv
 zinit snippet OMZP::ruby
+zinit snippet OMZP::sudo  # ESC ESC to add sudo - needs key binding
+
+# eza aliases plugin - configure params before loading
+export _EZA_PARAMS=(
+    '--git' '--icons=always' '--group' '--group-directories-first'
+    '--time-style=long-iso' '--color-scale=all' '--color=always'
+)
+zinit light z-shell/zsh-eza
 
 # Fast syntax highlighting (load early for immediate effect)
 zinit light zdharma-continuum/fast-syntax-highlighting
@@ -138,7 +146,12 @@ zinit wait lucid for \
 # Additional useful plugins
 zinit wait lucid for \
     MichaelAquilina/zsh-you-should-use \
-    fdellwing/zsh-bat
+    fdellwing/zsh-bat \
+    OMZP::extract \
+    OMZP::copypath \
+    OMZP::copyfile \
+    OMZP::jsontools \
+    OMZP::encode64
 
 # ============================================================================
 # Binary Programs via Zinit (Load in background)
@@ -274,10 +287,15 @@ fi
 # Aliases
 # ============================================================================
 
-# Modern replacements
-alias ls='eza --icons=always --color=always'
-alias ll='eza -la --icons=always --color=always'
-alias tree='eza --tree --icons=always --color=always'
+# Modern replacements (managed by z-shell/zsh-eza plugin)
+# Plugin provides: ls, l, ll, llm, la, lx, tree
+# With custom params: --git, --icons=always, --group, --group-directories-first,
+#                     --time-style=long-iso, --color-scale=all, --color=always
+
+# Custom eza aliases (override plugin or add new ones)
+alias lt='eza -l --grid --header --icons=always --color=always'  # Grid view (override plugin's tree lt)
+
+# Tool replacements
 alias cat='bat'
 alias vim='nvim'
 alias vi='nvim'
@@ -328,6 +346,45 @@ alias batteryv='battery-status -v'  # verbose output
 alias mr='~/daily-maintenance-control.sh run'      # maintenance run
 alias ms='~/daily-maintenance-control.sh status'   # maintenance status
 alias ml='~/daily-maintenance-control.sh logs'     # maintenance logs
+
+# ============================================================================
+# Modern CLI Tools Aliases
+# ============================================================================
+
+# System monitoring
+alias top='btop'
+alias htop='btop'
+
+# Disk analysis
+alias du='dust'
+alias df='duf'
+
+# Text processing (keep sed for compatibility, add replace for convenience)
+alias replace='sd'
+
+# Network tools
+alias dog='doggo'  # Keep dog naming convention
+
+# HTTP client
+if command -v xh &> /dev/null; then
+    alias http='xh'
+    alias https='xh https'
+fi
+
+# Development tools
+if command -v hyperfine &> /dev/null; then
+    alias bench='hyperfine'
+fi
+if command -v tokei &> /dev/null; then
+    alias count='tokei'
+fi
+if command -v hexyl &> /dev/null; then
+    alias hex='hexyl'
+fi
+
+# Documentation
+alias help='tlrc'
+alias cheat='tlrc'
 
 # ============================================================================
 # Shell Options

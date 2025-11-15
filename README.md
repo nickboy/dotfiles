@@ -239,10 +239,12 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty Features
 
-- **Transparency**: Background opacity (0.88) with blur effect for macOS liquid visuals
+- **Transparency**: Background opacity (0.75) with blur effect for macOS liquid visuals
 - **Shell Integration**: Enhanced shell integration for better Claude Code support
 - **Smart Clipboard**: Protected paste with bracketed paste mode
 - **Custom Keybinds**: Split panes with `Cmd+D` (down) and `Cmd+Shift+D` (right)
+- **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`, `cursor_smear.glsl`)
+- **Config Reload**: `Cmd+Shift+,` to reload config without restart
 - **Theme**: Catppuccin Mocha with Hack Nerd Font
 
 ### Key Settings
@@ -253,8 +255,8 @@ rm ~/Library/Logs/daily-maintenance*.log
 - Mouse support with focus-follows-mouse
 - Link clicking enabled
 
-Note: After modifying Ghostty config, restart the application for transparency
-changes to take effect.
+Note: Shaders are located in `~/.config/ghostty/shaders/` and symlinked via
+bootstrap. Use `Cmd+Shift+,` to reload config after changes.
 
 ## 🖥️ Tmux Configuration
 

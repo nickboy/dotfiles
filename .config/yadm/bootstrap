@@ -32,6 +32,16 @@ if [ -f "$HOME/.config/ghostty/config" ]; then
     else
         echo "  Ghostty symlink already exists"
     fi
+
+    # Create symlink for shaders directory if it exists
+    if [ -d "$HOME/.config/ghostty/shaders" ]; then
+        if [ ! -L "$GHOSTTY_APP_CONFIG/shaders" ]; then
+            echo "  Creating symlink for Ghostty shaders..."
+            ln -sf "$HOME/.config/ghostty/shaders" "$GHOSTTY_APP_CONFIG/shaders"
+        else
+            echo "  Ghostty shaders symlink already exists"
+        fi
+    fi
 else
     echo "  Warning: Ghostty config not found in ~/.config/ghostty/"
 fi

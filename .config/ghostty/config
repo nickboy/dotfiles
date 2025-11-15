@@ -21,6 +21,11 @@ macos-titlebar-style = transparent
 cursor-style = block
 cursor-style-blink = true
 
+# Cursor shaders - fancy cursor effects
+custom-shader-animation = true
+custom-shader = shaders/cursor_ripple.glsl
+custom-shader = shaders/cursor_glow.glsl
+
 # Custom keybinds
 keybind = shift+enter=text:\n
 keybind = cmd+k=clear_screen

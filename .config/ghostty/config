@@ -21,11 +21,19 @@ macos-titlebar-style = transparent
 cursor-style = block
 cursor-style-blink = true
 
+# Cursor shaders - fancy cursor effects
+# cursor_slash: diagonal trail effect on cursor movement
+# cursor_smear: smooth smearing trail effect on cursor movement
+custom-shader-animation = true
+custom-shader = shaders/cursor_slash.glsl
+custom-shader = shaders/cursor_smear.glsl
+
 # Custom keybinds
 keybind = shift+enter=text:\n
 keybind = cmd+k=clear_screen
 keybind = cmd+shift+d=new_split:right
 keybind = cmd+d=new_split:down
+keybind = cmd+shift+comma=reload_config
 
 # Shell Integration for Claude Code
 shell-integration = detect

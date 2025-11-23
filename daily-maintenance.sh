@@ -62,15 +62,16 @@ if ! run_command "Homebrew cask upgrade (greedy)" brew upgrade --cask --greedy; 
 fi
 
 # For zinit, we need to ensure it's available
-if [ -f "$HOME/.local/share/zinit/zinit.git/zinit.zsh" ] || [ -f "$HOME/.zinit/bin/zinit.zsh" ]; then
+ZINIT_HOME="$HOME/.local/share/zinit/zinit.git"
+if [ -f "$ZINIT_HOME/zinit.zsh" ]; then
     echo ""
     echo "----------------------------------------"
     echo "Task: Zinit update"
-    echo "Command: zsh -i -c 'zinit update --all --quiet'"
+    echo "Command: zinit update --all --quiet"
     echo -n "Status: "
-    
-    # Run zinit update directly to avoid parameter issues
-    if zsh -i -c 'zinit update --all --quiet' >/dev/null 2>&1; then
+
+    # Run zinit update by sourcing directly (avoid zsh -i which can hang)
+    if zsh -c "source '$ZINIT_HOME/zinit.zsh' && zinit update --all --quiet" >/dev/null 2>&1; then
         echo "✓ SUCCESS"
     else
         echo "✗ FAILED"

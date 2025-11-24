@@ -81,8 +81,8 @@ else
     echo "Warning: zinit not found, skipping zinit update"
 fi
 
-if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob update; then
-    FAILED_COMMANDS+=("bob update")
+if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob update nightly; then
+    FAILED_COMMANDS+=("bob update nightly")
 fi
 
 # Update LazyVim plugins

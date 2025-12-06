@@ -11,10 +11,10 @@ configurations for macOS development environment.
 
 - **Shell**: Zsh configuration with zinit plugin manager and Oh-My-Zsh plugins
 - **Editor**: Neovim (LazyVim) and Zed configurations
-- **Terminal**: tmux with sesh session manager and Ghostty configs
+- **Terminal**: tmux with sesh session manager, Ghostty and Kitty configs
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, doggo, sd, hyperfine, tokei, xh
+- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, and more
 - **Completions**: Carapace (universal command completions)
 - **Claude Code**: Integrated statusline with ccusage for cost tracking
 
@@ -258,6 +258,54 @@ rm ~/Library/Logs/daily-maintenance*.log
 Note: Shaders are located in `~/.config/ghostty/shaders/` and symlinked via
 bootstrap. Use `Cmd+Shift+,` to reload config after changes.
 
+## 🐱 Kitty Terminal Configuration
+
+### Kitty Features
+
+- **Monaspace Fonts**: GitHub's variable font family with Radon italic style
+- **Ligatures**: Full OpenType support with texture healing and coding ligatures
+- **Cursor Trail**: Animated cursor trail effect (Kitty 0.37+ exclusive)
+- **Transparency**: Background opacity (0.75) with blur, matching Ghostty
+- **Kittens**: Built-in tools for images, hints, diffs, themes, and more
+- **Remote Control**: Scriptable via unix socket for automation
+- **Layouts**: 7 built-in layouts (tall, stack, fat, grid, splits, etc.)
+- **Theme**: Catppuccin Mocha (same as Ghostty)
+
+### Kitty Shortcuts
+
+| Keybinding | Action |
+| --- | --- |
+| `Cmd+D` | Horizontal split |
+| `Cmd+Shift+D` | Vertical split |
+| `Ctrl+h/j/k/l` | Vim-style pane navigation |
+| `Cmd+Arrow keys` | Pane navigation |
+| `Ctrl+Shift+L` | Cycle layouts |
+| `Cmd+Shift+,` | Reload config |
+| `Ctrl+Shift+I` | Display images (icat) |
+| `Ctrl+Shift+E` | Hints mode (URLs, paths) |
+| `Ctrl+Shift+U` | Unicode input |
+| `Ctrl+Shift+H` | Open scrollback in nvim |
+
+### Kittens (Built-in Tools)
+
+- **icat**: Display images directly in terminal
+- **hints**: Select URLs, paths, words with keyboard
+- **diff**: Side-by-side diff with syntax highlighting
+- **themes**: Preview and switch themes interactively
+- **choose-fonts**: Preview fonts with variable font support
+- **broadcast**: Type in all windows simultaneously
+- **unicode_input**: Insert unicode characters by name
+
+### Third-Party Integrations
+
+Works seamlessly with image-capable tools:
+
+- **yazi/ranger**: File managers with image preview
+- **timg**: Image and video viewer
+- **mpv**: Video player (`mpv --vo=kitty video.mp4`)
+- **awrit**: Chromium-based terminal browser
+- **presenterm**: Markdown presentations with images
+
 ## 🖥️ Tmux Configuration
 
 ### Setup
@@ -286,7 +334,7 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 #### Window Management
 
 | Keybinding | Action |
-|------------|--------|
+| --- | --- |
 | `Ctrl-a + 1-9` | Switch to window by number (1-indexed) |
 | `Ctrl-a + n` | Next window |
 | `Ctrl-a + p` | Previous window |
@@ -300,7 +348,7 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 #### Pane Management
 
 | Keybinding | Action |
-|------------|--------|
+| --- | --- |
 | `Ctrl-a + \\` | Split window horizontally |
 | `Ctrl-a + -` | Split window vertically |
 | `Ctrl-a + h/j/k/l` | Navigate between panes (vim-style) |
@@ -314,7 +362,7 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 #### Seamless Navigation
 
 | Keybinding | Action |
-|------------|--------|
+| --- | --- |
 | `Ctrl-h/j/k/l` | Navigate between tmux panes and vim splits seamlessly |
 
 #### Session Management (sesh)
@@ -324,7 +372,7 @@ Sesh is a smart tmux session manager integrated with zoxide.
 **Shell Commands:**
 
 | Command | Description |
-|---------|-------------|
+| --- | --- |
 | `s` | Interactive session picker with fzf preview |
 | `s myproject` | Connect to existing session or create from path |
 | `sn` | Create session named after current directory |
@@ -334,7 +382,7 @@ Sesh is a smart tmux session manager integrated with zoxide.
 **Inside tmux:**
 
 | Keybinding | Action |
-|------------|--------|
+| --- | --- |
 | `Ctrl-a + T` | Open advanced sesh session switcher |
 
 **Session switcher controls** (when using `Ctrl-a + T`):
@@ -367,7 +415,7 @@ sesh clone https://github.com/user/repo
 #### Copy Mode
 
 | Keybinding | Action |
-|------------|--------|
+| --- | --- |
 | `Ctrl-a + [` | Enter copy mode |
 | `v` (in copy mode) | Begin selection |
 | `y` (in copy mode) | Copy selection |
@@ -375,11 +423,11 @@ sesh clone https://github.com/user/repo
 
 ## 🛠️ Modern CLI Tools
 
-This dotfiles setup includes modern Rust-based replacements for traditional Unix tools:
+Modern Rust-based replacements for traditional Unix tools:
 
 | Traditional | Modern Tool | Description | Alias |
-|------------|-------------|-------------|-------|
-| `ls` | **eza** | Modern ls with git integration, icons | `ls`, `ll`, `lt`, `tree` |
+| --- | --- | --- | --- |
+| `ls` | **eza** | Modern ls with git integration | `ls`, `ll`, `lt` |
 | `cat` | **bat** | Cat with syntax highlighting | `cat` |
 | `grep` | **ripgrep** | Faster grep with smart defaults | `rg` |
 | `find` | **fd** | Simpler, faster find | `fd` |
@@ -467,6 +515,7 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── nvim/          # Neovim configuration (LazyVim)
 │   ├── zed/           # Zed editor configuration
 │   ├── ghostty/       # Ghostty terminal configuration
+│   ├── kitty/         # Kitty terminal configuration
 │   ├── bat/           # Bat themes
 │   └── ripgrep/       # Ripgrep configuration
 ├── .local/

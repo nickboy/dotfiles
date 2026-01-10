@@ -97,7 +97,8 @@ if command -v nvim >/dev/null 2>&1; then
     # --headless: Run without UI
     # '+Lazy! sync': Run Lazy sync command (! means no prompts)
     # +qa: Quit all windows
-    if nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
+    # timeout: Prevent hanging from async plugin operations
+    if timeout 120 nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
         echo "✓ SUCCESS"
     else
         echo "✗ FAILED"

@@ -57,18 +57,21 @@ setopt hist_save_no_dups
 setopt hist_find_no_dups
 
 # ============================================================================
-# Oh-My-Zsh Configuration (Framework only, plugins via Zinit)
+# Oh-My-Zsh Path (for Zinit OMZ:: snippets)
 # ============================================================================
 
 export ZSH=$HOME/.oh-my-zsh
-ZSH_THEME=""  # Empty because we use Starship
-plugins=(macos)    # Load macos plugin through OMZ to avoid submodule issues
 
-# Tmux settings (before loading OMZ)
-ZSH_TMUX_AUTOSTART='true'
+# Tmux settings
+# Only autostart tmux for local terminal sessions, not SSH
+if [[ -z "$SSH_CONNECTION" ]]; then
+    ZSH_TMUX_AUTOSTART='true'
+else
+    ZSH_TMUX_AUTOSTART='false'
+fi
 
-# Load Oh-My-Zsh framework
-source $ZSH/oh-my-zsh.sh
+# NOTE: We do NOT source oh-my-zsh.sh here.
+# All OMZ libs and plugins are loaded via Zinit for better control and no conflicts.
 
 # ============================================================================
 # Zinit Plugin Manager
@@ -101,7 +104,13 @@ zinit light-mode for \
 # Essential Plugins (Load immediately)
 # ============================================================================
 
+# Initialize completion system first (required for compdef)
+autoload -Uz compinit
+compinit
+
 # OMZ Libraries (load first as other plugins may depend on them)
+# Note: functions.zsh must come before termsupport.zsh (provides omz_urlencode)
+zinit snippet OMZ::lib/functions.zsh
 zinit snippet OMZ::lib/clipboard.zsh
 zinit snippet OMZ::lib/termsupport.zsh
 zinit snippet OMZ::lib/completion.zsh
@@ -109,7 +118,8 @@ zinit snippet OMZ::lib/key-bindings.zsh
 
 # OMZ Plugins (via Zinit for better control)
 zinit snippet OMZP::git
-# macos plugin is loaded via OMZ plugins array to avoid submodule issues
+# macos plugin loaded directly from OMZ (has multiple files that Zinit svn doesn't handle well)
+source "$ZSH/plugins/macos/macos.plugin.zsh"
 zinit snippet OMZP::brew
 zinit snippet OMZP::dotenv
 zinit snippet OMZP::rake
@@ -385,6 +395,7 @@ fi
 # Documentation
 alias help='tlrc'
 alias cheat='tlrc'
+
 
 # ============================================================================
 # Shell Options

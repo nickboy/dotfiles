@@ -1,7 +1,4 @@
 {
-  "env": {
-    "DISABLE_AUTOUPDATER": "1"
-  },
   "model": "opus",
   "hooks": {
     "Notification": [
@@ -18,9 +15,5 @@
   "statusLine": {
     "type": "command",
     "command": "ccusage statusline"
-  },
-  "enabledPlugins": {
-    "llm-rules@Meta": true,
-    "meta@Meta": true
   }
 }

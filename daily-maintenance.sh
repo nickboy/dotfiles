@@ -81,6 +81,25 @@ else
     echo "Warning: zinit not found, skipping zinit update"
 fi
 
+# Update Oh-My-Zsh (provides macos plugin and OMZ libs)
+OMZ_HOME="$HOME/.oh-my-zsh"
+if [ -d "$OMZ_HOME" ]; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Oh-My-Zsh update"
+    echo "Command: $OMZ_HOME/tools/upgrade.sh"
+    echo -n "Status: "
+
+    if env ZSH="$OMZ_HOME" DISABLE_UPDATE_PROMPT=true sh "$OMZ_HOME/tools/upgrade.sh" >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("oh-my-zsh update")
+    fi
+else
+    echo "Warning: Oh-My-Zsh not found, skipping OMZ update"
+fi
+
 if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob update nightly; then
     FAILED_COMMANDS+=("bob update nightly")
 fi
@@ -97,7 +116,8 @@ if command -v nvim >/dev/null 2>&1; then
     # --headless: Run without UI
     # '+Lazy! sync': Run Lazy sync command (! means no prompts)
     # +qa: Quit all windows
-    if nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
+    # timeout: Prevent hanging from async plugin operations
+    if timeout 120 nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
         echo "✓ SUCCESS"
     else
         echo "✗ FAILED"

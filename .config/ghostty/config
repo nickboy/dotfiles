@@ -56,3 +56,7 @@ link-url = true
 
 # Additional features
 confirm-close-surface = false
+
+# Bell notification for Claude Code permission requests
+# Features: system (macOS notification), audio (sound), attention (dock bounce)
+bell-features = system,audio,attention,title

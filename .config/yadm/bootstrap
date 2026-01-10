@@ -84,6 +84,10 @@ if [ ! -d "$HOME/.local/share/zinit/zinit.git" ]; then
     bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
 fi
 
+# Clear zinit snippet cache to ensure fresh state (prevents OMZ loading issues)
+echo "🧹 Clearing zinit snippet cache..."
+rm -rf "$HOME/.local/share/zinit/snippets/OMZ"* "$HOME/.zcompdump"* 2>/dev/null || true
+
 # Install/Update Catppuccin themes (always fetch latest)
 echo "🎨 Installing/Updating Catppuccin themes..."
 

@@ -109,6 +109,8 @@ brew "uv"
 brew "yadm"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
+# Magical shell history with sync and search
+brew "atuin"
 # GitHub command-line tool
 brew "gh"
 # Neovim version manager

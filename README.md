@@ -447,6 +447,8 @@ Modern Rust-based replacements for traditional Unix tools:
 ### Shell Enhancements
 
 - **z-shell/zsh-eza**: Smart eza aliases with git status, icons, and grouping
+- **Atuin**: Enhanced shell history with SQLite storage, fuzzy search, and syntax
+  highlighting
 - **Oh-My-Zsh Libraries** (via Zinit):
   - `directories` - Directory navigation (`..`, `...`, `d`, 1-9 stack, AUTO_CD)
   - `history` - Enhanced history with timestamps (`HIST_STAMPS`)
@@ -499,6 +501,35 @@ stackoverflow "bash vs zsh"
 ddg "privacy search"        # DuckDuckGo
 youtube "vim tips"
 ```
+
+### Shell History (Atuin)
+
+Atuin replaces traditional shell history with a SQLite database, providing
+syntax highlighting, fuzzy search, and rich metadata.
+
+```bash
+# Interactive history search (Ctrl+R)
+# - Fuzzy search with syntax highlighting
+# - Filter by: host, session, directory, or global
+# - Press Ctrl+R again to cycle filter modes
+
+# Statistics
+atuin stats              # Show command usage statistics
+
+# Search commands
+atuin search "git"       # Search history for git commands
+atuin search --cwd .     # Search only in current directory
+```
+
+**Key bindings in search UI:**
+
+| Key | Action |
+| --- | --- |
+| `Ctrl+R` | Open search / cycle filter mode |
+| `↑/↓` | Navigate results |
+| `Enter` | Execute selected command |
+| `Tab` | Insert command to edit |
+| `Esc` | Exit search |
 
 ### Usage Examples
 

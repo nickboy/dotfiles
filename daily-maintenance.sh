@@ -61,6 +61,24 @@ if ! run_command "Homebrew cask upgrade (greedy)" brew upgrade --cask --greedy; 
     FAILED_COMMANDS+=("brew upgrade --cask --greedy")
 fi
 
+# Clean broken completion symlinks before zinit update
+ZINIT_COMPLETIONS="$HOME/.local/share/zinit/completions"
+if [ -d "$ZINIT_COMPLETIONS" ]; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Clean broken completion symlinks"
+    echo -n "Status: "
+    # Find and remove broken symlinks
+    broken_count=$(find "$ZINIT_COMPLETIONS" -type l ! -exec test -e {} \; -print 2>/dev/null | wc -l | tr -d ' ')
+    if [ "$broken_count" -gt 0 ]; then
+        find "$ZINIT_COMPLETIONS" -type l ! -exec test -e {} \; -delete 2>/dev/null
+        rm -f "$HOME/.zcompdump"*  # Force zcompdump regeneration
+        echo "✓ Cleaned $broken_count broken symlinks"
+    else
+        echo "✓ No broken symlinks found"
+    fi
+fi
+
 # For zinit, we need to ensure it's available
 ZINIT_HOME="$HOME/.local/share/zinit/zinit.git"
 if [ -f "$ZINIT_HOME/zinit.zsh" ]; then

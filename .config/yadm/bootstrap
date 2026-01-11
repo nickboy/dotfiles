@@ -64,6 +64,20 @@ if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
     brew bundle --file="$HOME/Brewfile" || true
 fi
 
+# Install tree-sitter-cli (required for nvim-treesitter main branch)
+# Note: Homebrew's tree-sitter is just a library, not the CLI
+if command -v cargo &> /dev/null; then
+    if ! command -v tree-sitter &> /dev/null; then
+        echo "🌳 Installing tree-sitter-cli via cargo..."
+        cargo install --locked tree-sitter-cli || echo "  ⚠️  Failed to install tree-sitter-cli"
+    else
+        echo "🌳 tree-sitter-cli already installed"
+    fi
+else
+    echo "  ⚠️  cargo not found, skipping tree-sitter-cli installation"
+    echo "     Run 'cargo install --locked tree-sitter-cli' manually after installing Rust"
+fi
+
 # Setup tmux plugin manager
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     echo "🔌 Installing tmux plugin manager..."
@@ -146,9 +160,22 @@ chmod +x ~/uninstall-daily-maintenance.sh 2>/dev/null || true
 chmod +x ~/test-dotfiles.sh 2>/dev/null || true
 chmod +x ~/.local/bin/* 2>/dev/null || true
 
+# Install essential treesitter parsers for Neovim
+if command -v nvim &> /dev/null; then
+    echo "🌲 Installing essential treesitter parsers..."
+    # These parsers are required by noice.nvim and common development
+    # vim, regex, lua, bash - required by noice.nvim cmdline
+    # markdown, markdown_inline - required by noice.nvim for LSP docs
+    # python, json, yaml, toml - common development languages
+    timeout 120 nvim --headless \
+        "+TSInstall vim regex lua bash markdown markdown_inline python json yaml toml" \
+        "+sleep 20" +qa 2>/dev/null || echo "  ⚠️  Some parsers may need manual installation"
+    echo "  ✓ Treesitter parsers installed"
+fi
+
 echo "✅ Bootstrap complete!"
 echo ""
 echo "📝 Next steps:"
 echo "  1. Restart your terminal or run: source ~/.zshrc"
-echo "  2. Open Neovim to install LazyVim plugins"
+echo "  2. Open Neovim to verify LazyVim plugins are installed"
 echo "  3. Check daily maintenance status: ~/daily-maintenance-control.sh status"

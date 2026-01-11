@@ -29,7 +29,8 @@ quickly understand the development environment and automation setup.
 - **Languages**: Python 3.13, Go, Rust, Julia, Node.js, Java (OpenJDK), Ruby
 - **Linters/Formatters**: Ruff (Python), ShellCheck, Prettier, rust-analyzer
 - **Search Tools**: ripgrep, fd, fzf with custom TokyoNight theme
-- **File Navigation**: eza (modern ls), zoxide (smart cd), bat (cat with syntax highlighting)
+- **File Navigation**: eza (modern ls), zoxide (smart cd), bat (syntax highlighting)
+- **Treesitter**: tree-sitter-cli (via cargo, required for nvim-treesitter)
 
 ## File Structure
 
@@ -132,9 +133,11 @@ quickly understand the development environment and automation setup.
 1. Homebrew formula updates
 2. Homebrew cask updates (greedy)
 3. Zinit plugin updates
-4. Bob (Neovim) updates
-5. LazyVim plugin updates
-6. Homebrew cleanup (removes old versions and cache)
+4. Oh-My-Zsh updates
+5. Bob (Neovim) updates
+6. LazyVim plugin updates
+7. Treesitter parser updates (`:TSUpdate`)
+8. Homebrew cleanup (removes old versions and cache)
 
 **Control Commands**:
 
@@ -269,7 +272,14 @@ Python script at `~/.local/bin/battery-status`
    - Oh-My-Zsh provides the framework
    - Don't duplicate plugin loading
 
-5. **Lint-free commits** (MANDATORY):
+5. **Neovim/Treesitter notes**:
+   - nvim-treesitter uses `main` branch (not `master`) since May 2025
+   - `tree-sitter-cli` must be installed via cargo (`cargo install --locked tree-sitter-cli`)
+   - Homebrew's `tree-sitter` package is just a library, not the CLI
+   - noice.nvim requires: `vim`, `regex`, `lua`, `bash`, `markdown`, `markdown_inline`
+   - Run `:TSUpdate` after updating nvim-treesitter to sync parser versions
+
+6. **Lint-free commits** (MANDATORY):
    - Every commit MUST pass markdown linting
    - Run `npx markdownlint-cli README.md CLAUDE.md` before ANY commit
    - Common errors to avoid:
@@ -281,7 +291,7 @@ Python script at `~/.local/bin/battery-status`
    - **IMPORTANT**: Use `yadm` commands (not `git`) for all operations
    - **DO NOT** include Claude co-author or AI-generated tags in commit messages
 
-6. **Updates and maintenance**:
+7. **Updates and maintenance**:
    - Daily automation handles most updates
    - Manual control via `daily-maintenance-control.sh`
    - Logs are in `~/Library/Logs/`
@@ -370,6 +380,18 @@ yadm status           # Check status
 yadm add <file>       # Track new file
 yadm commit -m "msg"  # Commit changes
 yadm push            # Push to GitHub
+```
+
+**Important: Set correct author for yadm commits**:
+
+```bash
+# Check current author config
+yadm config user.name
+yadm config user.email
+
+# Set correct author (required for proper commit attribution)
+yadm config user.name "Tzu-Hua(Nick) Liu"
+yadm config user.email "nickboy@users.noreply.github.com"
 ```
 
 **Create Pull Requests with GitHub CLI**:

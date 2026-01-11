@@ -138,9 +138,6 @@ zinit light z-shell/zsh-eza
 # Fast syntax highlighting (load early for immediate effect)
 zinit light zdharma-continuum/fast-syntax-highlighting
 
-# History search
-zinit load zdharma-continuum/history-search-multi-word
-
 # ============================================================================
 # Deferred Plugins (Load after prompt for faster startup)
 # ============================================================================
@@ -294,6 +291,11 @@ if command -v thefuck &> /dev/null; then
     eval $(thefuck --alias fk)
 fi
 
+# Atuin (enhanced shell history with syntax highlighting)
+if command -v atuin &> /dev/null; then
+    eval "$(atuin init zsh)"
+fi
+
 # ============================================================================
 # Aliases
 # ============================================================================
@@ -311,6 +313,10 @@ alias cat='bat'
 alias vim='nvim'
 alias vi='nvim'
 alias ps='procs'
+
+# History with syntax highlighting (requires atuin + bat)
+alias h='atuin history list -f "{time}\t{command}" | bat -l bash --style=plain --paging=never'
+alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 
 # Shortcuts
 alias c='clear'

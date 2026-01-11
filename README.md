@@ -447,12 +447,58 @@ Modern Rust-based replacements for traditional Unix tools:
 ### Shell Enhancements
 
 - **z-shell/zsh-eza**: Smart eza aliases with git status, icons, and grouping
+- **Oh-My-Zsh Libraries** (via Zinit):
+  - `directories` - Directory navigation (`..`, `...`, `d`, 1-9 stack, AUTO_CD)
+  - `history` - Enhanced history with timestamps (`HIST_STAMPS`)
+  - `misc` - Utility functions (env, pgrep, confirm_wrapper)
 - **Oh-My-Zsh Plugins** (via Zinit):
+  - `common-aliases` - Global pipe aliases (H/T/G/L/NUL)
+  - `colored-man-pages` - Syntax-highlighted man pages
+  - `web-search` - Search from terminal (google, github, stackoverflow)
   - `sudo` - Press ESC ESC to add sudo to previous command
   - `extract` - Universal archive extraction
   - `copypath` / `copyfile` - Quick clipboard operations
   - `jsontools` - JSON formatting and validation
   - `encode64` - Base64 encoding/decoding
+
+### Directory Navigation
+
+```bash
+# Quick navigation (directories.zsh)
+..              # cd ..
+...             # cd ../..
+....            # cd ../../..
+d               # Show last 10 directories with numbers
+1               # Jump to 1st previous directory
+2               # Jump to 2nd previous directory (up to 9)
+~/Projects      # Direct path entry (AUTO_CD enabled)
+
+# Smart navigation (zoxide)
+z project       # Jump to most-frecent 'project' directory
+cd mydir        # Uses zoxide under the hood
+```
+
+### Global Pipe Aliases (common-aliases)
+
+```bash
+# Pipe shortcuts - append to any command
+cat file.txt G "error"    # | grep "error"
+cat file.txt H            # | head
+cat file.txt T            # | tail
+cat file.txt L            # | less
+command NUL               # > /dev/null 2>&1
+```
+
+### Web Search
+
+```bash
+# Search engines from terminal (web-search plugin)
+google "zsh tutorial"
+github "zinit plugin"
+stackoverflow "bash vs zsh"
+ddg "privacy search"        # DuckDuckGo
+youtube "vim tips"
+```
 
 ### Usage Examples
 

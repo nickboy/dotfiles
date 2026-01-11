@@ -167,7 +167,14 @@ if command -v nvim &> /dev/null; then
     # vim, regex, lua, bash - required by noice.nvim cmdline
     # markdown, markdown_inline - required by noice.nvim for LSP docs
     # python, json, yaml, toml - common development languages
-    timeout 120 nvim --headless \
+    # Use gtimeout (macOS) or timeout (Linux) if available
+    TIMEOUT_CMD=""
+    if command -v gtimeout &> /dev/null; then
+        TIMEOUT_CMD="gtimeout 120"
+    elif command -v timeout &> /dev/null; then
+        TIMEOUT_CMD="timeout 120"
+    fi
+    $TIMEOUT_CMD nvim --headless \
         "+TSInstall vim regex lua bash markdown markdown_inline python json yaml toml" \
         "+sleep 20" +qa 2>/dev/null || echo "  ⚠️  Some parsers may need manual installation"
     echo "  ✓ Treesitter parsers installed"

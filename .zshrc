@@ -42,25 +42,11 @@ export HOMEBREW_NO_ANALYTICS=1
 export HOMEBREW_RUBY3=true
 
 # ============================================================================
-# History Configuration (Set early for better history handling)
-# ============================================================================
-
-HISTSIZE=10000
-HISTFILE=~/.zsh_history
-SAVEHIST=$HISTSIZE
-HISTDUP=erase
-setopt appendhistory
-setopt sharehistory
-setopt hist_ignore_space
-setopt hist_ignore_all_dups
-setopt hist_save_no_dups
-setopt hist_find_no_dups
-
-# ============================================================================
-# Oh-My-Zsh Path (for Zinit OMZ:: snippets)
+# Oh-My-Zsh Path and Settings (for Zinit OMZ:: snippets)
 # ============================================================================
 
 export ZSH=$HOME/.oh-my-zsh
+HIST_STAMPS="yyyy-mm-dd"
 
 # Tmux settings
 # Only autostart tmux for local terminal sessions, not SSH
@@ -112,20 +98,35 @@ compinit
 # Note: functions.zsh must come before termsupport.zsh (provides omz_urlencode)
 zinit snippet OMZ::lib/functions.zsh
 zinit snippet OMZ::lib/clipboard.zsh
+zinit snippet OMZ::lib/directories.zsh
+zinit snippet OMZ::lib/history.zsh
+zinit snippet OMZ::lib/misc.zsh
 zinit snippet OMZ::lib/termsupport.zsh
 zinit snippet OMZ::lib/completion.zsh
 zinit snippet OMZ::lib/key-bindings.zsh
+
+# Fix directories.zsh conflict with zoxide (1-9 aliases should use builtin cd)
+alias -- -='builtin cd -'
+for i in {1..9}; do alias $i="builtin cd -$i"; done
+
+# Strengthen history deduplication (beyond OMZ defaults)
+setopt hist_ignore_all_dups
+setopt hist_save_no_dups
+setopt hist_find_no_dups
 
 # OMZ Plugins (via Zinit for better control)
 zinit snippet OMZP::git
 # macos plugin loaded directly from OMZ (has multiple files that Zinit svn doesn't handle well)
 source "$ZSH/plugins/macos/macos.plugin.zsh"
 zinit snippet OMZP::brew
+zinit snippet OMZP::common-aliases
+zinit snippet OMZP::colored-man-pages
+zinit snippet OMZP::web-search
 zinit snippet OMZP::dotenv
 zinit snippet OMZP::rake
 zinit snippet OMZP::rbenv
 zinit snippet OMZP::ruby
-zinit snippet OMZP::sudo  # ESC ESC to add sudo - needs key binding
+zinit snippet OMZP::sudo
 
 # eza aliases plugin - configure params before loading
 export _EZA_PARAMS=(

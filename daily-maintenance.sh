@@ -129,7 +129,7 @@ if command -v nvim >/dev/null 2>&1; then
     echo "Task: LazyVim plugin updates"
     echo "Command: nvim --headless '+Lazy! sync' +qa"
     echo -n "Status: "
-    
+
     # Run Neovim in headless mode to update LazyVim plugins
     # --headless: Run without UI
     # '+Lazy! sync': Run Lazy sync command (! means no prompts)
@@ -140,6 +140,22 @@ if command -v nvim >/dev/null 2>&1; then
     else
         echo "✗ FAILED"
         FAILED_COMMANDS+=("LazyVim update")
+    fi
+
+    # Update treesitter parsers
+    # This keeps parsers in sync with nvim-treesitter queries
+    # Required for noice.nvim cmdline and other treesitter-dependent plugins
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Treesitter parser updates"
+    echo "Command: nvim --headless '+TSUpdate' +qa"
+    echo -n "Status: "
+
+    if timeout 120 nvim --headless "+TSUpdate" "+sleep 10" +qa 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("Treesitter update")
     fi
 else
     echo "Warning: Neovim not found, skipping LazyVim updates"

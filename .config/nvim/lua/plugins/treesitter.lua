@@ -1,7 +1,2 @@
--- Override nvim-treesitter to use master branch (avoid breaking changes on main)
-return {
-  {
-    "nvim-treesitter/nvim-treesitter",
-    branch = "master",
-  },
-}
+-- Use LazyVim's default treesitter configuration (main branch)
+return {}

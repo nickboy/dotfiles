@@ -75,8 +75,10 @@ Automates daily system maintenance tasks including:
 - Homebrew formula updates (`brew upgrade`)
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
 - Zinit plugin updates (`zinit update --all --quiet`)
+- Oh-My-Zsh updates
 - Bob (Neovim version manager) updates (`bob update`)
 - LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
+- Treesitter parser updates (`nvim --headless '+TSUpdate' +qa`)
 - Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and
   clears cache
 
@@ -239,7 +241,7 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty Features
 
-- **Transparency**: Background opacity (0.75) with blur effect for macOS liquid visuals
+- **Transparency**: Background opacity (0.75) with blur for macOS visuals
 - **Shell Integration**: Enhanced shell integration for better Claude Code support
 - **Smart Clipboard**: Protected paste with bracketed paste mode
 - **Custom Keybinds**: Split panes with `Cmd+D` (down) and `Cmd+Shift+D` (right)
@@ -437,7 +439,7 @@ Modern Rust-based replacements for traditional Unix tools:
 | `dig` | **doggo** | User-friendly DNS client | `dog` |
 | `sed` | **sd** | Simpler find & replace | `replace` |
 | `ps` | **procs** | Modern process viewer | `ps` |
-| `cut` | **choose** | Human-friendly field selection | (use `choose` directly) |
+| `cut` | **choose** | Human-friendly field selection | `choose` |
 | `time` | **hyperfine** | Command benchmarking tool | `bench` |
 | `hexdump` | **hexyl** | Colored hex viewer | `hex` |
 | `curl` | **xh** | Fast HTTP client | `http`, `https` |

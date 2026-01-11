@@ -26,6 +26,26 @@ echo "========================================="
 # Set up PATH to include homebrew
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Set up timeout command (macOS uses gtimeout from coreutils)
+if command -v gtimeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="gtimeout"
+elif command -v timeout >/dev/null 2>&1; then
+    TIMEOUT_CMD="timeout"
+else
+    TIMEOUT_CMD=""
+fi
+
+# Function to run command with optional timeout
+run_with_timeout() {
+    local seconds="$1"
+    shift
+    if [ -n "$TIMEOUT_CMD" ]; then
+        $TIMEOUT_CMD "$seconds" "$@"
+    else
+        "$@"
+    fi
+}
+
 # Function to run command and check status
 run_command() {
     local description="$1"
@@ -135,7 +155,7 @@ if command -v nvim >/dev/null 2>&1; then
     # '+Lazy! sync': Run Lazy sync command (! means no prompts)
     # +qa: Quit all windows
     # timeout: Prevent hanging from async plugin operations
-    if timeout 120 nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
+    if run_with_timeout 120 nvim --headless "+Lazy! sync" +qa 2>/dev/null; then
         echo "✓ SUCCESS"
     else
         echo "✗ FAILED"
@@ -151,7 +171,7 @@ if command -v nvim >/dev/null 2>&1; then
     echo "Command: nvim --headless '+TSUpdate' +qa"
     echo -n "Status: "
 
-    if timeout 120 nvim --headless "+TSUpdate" "+sleep 10" +qa 2>/dev/null; then
+    if run_with_timeout 120 nvim --headless "+TSUpdate" "+sleep 10" +qa 2>/dev/null; then
         echo "✓ SUCCESS"
     else
         echo "✗ FAILED"

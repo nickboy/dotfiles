@@ -15,6 +15,8 @@ brew "chafa"
 brew "choose-rust"
 # Cross-platform make
 brew "cmake"
+# GNU core utilities (provides gtimeout, gdate, etc.)
+brew "coreutils"
 # Claude Code usage and cost tracker
 brew "ccusage"
 # Dependency Manager for PHP

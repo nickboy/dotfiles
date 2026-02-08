@@ -281,11 +281,6 @@ if command -v zoxide &> /dev/null; then
     eval "$(zoxide init zsh)"
 fi
 
-# GitHub Copilot CLI
-if command -v gh &> /dev/null && gh copilot --help &>/dev/null; then
-    eval "$(gh copilot alias -- zsh)"
-fi
-
 # The fuck (command correction)
 if command -v thefuck &> /dev/null; then
     eval $(thefuck --alias fk)

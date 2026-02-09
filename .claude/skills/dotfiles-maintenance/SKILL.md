@@ -94,6 +94,7 @@ zinit update --all                        # Zinit plugins
 bob update                                # Neovim versions
 nvim --headless '+Lazy! sync' +qa         # LazyVim plugins
 nvim --headless '+TSUpdate' +qa           # Treesitter parsers
+mise upgrade                              # Mise-managed tool versions
 ```
 
 ## Installation / Uninstallation

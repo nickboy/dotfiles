@@ -291,6 +291,11 @@ if command -v atuin &> /dev/null; then
     eval "$(atuin init zsh)"
 fi
 
+# Mise (polyglot dev tool version manager)
+if command -v mise &> /dev/null; then
+    eval "$(mise activate zsh)"
+fi
+
 # ============================================================================
 # Aliases
 # ============================================================================
@@ -398,6 +403,26 @@ fi
 alias help='tlrc'
 alias cheat='tlrc'
 
+# Markdown rendering
+if command -v glow &> /dev/null; then
+    alias md='glow'
+fi
+
+# Search and replace TUI
+if command -v serpl &> /dev/null; then
+    alias sr='serpl'
+fi
+
+# File management (yazi with cd-on-exit wrapper)
+if command -v yazi &> /dev/null; then
+    function y() {
+        local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+        command yazi "$@" --cwd-file="$tmp"
+        IFS= read -r -d '' cwd < "$tmp"
+        [ "$cwd" != "$PWD" ] && [ -d "$cwd" ] && builtin cd -- "$cwd"
+        rm -f -- "$tmp"
+    }
+fi
 
 # ============================================================================
 # Shell Options

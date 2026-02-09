@@ -1,12 +1,12 @@
 {
-  "model": "opus",
   "hooks": {
     "Notification": [
       {
+        "matcher": "",
         "hooks": [
           {
             "type": "command",
-            "command": "printf '\\a'"
+            "command": "printf '\\a' > /dev/tty && osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
           }
         ]
       }
@@ -15,5 +15,6 @@
   "statusLine": {
     "type": "command",
     "command": "ccusage statusline"
-  }
+  },
+  "model": "opus"
 }

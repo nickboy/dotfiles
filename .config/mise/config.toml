@@ -1,0 +1,14 @@
+# https://mise.jdx.dev/configuration.html
+# Per-project overrides: create .mise.toml in any project directory
+
+[tools]
+node = "lts"
+python = "3.13"
+go = "latest"
+ruby = "latest"
+
+[settings]
+# Also reads .nvmrc, .python-version, .tool-versions
+idiomatic_version_file_enable_tools = ["node", "python", "ruby", "go"]
+not_found_auto_install = true
+jobs = 4

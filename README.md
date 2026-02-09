@@ -2,6 +2,8 @@
 
 [![Dotfiles CI](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml/badge.svg)](https://github.com/nickboy/dotfiles/actions/workflows/ci.yml)
 
+> **Language**: English | [繁體中文](README.zh-TW.md)
+
 Personal dotfiles managed with [yadm](https://yadm.io/), containing
 configurations for macOS development environment.
 

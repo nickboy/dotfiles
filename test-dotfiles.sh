@@ -164,8 +164,27 @@ EOF
 run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
 echo
 
-# Test 9: Git/yadm checks
-echo -e "${YELLOW}9. Version Control Checks${NC}"
+# Test 9: Config file validation
+echo -e "${YELLOW}9. Config File Validation${NC}"
+
+# Validate Brewfile syntax
+if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
+    run_test "Brewfile syntax" "brew bundle check --file=$HOME/Brewfile 2>&1 | head -1"
+fi
+
+# Validate mise config
+if command -v mise >/dev/null 2>&1 && [ -f "$HOME/.config/mise/config.toml" ]; then
+    run_test "Mise config syntax" "mise config 2>&1 | head -1"
+fi
+
+# Validate yazi config exists
+if [ -f "$HOME/.config/yazi/yazi.toml" ]; then
+    run_test "Yazi config exists" "[ -s $HOME/.config/yazi/yazi.toml ]"
+fi
+echo
+
+# Test 10: Git/yadm checks
+echo -e "${YELLOW}10. Version Control Checks${NC}"
 run_test "No uncommitted changes" "[ -z \"$(yadm status --porcelain 2>/dev/null)\" ] || yadm status --porcelain"
 echo
 

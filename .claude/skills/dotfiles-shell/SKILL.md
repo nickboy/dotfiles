@@ -3,8 +3,9 @@ name: dotfiles-shell
 description: |
   Use when user mentions "zshrc", "shell config", "zinit", "oh-my-zsh",
   "tmux", "alias", "fzf", "zoxide", "sesh", "ghostty", "kitty",
-  "terminal", "atuin", "starship", "carapace", or discusses shell,
-  terminal, or multiplexer configuration.
+  "terminal", "atuin", "starship", "carapace", "yazi", "mise",
+  "television", "glow", "serpl", "jj", "jujutsu", or discusses
+  shell, terminal, or multiplexer configuration.
 version: 1.0.0
 tools: Read, Glob, Grep, Bash, Edit
 user-invocable: true
@@ -19,7 +20,7 @@ user-invocable: true
 1. Early environment setup (PATH, compilation flags)
 2. Oh-My-Zsh framework loading (minimal plugins)
 3. Zinit plugin manager with lazy loading
-4. Tool integrations (fzf, zoxide, starship, atuin, carapace)
+4. Tool integrations (fzf, zoxide, starship, atuin, carapace, mise)
 5. Modern CLI aliases
 
 ### Critical Rules
@@ -41,11 +42,14 @@ user-invocable: true
 ### Key Integrations
 
 - **FZF**: Fuzzy finder with Catppuccin theme and preview windows
+- **Television**: Modern fuzzy finder with built-in previews and channels
 - **Zoxide**: Smart `cd` replacement (`z project` jumps to frecent match)
 - **Starship**: Cross-shell prompt
 - **Atuin**: Enhanced shell history with SQLite, fuzzy search, syntax
   highlighting. Ctrl+R for interactive search.
 - **Carapace**: Universal command completions
+- **Mise**: Polyglot dev tool version manager (node, python, go, ruby).
+  Config: `~/.config/mise/config.toml`. Per-project: `.mise.toml`
 
 ### Notable Aliases
 
@@ -53,8 +57,16 @@ user-invocable: true
 - `ms` — Maintenance status
 - `ml` — Maintenance logs
 - `cat` → `bat`, `vim` → `nvim`, `cd` → `z`
+- `y` → yazi (file manager, cd on exit), `sr` → serpl, `md` → glow
 - Modern CLI replacements: `ls`→eza, `du`→dust, `df`→duf, `top`→btop,
   `grep`→rg, `find`→fd, `dig`→doggo, `ps`→procs
+
+## Yazi File Manager
+
+- Config: `~/.config/yazi/yazi.toml`
+- Use `y` wrapper function (cd to last dir on exit) instead of `yazi`
+- Supports image preview in Ghostty/Kitty via native protocols
+- Navigation: h/l parent/child, j/k up/down, Enter open, q quit
 
 ## Tmux (.tmux.conf)
 

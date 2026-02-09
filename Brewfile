@@ -39,6 +39,8 @@ brew "findent"
 brew "fzf"
 # Syntax-highlighting pager for git and diff output
 brew "git-delta"
+# Render markdown in the terminal
+brew "glow"
 # Open source programming language to build simple/reliable/efficient software
 brew "go"
 # Hex viewer (modern hexdump replacement)
@@ -47,12 +49,16 @@ brew "hexyl"
 brew "hyperfine"
 # Fast, Dynamic Programming Language
 brew "julia"
+# Git-compatible version control system
+brew "jj"
 # Just a command runner
 brew "just"
 # Simple terminal UI for git commands
 brew "lazygit"
 # Package manager for the Lua programming language
 brew "luarocks"
+# Polyglot dev tool version manager (replaces asdf/nvm/pyenv)
+brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
 # Control nvim processes using `nvr` command-line tool
@@ -75,6 +81,8 @@ brew "pyright"
 brew "ripgrep"
 # Intuitive find & replace CLI (sed alternative)
 brew "sd"
+# TUI for search and replace, ala VS Code
+brew "serpl"
 # Tool to find ROP sequences in PE/Elf/Mach-O x86/x64 binaries
 brew "rp"
 # Extremely fast Python linter, written in Rust
@@ -91,6 +99,8 @@ brew "starship"
 brew "thefuck"
 # Official tldr client written in Rust
 brew "tlrc"
+# Fast fuzzy finder with built-in previews
+brew "television"
 # Count lines of code quickly
 brew "tokei"
 # Terminal multiplexer
@@ -109,6 +119,8 @@ brew "xh"
 brew "uv"
 # Yet Another Dotfiles Manager
 brew "yadm"
+# Blazing fast terminal file manager written in Rust
+brew "yazi"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Magical shell history with sync and search

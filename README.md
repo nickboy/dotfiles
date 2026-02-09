@@ -14,7 +14,8 @@ configurations for macOS development environment.
 - **Terminal**: tmux with sesh session manager, Ghostty and Kitty configs
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, and more
+- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi, and more
+- **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
 - **Claude Code**: Integrated statusline with ccusage for cost tracking
 
@@ -445,6 +446,12 @@ Modern Rust-based replacements for traditional Unix tools:
 | `curl` | **xh** | Fast HTTP client | `http`, `https` |
 | - | **tokei** | Code statistics tool | `count` |
 | `man` | **tlrc** | Quick command examples | `help`, `cheat` |
+| - | **yazi** | Blazing fast file manager | `y` |
+| - | **serpl** | TUI search & replace | `sr` |
+| - | **television** | Fuzzy finder with previews | `tv` |
+| - | **glow** | Terminal markdown renderer | `md` |
+| `git` | **jujutsu** | Git-compatible VCS | `jj` |
+| `nvm`/`pyenv` | **mise** | Polyglot version manager | `mise` |
 
 ### Shell Enhancements
 
@@ -565,7 +572,63 @@ count .         # Count lines of code by language
 # Quick help
 help tar        # Show tar examples
 cheat docker    # Docker command examples
+
+# File management (yazi)
+y               # Open yazi, cd to last dir on exit
+y ~/Downloads   # Open yazi in specific directory
+
+# Markdown rendering
+md README.md    # Render markdown in terminal
+
+# Search and replace (serpl)
+sr              # Open TUI search & replace
+
+# Fuzzy finder with previews (television)
+tv              # Open television fuzzy finder
 ```
+
+### Yazi File Manager
+
+[Yazi](https://yazi-rs.github.io/) is a blazing fast terminal file manager
+written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
+
+```bash
+# Open yazi (use 'y' wrapper to cd on exit)
+y
+
+# Navigation
+# h/l or ←/→  - Parent/Child directory
+# j/k or ↑/↓  - Move cursor
+# Enter       - Open file
+# q           - Quit (no cd)
+# Shift+Q     - Quit (cd to current dir, via 'y' wrapper)
+```
+
+Configuration: `~/.config/yazi/yazi.toml`
+
+### Mise Version Manager
+
+[Mise](https://mise.jdx.dev/) manages dev tool versions per-project. It
+replaces nvm, pyenv, rbenv, and similar tools with one consistent interface.
+
+```bash
+# Check installed tools
+mise ls
+
+# Install a specific version
+mise use node@22
+mise use python@3.13
+
+# Per-project config (create .mise.toml in project root)
+mise use node@18    # creates/updates .mise.toml
+
+# Global config
+mise use -g node@lts python@3.13
+
+# Reads existing version files (.nvmrc, .python-version, etc.)
+```
+
+Configuration: `~/.config/mise/config.toml`
 
 ## 🔧 Manual Updates
 

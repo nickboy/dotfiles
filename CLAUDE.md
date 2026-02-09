@@ -1,451 +1,77 @@
-# Nick's Dotfiles Documentation for AI Assistants
+# Nick's Dotfiles — AI Assistant Instructions
 
-This document provides comprehensive information about the dotfiles repository
-managed with [yadm](https://yadm.io/). It's designed to help AI assistants
-quickly understand the development environment and automation setup.
+Personal dotfiles managed with [yadm](https://yadm.io/) at
+<https://github.com/nickboy/dotfiles.git>.
 
-## Repository Information
+## Architecture
 
-- **Repository URL**: <https://github.com/nickboy/dotfiles.git>
-- **Management Tool**: yadm (Yet Another Dotfiles Manager)
-- **Primary OS**: macOS (Darwin 25.0.0)
-- **Last Updated**: September 2025
+macOS (Apple Silicon) development environment:
 
-## System Architecture Overview
-
-### Core Technologies
-
-- **Shell**: Zsh with Oh-My-Zsh framework and Zinit plugin manager
-- **Terminal Multiplexer**: tmux with Catppuccin theme and sesh session manager
-- **Primary Editors**:
-  - Neovim (LazyVim configuration)
-  - Zed (with vim mode enabled)
-- **Package Management**: Homebrew (Apple Silicon optimized at `/opt/homebrew`)
-- **Version Control**: Git with delta for diffs
+- **Shell**: Zsh + Oh-My-Zsh framework + Zinit plugin manager
+- **Terminals**: Ghostty, Kitty (both Catppuccin Mocha themed)
+- **Multiplexer**: tmux with sesh session manager
+- **Editors**: Neovim (LazyVim via bob) and Zed
+- **Packages**: Homebrew at `/opt/homebrew`
 - **Prompt**: Starship
+- **History**: Atuin
+- **Completions**: Carapace
+- **Git**: delta pager, zdiff3 merge style
+- **Version Control**: yadm (NOT git) for all dotfile operations
 
-### Development Tools
+### PATH Priority
 
-- **Languages**: Python 3.13, Go, Rust, Julia, Node.js, Java (OpenJDK), Ruby
-- **Linters/Formatters**: Ruff (Python), ShellCheck, Prettier, rust-analyzer
-- **Search Tools**: ripgrep, fd, fzf with custom TokyoNight theme
-- **File Navigation**: eza (modern ls), zoxide (smart cd), bat (syntax highlighting)
-- **Treesitter**: tree-sitter-cli (via cargo, required for nvim-treesitter)
-
-## File Structure
-
-```text
-~/
-├── Configuration Files
-│   ├── .zshrc                    # Zsh configuration with Zinit
-│   ├── .gitconfig                # Git configuration with delta
-│   ├── .tmux.conf                # Tmux configuration
-│   └── Brewfile                  # Homebrew bundle definition
-│
-├── .config/
-│   ├── nvim/                     # Neovim LazyVim configuration
-│   │   ├── init.lua
-│   │   ├── lazy-lock.json
-│   │   └── lua/config/           # Neovim configs
-│   ├── zed/                      # Zed editor settings
-│   │   └── settings.json         # Comprehensive Zed configuration
-│   ├── ghostty/                  # Ghostty terminal configuration
-│   │   └── config                # Symlinked to Application Support
-│   ├── bat/                      # Bat themes
-│   │   └── themes/tokyonight_night.tmTheme
-│   ├── ripgrep/                  # Ripgrep configuration
-│   │   └── config                # Search exclusions and settings
-│   └── yadm/
-│       └── bootstrap             # Auto-runs after yadm clone
-│
-├── .local/bin/                   # User scripts
-│   └── battery-status            # Battery monitoring utility (Python)
-│
-├── Library/LaunchAgents/         # macOS automation
-│   └── com.nickboy.daily-maintenance.plist
-│
-├── Automation Scripts
-│   ├── daily-maintenance.sh      # Main update script
-│   ├── daily-maintenance-control.sh # Control interface
-│   ├── install-daily-maintenance.sh
-│   └── uninstall-daily-maintenance.sh
-│
-├── Development & Testing
-│   ├── test-dotfiles.sh          # Local test suite
-│   ├── .github/workflows/ci.yml  # GitHub Actions CI/CD
-│   └── .yadm/hooks/pre-commit    # Pre-commit validation
-│
-└── Documentation
-    ├── README.md                  # User documentation
-    ├── CONTRIBUTING.md            # Development guidelines
-    └── CLAUDE.md                  # This file (AI assistant documentation)
-```
-
-## Key Configurations
-
-### Shell Environment (.zshrc)
-
-**Architecture**:
-
-1. Early environment setup (PATH, compilation flags)
-2. Oh-My-Zsh framework loading (minimal plugins)
-3. Zinit plugin manager with lazy loading
-4. Tool integrations (fzf, zoxide, starship)
-5. Modern CLI aliases
-
-**Key Features**:
-
-- Smart plugin loading with Zinit for fast startup
-- FZF with TokyoNight theme and preview windows
-- Zoxide for intelligent directory navigation
-- GitHub Copilot CLI integration
-- Battery monitoring alias
-
-**PATH Priority**:
-
-1. `/opt/homebrew/bin` (Apple Silicon Homebrew)
+1. `/opt/homebrew/bin` (Homebrew)
 2. `~/.local/bin` (user scripts)
 3. `~/.cargo/bin` (Rust)
-4. `~/.local/share/bob/nvim-bin` (Neovim versions)
+4. `~/.local/share/bob/nvim-bin` (Neovim)
 
-### Editor Configuration
+## Mandatory Rules
 
-**Neovim**:
+1. **Use yadm, not git** — All dotfile operations use `yadm` commands.
+   Never use `git` directly.
 
-- Base: LazyVim distribution
-- Location: `~/.config/nvim/`
-- Version Manager: bob
+2. **Respect existing patterns** — Check neighboring files for conventions,
+   use existing libraries/frameworks, follow established code style.
 
-**Zed** (`~/.config/zed/settings.json`):
+3. **Path conventions** — Homebrew is at `/opt/homebrew` (Apple Silicon).
+   Use `$HOME` instead of hardcoded user paths. Scripts must be `chmod +x`.
 
-- Vim mode enabled with relative line numbers
-- Theme: One Dark
-- Font: JetBrains Mono
-- AI: Claude 3.5 Sonnet integration
-- Format on save enabled
-- Language-specific formatters configured
-- Git inline blame enabled
+4. **Lint-free commits** — Every commit MUST pass markdown linting.
+   Run `npx markdownlint-cli '**/*.md' --ignore node_modules` before
+   any commit. Fix ALL lint errors, no exceptions.
 
-### Automation System
+5. **Run tests before committing** — `bash ~/test-dotfiles.sh`
 
-**Daily Maintenance** (Runs at 9:00 AM):
+6. **No AI tags in commits** — Do NOT include Claude co-author or
+   AI-generated tags in commit messages.
 
-1. Homebrew formula updates
-2. Homebrew cask updates (greedy)
-3. Zinit plugin updates
-4. Oh-My-Zsh updates
-5. Bob (Neovim) updates
-6. LazyVim plugin updates
-7. Treesitter parser updates (`:TSUpdate`)
-8. Homebrew cleanup (removes old versions and cache)
+7. **Zsh plugin loading** — Zinit manages most plugins, Oh-My-Zsh
+   provides the framework. Never duplicate plugin loading between them.
 
-**Control Commands**:
+8. **Neovim/Treesitter** — nvim-treesitter uses `main` branch (not
+   `master`). `tree-sitter-cli` must be installed via cargo, not
+   Homebrew. Run `:TSUpdate` after updating nvim-treesitter.
 
-- `~/daily-maintenance-control.sh status` - Check automation status
-- `~/daily-maintenance-control.sh run` - Run manually
-- `~/daily-maintenance-control.sh logs` - View logs
-- `~/daily-maintenance-control.sh stop/start` - Control automation
+9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
+   Git credentials managed by Git Credential Manager.
 
-**Shortcut Aliases** (in `.zshrc`):
+## Skills
 
-- `mr` - Maintenance run (manually execute all updates)
-- `ms` - Maintenance status (check if automation is active)
-- `ml` - Maintenance logs (view recent logs)
+Detailed workflows are in `~/.claude/skills/`. Claude loads these
+automatically based on context:
 
-**Logs Location**:
-
-- Main log: `~/Library/Logs/daily-maintenance.log`
-- Error log: `~/Library/Logs/daily-maintenance-error.log`
-
-### Git Configuration
-
-- Pager: delta with syntax highlighting
-- Merge conflict style: zdiff3
-- Credential helper: Git Credential Manager
-- User: Nick Liu (`nickboy@users.noreply.github.com`)
-
-### Tmux Configuration
-
-- Prefix: Ctrl-A (remapped from Ctrl-B)
-- Splits: `\` horizontal, `-` vertical
-- Vi mode enabled
-- Mouse support enabled
-- Session management: sesh (Ctrl-A + T for session switcher)
-- Plugins via TPM:
-  - vim-tmux-navigator
-  - tmux-resurrect (session persistence)
-  - tmux-continuum (auto-save)
-  - Catppuccin theme
-
-## Development Workflow
-
-### Testing
-
-Run before committing:
-
-```bash
-bash ~/test-dotfiles.sh
-```
-
-Tests include:
-
-- Shell script syntax validation
-- ShellCheck analysis
-- Zsh configuration validation
-- Plist validation
-- Documentation checks
-
-### CI/CD Pipeline
-
-GitHub Actions workflow (`.github/workflows/ci.yml`):
-
-- **Lint checks**: ShellCheck, YAML, Markdown
-- **Syntax validation**: Bash, Zsh
-- **Security scanning**: Trivy, Trufflehog
-- **Compatibility testing**: macOS latest and macOS 13
-- **Documentation validation**
-
-### Pre-commit Hook
-
-Located at `.yadm/hooks/pre-commit`
-Runs validation before allowing commits
-
-## Installed Tools (Brewfile)
-
-### CLI Tools
-
-- **Search/Find**: ripgrep, fd, fzf, ffind, ast-grep
-- **File Management**: eza, bat, chafa (image viewer), viu
-- **Development**: git-delta, lazygit, neovim, tmux, sesh
-- **Languages**: Python 3.13, Go, Rust, Julia, Node.js, Java, Perl, Ruby
-- **Package Managers**: Composer (PHP), LuaRocks, pipx, cargo
-- **Linters**: ruff, pyright, shellcheck
-- **Utilities**: thefuck, tlrc, wget, yadm, zoxide
-
-### GUI Applications (Casks)
-
-- **Password**: 1Password + CLI
-- **Browsers**: Arc
-- **Development**: Ghostty, Warp (terminals)
-- **Media**: IINA, Spotify
-- **Utilities**: BetterDisplay, Raycast, Rectangle Pro, SoundSource
-- **Fonts**: Hack Nerd Font
-
-## Custom Scripts
-
-### battery-status
-
-Python script at `~/.local/bin/battery-status`
-
-- Shows battery charging/discharging wattage
-- Displays voltage and amperage
-- Usage: `battery` or `battery -v` for verbose
-
-## Important Notes for AI Assistants
-
-### When Making Changes
-
-1. **Always respect existing patterns**:
-   - Check neighboring files for conventions
-   - Use existing libraries/frameworks
-   - Follow the established code style
-
-2. **Path considerations**:
-   - Homebrew is at `/opt/homebrew` (Apple Silicon)
-   - Use `$HOME` instead of hardcoded user paths
-   - Scripts should be executable (`chmod +x`)
-
-3. **Testing requirements**:
-   - Run `bash ~/test-dotfiles.sh` before committing
-   - Check syntax with appropriate tools
-   - Ensure LaunchAgent plists are valid
-   - **IMPORTANT**: Always run markdown lint before committing:
-
-     ```bash
-     npx markdownlint-cli '**/*.md' --ignore node_modules
-     ```
-
-   - Fix ALL lint errors - no exceptions
-
-4. **Zsh-specific notes**:
-   - Zinit manages most plugins
-   - Oh-My-Zsh provides the framework
-   - Don't duplicate plugin loading
-
-5. **Neovim/Treesitter notes**:
-   - nvim-treesitter uses `main` branch (not `master`) since May 2025
-   - `tree-sitter-cli` must be installed via cargo (`cargo install --locked tree-sitter-cli`)
-   - Homebrew's `tree-sitter` package is just a library, not the CLI
-   - noice.nvim requires: `vim`, `regex`, `lua`, `bash`, `markdown`, `markdown_inline`
-   - Run `:TSUpdate` after updating nvim-treesitter to sync parser versions
-
-6. **Lint-free commits** (MANDATORY):
-   - Every commit MUST pass markdown linting
-   - Run `npx markdownlint-cli README.md CLAUDE.md` before ANY commit
-   - Common errors to avoid:
-     - MD022: Headings need blank lines around them
-     - MD031: Code blocks need blank lines around them
-     - MD032: Lists need blank lines around them
-     - MD013: Keep lines under 80 characters when possible
-   - Never commit with lint errors present
-   - **IMPORTANT**: Use `yadm` commands (not `git`) for all operations
-   - **DO NOT** include Claude co-author or AI-generated tags in commit messages
-
-7. **Updates and maintenance**:
-   - Daily automation handles most updates
-   - Manual control via `daily-maintenance-control.sh`
-   - Logs are in `~/Library/Logs/`
-
-### Modern CLI Tools Reference
-
-**Use these modern tools instead of traditional ones**:
-
-```bash
-# Search file contents (instead of grep)
-rg "pattern"                   # ripgrep - faster than grep
-rg -i "case_insensitive"       # Case insensitive search
-rg -t py "def.*function"       # Search only Python files
-rg --hidden "pattern"          # Include hidden files
-
-# Find files (instead of find)
-fd "filename"                  # fd - simpler and faster than find
-fd -e py                       # Find all Python files
-fd -H "hidden"                 # Include hidden files
-fd -t f "test.*\.sh$"         # Find test shell scripts
-
-# Search code semantically
-ast-grep 'function $NAME() { $$$ }' # AST-based search
-
-# Interactive file search
-ffind                          # Interactive file finder
-```
-
-### Common Tasks
-
-**Run linters before committing**:
-
-```bash
-# Install linters with uv (fast Python package manager)
-brew install uv  # If not installed
-uv tool install yamllint
-uv tool install beautysh --with setuptools
-
-# Run YAML lint
-yamllint -d relaxed .github/workflows/ci.yml
-
-# Run shell script lint (if shellcheck is installed)
-shellcheck *.sh
-
-# Run markdown lint (for documentation validation)
-npm install -g markdownlint-cli  # Install if needed
-markdownlint '**/*.md' --ignore node_modules
-
-# Run test suite
-bash ~/test-dotfiles.sh
-```
-
-**Markdown formatting standards**:
-
-- Headings must be surrounded by blank lines (MD022)
-- Code blocks must be surrounded by blank lines (MD031)
-- Lists must be surrounded by blank lines (MD032)
-- Use consistent heading style (ATX-style with #)
-- Proper line length (120 characters recommended)
-
-**Add a new Homebrew package**:
-
-1. Edit `~/Brewfile`
-2. Run `brew bundle`
-
-**Modify daily maintenance**:
-
-1. Edit `~/daily-maintenance.sh`
-2. Test with `~/daily-maintenance-control.sh run`
-3. Check logs for errors
-
-**Update Neovim configuration**:
-
-1. Edit files in `~/.config/nvim/`
-2. Restart Neovim to apply changes
-
-**Change Zed settings**:
-
-1. Edit `~/.config/zed/settings.json`
-2. Changes apply automatically
-
-**Manage dotfiles with yadm**:
-
-```bash
-yadm status           # Check status
-yadm add <file>       # Track new file
-yadm commit -m "msg"  # Commit changes
-yadm push            # Push to GitHub
-```
-
-**Important: Set correct author for yadm commits**:
-
-```bash
-# Check current author config
-yadm config user.name
-yadm config user.email
-
-# Set correct author (required for proper commit attribution)
-yadm config user.name "Tzu-Hua(Nick) Liu"
-yadm config user.email "nickboy@users.noreply.github.com"
-```
-
-**Create Pull Requests with GitHub CLI**:
-Since yadm uses git under the hood, you can use GitHub CLI (`gh`) for PR operations:
-
-```bash
-# Create a feature branch
-yadm checkout -b feature-branch-name
-
-# Make changes and commit
-yadm add <files>
-yadm commit -m "feat: your commit message"
-
-# Push branch to remote
-yadm push -u origin feature-branch-name
-
-# Create PR using the git alias we've configured
-yadm pr create --title "PR title" --body "PR description"
-
-# Alternative: If alias not configured, set it up first
-yadm gitconfig alias.pr '!f() { GIT_DIR=$HOME/.local/share/yadm/repo.git \
-  GIT_WORK_TREE=$HOME gh pr "$@"; }; f'
-
-# Then use any gh pr commands with yadm
-yadm pr list              # List PRs
-yadm pr view              # View current PR
-yadm pr merge             # Merge PR
-yadm pr create --title "Title" --body "Description"
-```
-
-## Environment Details
-
-- **Working Directory**: /Users/nickboy
-- **Platform**: macOS (Darwin 25.0.0)
-- **Shell**: Zsh with extensive customization
-- **Python**: 3.13 via Homebrew
-- **Node**: Latest via Homebrew
-- **Rust**: Managed via rustup
-
-## Security Considerations
-
-- No secrets in dotfiles (use `.gitignore`)
-- Git credentials managed by Git Credential Manager
-- Edit predictions disabled for sensitive files in Zed
-- Telemetry disabled in Zed configuration
-
-## Contact & Support
-
-- Repository: <https://github.com/nickboy/dotfiles>
-- Issues: Report at repository issues page
-- CI Status: Check GitHub Actions tab
+- **dotfiles-commit** — Yadm commit/push/PR workflow, conventional
+  commits, pre-commit checklist, author config
+- **dotfiles-test** — Test suite, linters (shellcheck, markdownlint,
+  yamllint), CI/CD pipeline, pre-commit hook
+- **dotfiles-maintenance** — Daily automation (brew, zinit, bob,
+  LazyVim, treesitter), control commands, Brewfile management
+- **dotfiles-editors** — Neovim/LazyVim config, treesitter details,
+  bob version manager, Zed settings
+- **dotfiles-shell** — Zsh/Zinit/Oh-My-Zsh architecture, tmux config,
+  terminal emulators (Ghostty, Kitty), Atuin, sesh, aliases
 
 ---
 
-*This documentation is specifically designed for AI assistants to quickly
-understand and work with this dotfiles setup. Always verify current state with
-`yadm status` and check actual file contents when making modifications.*
+*Verify current state with `yadm status`. Check actual file contents
+before making modifications.*

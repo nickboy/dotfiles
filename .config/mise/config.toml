@@ -3,7 +3,7 @@
 
 [tools]
 node = "lts"
-python = "3.13"
+python = "latest"
 go = "latest"
 ruby = "latest"
 

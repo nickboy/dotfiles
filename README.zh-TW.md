@@ -242,23 +242,37 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Ghostty 功能特色
 
 - **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果
-- **Shell 整合**: 增強的 shell 整合，支援更好的 Claude Code 體驗
+- **Shell 整合**: 增強的 shell 整合，搭配 `path` 功能追蹤
+  工作目錄（OSC 7）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
-- **自訂快捷鍵**: `Cmd+D` 水平分割、`Cmd+Shift+D` 垂直分割
-- **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、`cursor_smear.glsl`）
+- **Option 作為 Alt**: 左 Option 鍵作為 Alt 使用，支援
+  單字移動（`Alt+B/F/D`）
+- **視窗狀態持久化**: 重新啟動時自動恢復視窗佈局
+  （`window-save-state`）
+- **提示導航**: `Cmd+Up/Down` 在捲動緩衝區中跳轉 shell
+  提示
+- **分割縮放**: `Cmd+Shift+Enter` 最大化/還原分割窗格
+- **調整大小覆蓋層**: 調整視窗大小時顯示尺寸
+- **連結預覽**: 懸停 URL 即可預覽
+- **自動更新**: Ghostty 有新版本時發出通知
+- **鈴聲通知**: 系統通知、音效與 Dock 彈跳，適用於
+  權限請求提醒
+- **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
+  `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
 - **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
 
 ### 主要設定
 
 - 透明背景搭配模糊效果，呈現現代 macOS 風格
-- Shell 整合與工作目錄追蹤（OSC 7）
+- 平衡內邊距搭配延伸儲存格背景色，呈現無縫外觀
+- Shell 整合搭配 `path` 功能追蹤工作目錄
 - 增強剪貼簿功能與貼上保護
 - 滑鼠支援與焦點追隨滑鼠
-- 啟用連結點擊
+- 啟用連結點擊與懸停預覽
 
-注意：著色器位於 `~/.config/ghostty/shaders/`，透過 bootstrap 建立 symlink。
-修改後使用 `Cmd+Shift+,` 重載設定。
+注意：著色器位於 `~/.config/ghostty/shaders/`，透過
+bootstrap 建立 symlink。修改後使用 `Cmd+Shift+,` 重載設定。
 
 ## Kitty 終端機設定
 
@@ -320,12 +334,22 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 
 ### 設定功能
 
+- **Truecolor + Ghostty RGB**: 終端機覆蓋設定支援完整
+  24 位元色彩
+- **透明度穿透**: Ghostty 背景透明度與模糊效果可穿透
+  tmux 窗格顯示
+- **OSC52 剪貼簿**: 透過 `set-clipboard on` 整合系統
+  剪貼簿
+- **DCS 穿透**: 啟用圖片協定與 shell 整合穿透 tmux
+- **Undercurl 支援**: 為 Neovim LSP 診斷提供彩色波浪
+  底線
 - **視窗/窗格編號**: 從 1 開始（方便鍵盤操作）
 - **滑鼠支援**: 啟用窗格選取與捲動
 - **Vi 模式**: 複製模式使用 Vi 風格按鍵
 - **自動重新編號**: 關閉視窗時自動重新編號
 - **主題**: Catppuccin Mocha 搭配自訂狀態列
-- **工作階段持久化**: 透過 tmux-resurrect/continuum 自動儲存與復原
+- **工作階段持久化**: 透過 tmux-resurrect/continuum
+  自動儲存與復原
 
 ### 按鍵綁定
 
@@ -514,11 +538,15 @@ youtube "vim tips"
 Atuin 取代傳統 shell 歷史記錄，使用 SQLite 資料庫，提供語法高亮、
 模糊搜尋與豐富的中繼資料。
 
+功能：工作區感知篩選（上方向鍵顯示目前 git repo 範圍的歷史）、
+vi 按鍵模式、緊湊風格、自動秘密篩選。
+
 ```bash
 # 互動式歷史搜尋 (Ctrl+R)
 # - 模糊搜尋搭配語法高亮
-# - 篩選方式：主機、工作階段、目錄或全域
+# - 篩選方式：主機、工作階段、目錄、工作區或全域
 # - 再按 Ctrl+R 切換篩選模式
+# - 上方向鍵依目前 git repo 篩選（工作區模式）
 
 # 統計資料
 atuin stats              # 顯示指令使用統計
@@ -537,6 +565,19 @@ atuin search --cwd .     # 僅搜尋目前目錄
 | `Enter` | 執行選取的指令 |
 | `Tab` | 插入指令以編輯 |
 | `Esc` | 離開搜尋 |
+
+### FZF Git 快捷工具
+
+```bash
+# 模糊分支切換（依最近提交排序）
+gb
+
+# 從 git log 模糊切換
+gl
+
+# Ripgrep + FZF 互動式程式碼搜尋（Enter 在 nvim 開啟）
+rgf "pattern"
+```
 
 ### 使用範例
 
@@ -740,4 +781,4 @@ shellcheck *.sh  # 若已透過 brew 安裝
 
 ---
 
-最後更新：2025 年 9 月
+最後更新：2026 年 2 月

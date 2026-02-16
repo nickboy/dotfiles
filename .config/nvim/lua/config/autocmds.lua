@@ -12,6 +12,9 @@ vim.api.nvim_create_autocmd("ColorScheme", {
   callback = function()
     vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
     vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
+    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+    vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "NONE" })
+    vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "NONE" })
   end,
 })
 
@@ -19,3 +22,6 @@ vim.api.nvim_create_autocmd("ColorScheme", {
 -- initial colorscheme has already been set)
 vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
 vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "NONE" })
+vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "NONE" })

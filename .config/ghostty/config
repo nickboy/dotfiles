@@ -9,8 +9,11 @@ scrollback-limit = 10000
 # Window settings
 window-padding-x = 10
 window-padding-y = 10
+window-padding-balance = true
+window-padding-color = extend
 window-decoration = true
 window-theme = auto
+window-save-state = default
 
 # Transparency and visual effects for macOS liquid visuals
 background-opacity = 0.75
@@ -37,10 +40,13 @@ keybind = cmd+k=clear_screen
 keybind = cmd+shift+d=new_split:right
 keybind = cmd+d=new_split:down
 keybind = cmd+shift+comma=reload_config
+keybind = cmd+up=jump_to_prompt:-1
+keybind = cmd+down=jump_to_prompt:1
+keybind = cmd+shift+enter=toggle_split_zoom
 
 # Shell Integration for Claude Code
 shell-integration = detect
-shell-integration-features = cursor,sudo,title,ssh-env
+shell-integration-features = cursor,sudo,title,path
 
 # Enhanced clipboard for better Claude Code integration
 clipboard-read = allow
@@ -56,6 +62,14 @@ copy-on-select = clipboard
 
 # Link handling
 link-url = true
+link-previews = true
+
+# Window resize feedback
+resize-overlay = after-first
+resize-overlay-duration = 750ms
+
+# Auto-update notifications
+auto-update = check
 
 # Additional features
 confirm-close-surface = false

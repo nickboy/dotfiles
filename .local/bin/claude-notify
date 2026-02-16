@@ -6,8 +6,9 @@ set -euo pipefail
 #
 # Notification layers:
 # 1. BEL → Ghostty bell emoji + dock bounce (when unfocused)
-# 2. OSC 777 → Ghostty desktop notification (works over SSH)
-# 3. osascript/notify-send → local desktop notification fallback
+# 2. OSC 9/777 → Ghostty desktop notification (always sent;
+#    Ghostty shows banner only when window/surface unfocused)
+# 3. terminal-notifier/notify-send → fallback for non-Ghostty
 
 target_tty="/dev/tty"
 my_tty=$(command -p ps -o tty= -p $$ 2>/dev/null | tr -d ' ')
@@ -25,10 +26,19 @@ while [ "$pid" -gt 1 ]; do
   fi
 done
 
-# Send BEL (bell emoji + dock bounce)
+# Send BEL (bell emoji + dock bounce when unfocused)
 printf '\a' > "$target_tty" 2>/dev/null || true
 
-# Check if Ghostty is the focused app
+# OSC 9 desktop notification (always sent; Ghostty handles focus)
+printf '\033]9;Claude Code needs your attention\033\\' \
+  > "$target_tty" 2>/dev/null || true
+
+# OSC 777 desktop notification (title+body variant)
+printf '\033]777;notify;Claude Code;Needs your attention\033\\' \
+  > "$target_tty" 2>/dev/null || true
+
+# Fallback: native notification tools for non-Ghostty terminals
+# Only when Ghostty is NOT focused (avoid duplicate banners)
 ghostty_focused=false
 if command -v osascript &>/dev/null; then
   frontmost=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null || true)
@@ -37,17 +47,7 @@ if command -v osascript &>/dev/null; then
   esac
 fi
 
-# Only send notifications when Ghostty is NOT focused
 if [ "$ghostty_focused" = false ]; then
-  # OSC 9 desktop notification (simplest, works over SSH → Ghostty)
-  printf '\033]9;Claude Code needs your attention\033\\' \
-    > "$target_tty" 2>/dev/null || true
-
-  # OSC 777 desktop notification (title+body, works over SSH → Ghostty)
-  printf '\033]777;notify;Claude Code;Needs your attention\033\\' \
-    > "$target_tty" 2>/dev/null || true
-
-  # Fallback: native notification tools (not available over SSH)
   if command -v terminal-notifier &>/dev/null; then
     terminal-notifier \
       -title "Claude Code" \

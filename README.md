@@ -296,8 +296,9 @@ scp ~/.claude/settings.json remote:~/.claude/
 ```
 
 OSC 9/777 escape sequences travel back through SSH to Ghostty,
-which displays macOS banner notifications. Ensure Ghostty is in
-your Focus mode allowed apps list.
+which displays macOS banner notifications. No additional tools
+(e.g., `terminal-notifier`) need to be installed on the remote
+machine. Ensure Ghostty is in your Focus mode allowed apps list.
 
 ## 🐱 Kitty Terminal Configuration
 

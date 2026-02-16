@@ -283,7 +283,7 @@ fi
 
 # The fuck (command correction)
 if command -v thefuck &> /dev/null; then
-    eval $(thefuck --alias fk)
+    eval "$(thefuck --alias fk)"
 fi
 
 # Atuin (enhanced shell history with syntax highlighting)
@@ -423,6 +423,25 @@ if command -v yazi &> /dev/null; then
         rm -f -- "$tmp"
     }
 fi
+
+# FZF-powered git helpers
+alias gb='git branch --sort=-committerdate | fzf --preview "git log --oneline -10 {1}" | xargs git checkout'
+alias gl='git log --oneline --all | fzf --preview "git show --stat {1}" | cut -d" " -f1 | xargs git checkout'
+
+# Ripgrep + FZF for interactive code search (Enter opens in nvim)
+rgf() {
+    rg --color=always --line-number --no-heading "$@" |
+    fzf --ansi --delimiter : \
+        --preview 'bat --style=numbers --color=always --highlight-line {2} {1}' \
+        --preview-window '+{2}-5' \
+        --bind 'enter:become(nvim {1} +{2})'
+}
+
+# Quick utilities (inspired by nickjj/dotfiles)
+alias sz='source ~/.zshrc'
+alias myip='curl -s https://checkip.amazonaws.com | pbcopy && pbpaste'
+alias 755d='find . -type d -exec chmod 755 {} +'
+alias 644f='find . -type f -exec chmod 644 {} +'
 
 # ============================================================================
 # Shell Options

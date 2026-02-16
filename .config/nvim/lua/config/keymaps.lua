@@ -12,3 +12,13 @@ vim.keymap.set("t", "gx", function()
     vim.api.nvim_feedkeys("gx", "n", false)
   end
 end, { desc = "Open URL under cursor" })
+
+-- Model selector — switch between Opus/Sonnet/Haiku
+-- The command exists but has no default keymap in the LazyVim extra
+vim.keymap.set("n", "<leader>am", "<cmd>ClaudeCodeSelectModel<cr>",
+  { desc = "Select Claude model" })
+
+-- Exit terminal mode with double-Escape (standard Neovim convention)
+-- Useful for scrolling Claude Code output with vim motions
+vim.keymap.set("t", "<Esc><Esc>", "<C-\\><C-n>",
+  { desc = "Exit terminal mode" })

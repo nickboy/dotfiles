@@ -4,42 +4,62 @@ return {
     name = "catppuccin",
     priority = 1000,
     opts = {
-      flavour = "mocha", -- mocha, macchiato, frappe, latte
+      flavour = "mocha",
       background = {
         light = "latte",
         dark = "mocha",
       },
-      transparent_background = false,
-      show_end_of_buffer = false,
+      transparent_background = true,
+      show_end_of_buffer = true,
       term_colors = true,
       dim_inactive = {
         enabled = false,
         shade = "dark",
         percentage = 0.15,
       },
-      no_italic = false,
-      no_bold = false,
-      no_underline = false,
       styles = {
         comments = { "italic" },
         conditionals = { "italic" },
-        loops = {},
-        functions = {},
-        keywords = {},
-        strings = {},
-        variables = {},
-        numbers = {},
-        booleans = {},
-        properties = {},
-        types = {},
-        operators = {},
       },
-      color_overrides = {},
-      custom_highlights = {},
+      custom_highlights = function(colors)
+        return {
+          -- Floating windows (Lazy, Mason, etc.)
+          NormalFloat = { bg = "NONE" },
+          FloatBorder = { bg = "NONE" },
+          FloatTitle = { bg = "NONE" },
+
+          -- Telescope
+          TelescopeNormal = { bg = "NONE" },
+          TelescopeBorder = { bg = "NONE" },
+          TelescopeTitle = { bg = "NONE" },
+
+          -- Completion menu
+          Pmenu = { bg = "NONE" },
+          PmenuBorder = { bg = "NONE" },
+
+          -- Lazy UI
+          LazyNormal = { bg = "NONE" },
+
+          -- Other popups/floats
+          WhichKeyFloat = { bg = "NONE" },
+          NotifyBackground = { bg = "NONE" },
+
+          -- Line numbers
+          LineNr = { bg = "NONE", fg = colors.overlay1, bold = true },
+          LineNrAbove = { bg = "NONE", fg = colors.overlay0, bold = true },
+          LineNrBelow = { bg = "NONE", fg = colors.overlay0, bold = true },
+          CursorLineNr = { bg = "NONE", fg = colors.yellow, bold = true },
+
+          -- Sign column (git signs, diagnostics)
+          SignColumn = { bg = "NONE" },
+          GitSignsAdd = { bg = "NONE", fg = colors.green, bold = true },
+          GitSignsChange = { bg = "NONE", fg = colors.yellow, bold = true },
+          GitSignsDelete = { bg = "NONE", fg = colors.red, bold = true },
+        }
+      end,
       integrations = {
         cmp = true,
         gitsigns = true,
-        nvimtree = true,
         treesitter = true,
         notify = true,
         mini = {
@@ -48,20 +68,17 @@ return {
         },
         telescope = {
           enabled = true,
-          style = "nvchad"
+          style = "nvchad",
         },
         which_key = true,
         dashboard = true,
         neogit = true,
-        vim_sneak = false,
-        fern = false,
-        barbar = false,
         markdown = true,
         noice = true,
         hop = true,
         illuminate = {
           enabled = true,
-          lsp = false
+          lsp = false,
         },
         lsp_trouble = true,
         mason = true,
@@ -84,16 +101,8 @@ return {
             background = true,
           },
         },
-        navic = {
-          enabled = false,
-          custom_bg = "NONE",
-        },
-        overseer = false,
         semantic_tokens = true,
         treesitter_context = true,
-        ts_rainbow2 = false,
-        window_picker = false,
-        coc_nvim = false,
       },
     },
   },

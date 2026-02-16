@@ -283,7 +283,7 @@ fi
 
 # The fuck (command correction)
 if command -v thefuck &> /dev/null; then
-    eval $(thefuck --alias fk)
+    eval "$(thefuck --alias fk)"
 fi
 
 # Atuin (enhanced shell history with syntax highlighting)

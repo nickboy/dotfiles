@@ -58,6 +58,18 @@ return {
         }
       end,
       integrations = {
+        lualine = {
+          all = function()
+            return {
+              normal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              insert = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              terminal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              command = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              visual = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              replace = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+            }
+          end,
+        },
         cmp = true,
         gitsigns = true,
         treesitter = true,

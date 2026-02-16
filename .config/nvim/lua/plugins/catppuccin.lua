@@ -55,6 +55,9 @@ return {
           GitSignsAdd = { bg = "NONE", fg = colors.green, bold = true },
           GitSignsChange = { bg = "NONE", fg = colors.yellow, bold = true },
           GitSignsDelete = { bg = "NONE", fg = colors.red, bold = true },
+
+          -- Tab line
+          TabLine = { bg = "NONE" },
         }
       end,
       integrations = {
@@ -116,6 +119,12 @@ return {
         semantic_tokens = true,
         treesitter_context = true,
       },
+    },
+  },
+  {
+    "akinsho/bufferline.nvim",
+    opts = {
+      highlights = require("catppuccin.special.bufferline").get_theme(),
     },
   },
   {

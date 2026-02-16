@@ -242,23 +242,37 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Ghostty 功能特色
 
 - **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果
-- **Shell 整合**: 增強的 shell 整合，支援更好的 Claude Code 體驗
+- **Shell 整合**: 增強的 shell 整合，搭配 `path` 功能追蹤
+  工作目錄（OSC 7）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
-- **自訂快捷鍵**: `Cmd+D` 水平分割、`Cmd+Shift+D` 垂直分割
-- **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、`cursor_smear.glsl`）
+- **Option 作為 Alt**: 左 Option 鍵作為 Alt 使用，支援
+  單字移動（`Alt+B/F/D`）
+- **視窗狀態持久化**: 重新啟動時自動恢復視窗佈局
+  （`window-save-state`）
+- **提示導航**: `Cmd+Up/Down` 在捲動緩衝區中跳轉 shell
+  提示
+- **分割縮放**: `Cmd+Shift+Enter` 最大化/還原分割窗格
+- **調整大小覆蓋層**: 調整視窗大小時顯示尺寸
+- **連結預覽**: 懸停 URL 即可預覽
+- **自動更新**: Ghostty 有新版本時發出通知
+- **鈴聲通知**: 系統通知、音效與 Dock 彈跳，適用於
+  權限請求提醒
+- **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
+  `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
 - **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
 
 ### 主要設定
 
 - 透明背景搭配模糊效果，呈現現代 macOS 風格
-- Shell 整合與工作目錄追蹤（OSC 7）
+- 平衡內邊距搭配延伸儲存格背景色，呈現無縫外觀
+- Shell 整合搭配 `path` 功能追蹤工作目錄
 - 增強剪貼簿功能與貼上保護
 - 滑鼠支援與焦點追隨滑鼠
-- 啟用連結點擊
+- 啟用連結點擊與懸停預覽
 
-注意：著色器位於 `~/.config/ghostty/shaders/`，透過 bootstrap 建立 symlink。
-修改後使用 `Cmd+Shift+,` 重載設定。
+注意：著色器位於 `~/.config/ghostty/shaders/`，透過
+bootstrap 建立 symlink。修改後使用 `Cmd+Shift+,` 重載設定。
 
 ## Kitty 終端機設定
 
@@ -740,4 +754,4 @@ shellcheck *.sh  # 若已透過 brew 安裝
 
 ---
 
-最後更新：2025 年 9 月
+最後更新：2026 年 2 月

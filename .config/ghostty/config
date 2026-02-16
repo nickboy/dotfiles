@@ -74,6 +74,9 @@ auto-update = check
 # Additional features
 confirm-close-surface = false
 
-# Bell notification for Claude Code permission requests
-# Features: system (macOS notification), audio (sound), attention (dock bounce)
-bell-features = system,audio,attention,title
+# Bell: dock bounce (when unfocused) + bell emoji in title
+# Note: system and audio are Linux/GTK-only, not functional on macOS
+bell-features = attention,title
+
+# Desktop notifications via OSC 9/777 (banner when unfocused)
+desktop-notifications = true

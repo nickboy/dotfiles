@@ -18,7 +18,8 @@
 - **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop、yazi 等
 - **版本管理**: mise（多語言開發工具版本管理器）
 - **自動補全**: Carapace（通用指令自動補全）
-- **Claude Code**: 整合 ccusage 的狀態列成本追蹤
+- **Claude Code**: 整合 ccusage 的狀態列成本追蹤，透過 OSC 9/777
+  桌面通知（支援 Ghostty、Neovim 及 SSH 遠端）
 
 ### 自動化腳本
 
@@ -255,8 +256,9 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **調整大小覆蓋層**: 調整視窗大小時顯示尺寸
 - **連結預覽**: 懸停 URL 即可預覽
 - **自動更新**: Ghostty 有新版本時發出通知
-- **鈴聲通知**: 系統通知、音效與 Dock 彈跳，適用於
-  權限請求提醒
+- **鈴聲通知**: Dock 彈跳與標籤頁鈴聲表情，適用於權限請求提醒
+- **桌面通知**: 透過 `claude-notify` hook 的 OSC 9/777 橫幅通知
+  （支援 Ghostty 直接執行、Neovim 終端機及 SSH 遠端工作階段）
 - **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
   `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
@@ -273,6 +275,21 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 注意：著色器位於 `~/.config/ghostty/shaders/`，透過
 bootstrap 建立 symlink。修改後使用 `Cmd+Shift+,` 重載設定。
+
+### Claude Code 通知（SSH 遠端）
+
+在遠端 Linux 機器透過 SSH 執行 Claude Code 時，如需桌面通知，
+請複製通知腳本與 hook 設定：
+
+```bash
+scp ~/.local/bin/claude-notify remote:~/.local/bin/
+scp ~/.claude/settings.json remote:~/.claude/
+```
+
+OSC 9/777 跳脫序列會透過 SSH 傳回 Ghostty，由 Ghostty
+顯示 macOS 橫幅通知。遠端機器不需要安裝額外工具（如
+`terminal-notifier`）。請確認 Ghostty 已加入專注模式的允許
+應用程式清單。
 
 ## Kitty 終端機設定
 

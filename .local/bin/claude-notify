@@ -4,34 +4,57 @@ set -euo pipefail
 # Claude Code notification helper.
 # Works in: Ghostty direct, Neovim terminal, tmux, SSH remote.
 #
-# Strategy:
-# 1. Walk up process tree to find outermost TTY (bypasses Neovim pty)
-# 2. Fall back to /dev/tty if no parent TTY found (direct terminal/SSH)
-# 3. Send desktop notification via osascript (macOS) or notify-send (Linux)
+# Notification layers:
+# 1. BEL → Ghostty bell emoji + dock bounce (when unfocused)
+# 2. OSC 9/777 → Ghostty desktop notification (always sent;
+#    Ghostty shows banner only when window/surface unfocused)
+# 3. terminal-notifier/notify-send → fallback for non-Ghostty
 
-bell_sent=false
+target_tty="/dev/tty"
 my_tty=$(command -p ps -o tty= -p $$ 2>/dev/null | tr -d ' ')
 pid=$$
 
-# Walk up the process tree to find a parent on a different TTY
+# Walk up process tree to find outermost TTY (bypass Neovim pty)
 while [ "$pid" -gt 1 ]; do
   pid=$(command -p ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
   [ -z "$pid" ] && break
   parent_tty=$(command -p ps -o tty= -p "$pid" 2>/dev/null | tr -d ' ')
-  if [ -n "$parent_tty" ] && [ "$parent_tty" != "??" ] && [ "$parent_tty" != "$my_tty" ]; then
-    printf '\a' > "/dev/$parent_tty" 2>/dev/null && bell_sent=true
+  if [ -n "$parent_tty" ] && [ "$parent_tty" != "??" ] && \
+     [ "$parent_tty" != "$my_tty" ]; then
+    target_tty="/dev/$parent_tty"
     break
   fi
 done
 
-# Fallback: direct terminal or SSH (no Neovim in the way)
-if [ "$bell_sent" = false ]; then
-  printf '\a' > /dev/tty 2>/dev/null || true
+# Send BEL (bell emoji + dock bounce when unfocused)
+printf '\a' > "$target_tty" 2>/dev/null || true
+
+# OSC 9 desktop notification (always sent; Ghostty handles focus)
+printf '\033]9;Claude Code needs your attention\033\\' \
+  > "$target_tty" 2>/dev/null || true
+
+# OSC 777 desktop notification (title+body variant)
+printf '\033]777;notify;Claude Code;Needs your attention\033\\' \
+  > "$target_tty" 2>/dev/null || true
+
+# Fallback: native notification tools for non-Ghostty terminals
+# Only when Ghostty is NOT focused (avoid duplicate banners)
+ghostty_focused=false
+if command -v osascript &>/dev/null; then
+  frontmost=$(osascript -e 'tell application "System Events" to get name of first application process whose frontmost is true' 2>/dev/null || true)
+  case "$frontmost" in
+    [Gg]hostty) ghostty_focused=true ;;
+  esac
 fi
 
-# Desktop notification (platform-aware)
-if command -v osascript &>/dev/null; then
-  osascript -e 'display notification "Claude Code needs your attention" with title "Claude Code"' 2>/dev/null || true
-elif command -v notify-send &>/dev/null; then
-  notify-send "Claude Code" "Claude Code needs your attention" 2>/dev/null || true
+if [ "$ghostty_focused" = false ]; then
+  if command -v terminal-notifier &>/dev/null; then
+    terminal-notifier \
+      -title "Claude Code" \
+      -message "Needs your attention" 2>/dev/null || true
+  elif command -v osascript &>/dev/null; then
+    osascript -e 'display notification "Claude Code needs your attention" with title "Claude Code"' 2>/dev/null || true
+  elif command -v notify-send &>/dev/null; then
+    notify-send "Claude Code" "Claude Code needs your attention" 2>/dev/null || true
+  fi
 fi

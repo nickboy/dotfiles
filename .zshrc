@@ -4,7 +4,13 @@
 # Environment Variables (Set early for consistency)
 # ============================================================================
 
-export TERM="xterm-256color"
+# Use xterm-ghostty locally (enables Ghostty-specific capabilities)
+# Remote machines get xterm-256color via SSH SetEnv (see ~/.ssh/config)
+if [[ -z "$SSH_CONNECTION" ]] && infocmp xterm-ghostty &>/dev/null 2>&1; then
+    export TERM="xterm-ghostty"
+else
+    export TERM="xterm-256color"
+fi
 export EDITOR='nvim'
 export LANG=en_US.UTF-8
 
@@ -472,6 +478,40 @@ export BAT_THEME="Catppuccin Mocha"
 # ============================================================================
 
 eval "$(starship init zsh)"
+
+# ============================================================================
+# Remote Work Helpers
+# ============================================================================
+
+# Detect SSH session
+if [[ -n "$SSH_CONNECTION" ]]; then
+    export SSH_SESSION=1
+
+    # OSC52 clipboard helper for remote sessions
+    # Usage: echo "text" | clip   OR   clip "some text"
+    clip() {
+        local input
+        if [[ -p /dev/stdin ]]; then
+            input=$(cat)
+        else
+            input="$*"
+        fi
+        local encoded=$(printf '%s' "$input" | base64 | tr -d '\n')
+        printf '\033]52;c;%s\a' "$encoded"
+    }
+
+    # On remote, alias pbcopy to use OSC52
+    alias pbcopy='clip'
+fi
+
+# Quick SSH + tmux attach-or-create
+# Usage: ssht hostname [session-name]
+# Example: ssht dev-server → connects and attaches to "main" session
+ssht() {
+    local host="$1"
+    local session="${2:-main}"
+    ssh -t "$host" "tmux new-session -A -s $session"
+}
 
 # ============================================================================
 # Local/Private Configuration

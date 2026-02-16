@@ -287,7 +287,8 @@ scp ~/.claude/settings.json remote:~/.claude/
 ```
 
 OSC 9/777 跳脫序列會透過 SSH 傳回 Ghostty，由 Ghostty
-顯示 macOS 橫幅通知。請確認 Ghostty 已加入專注模式的允許
+顯示 macOS 橫幅通知。遠端機器不需要安裝額外工具（如
+`terminal-notifier`）。請確認 Ghostty 已加入專注模式的允許
 應用程式清單。
 
 ## Kitty 終端機設定

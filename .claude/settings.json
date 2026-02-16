@@ -1,4 +1,5 @@
 {
+  "model": "opus",
   "hooks": {
     "Notification": [
       {
@@ -16,5 +17,7 @@
     "type": "command",
     "command": "~/.local/bin/claude-statusline"
   },
-  "model": "opus"
+  "enabledPlugins": {
+    "lua-lsp@claude-plugins-official": true
+  }
 }

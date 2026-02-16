@@ -99,6 +99,8 @@ brew "starship"
 brew "thefuck"
 # Official tldr client written in Rust
 brew "tlrc"
+# macOS notification banners from the command line
+brew "terminal-notifier"
 # Fast fuzzy finder with built-in previews
 brew "television"
 # Count lines of code quickly

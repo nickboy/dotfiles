@@ -19,7 +19,8 @@ configurations for macOS development environment.
 - **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi, and more
 - **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
-- **Claude Code**: Integrated statusline with ccusage for cost tracking
+- **Claude Code**: Integrated statusline with ccusage for cost tracking,
+  desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH)
 
 ### 🤖 Automation Scripts
 
@@ -260,8 +261,11 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **Resize Overlay**: Shows terminal dimensions while resizing
 - **Link Previews**: Hover over URLs to see previews
 - **Auto-Update**: Notifications when Ghostty updates are available
-- **Bell Notifications**: System notification, audio, and dock
-  bounce for permission requests
+- **Bell Notifications**: Dock bounce and bell emoji in tab title
+  for permission requests
+- **Desktop Notifications**: OSC 9/777 banner notifications via
+  `claude-notify` hook (works in Ghostty direct, Neovim terminal,
+  and SSH remote sessions)
 - **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
   `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart
@@ -280,6 +284,21 @@ rm ~/Library/Logs/daily-maintenance*.log
 Note: Shaders are located in `~/.config/ghostty/shaders/` and
 symlinked via bootstrap. Use `Cmd+Shift+,` to reload config after
 changes.
+
+### Claude Code Notifications (SSH Remote)
+
+For desktop notifications when running Claude Code on a remote
+Linux machine via SSH, copy the notification script and hook config:
+
+```bash
+scp ~/.local/bin/claude-notify remote:~/.local/bin/
+scp ~/.claude/settings.json remote:~/.claude/
+```
+
+OSC 9/777 escape sequences travel back through SSH to Ghostty,
+which displays macOS banner notifications. No additional tools
+(e.g., `terminal-notifier`) need to be installed on the remote
+machine. Ensure Ghostty is in your Focus mode allowed apps list.
 
 ## 🐱 Kitty Terminal Configuration
 

@@ -2,6 +2,7 @@ theme = "Catppuccin Mocha"
 font-family = "Hack Nerd Font Mono"
 font-size = 14
 font-thicken = false
+adjust-cell-width = 1%
 
 # Performance
 scrollback-limit = 10000
@@ -13,7 +14,7 @@ window-padding-balance = true
 window-padding-color = extend
 window-decoration = true
 window-theme = auto
-window-save-state = default
+window-save-state = always
 
 # Transparency and visual effects for macOS liquid visuals
 background-opacity = 0.75
@@ -46,7 +47,7 @@ keybind = cmd+shift+enter=toggle_split_zoom
 
 # Shell Integration for Claude Code
 shell-integration = detect
-shell-integration-features = cursor,sudo,title,path
+shell-integration-features = sudo,title,path
 
 # Enhanced clipboard for better Claude Code integration
 clipboard-read = allow

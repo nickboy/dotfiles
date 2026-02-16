@@ -323,6 +323,13 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 
 ### Configuration Features
 
+- **Truecolor + Ghostty RGB**: Terminal overrides for full 24-bit
+  color in Ghostty and xterm-256color
+- **Transparency Passthrough**: Ghostty background opacity and blur
+  visible through tmux panes
+- **OSC52 Clipboard**: System clipboard integration via `set-clipboard on`
+- **DCS Passthrough**: Enables image protocols and shell integration through tmux
+- **Undercurl Support**: Colored wavy underlines for Neovim LSP diagnostics
 - **Window/Pane Numbering**: Starts at 1 instead of 0 for easier keyboard access
 - **Mouse Support**: Enabled for pane selection and scrolling
 - **Vi Mode**: Vi-style key bindings for copy mode
@@ -744,4 +751,4 @@ copy what you need.
 
 ---
 
-Last updated: September 2025
+Last updated: February 2026

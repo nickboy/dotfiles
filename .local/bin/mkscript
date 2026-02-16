@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ -z "${1:-}" ]; then
+  echo "Usage: mkscript <filename>" >&2
+  exit 1
+fi
+
+cat > "$1" << 'SCRIPT'
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT
+
+chmod +x "$1"
+echo "Created $1"

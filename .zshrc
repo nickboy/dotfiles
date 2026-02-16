@@ -437,6 +437,12 @@ rgf() {
         --bind 'enter:become(nvim {1} +{2})'
 }
 
+# Quick utilities (inspired by nickjj/dotfiles)
+alias sz='source ~/.zshrc'
+alias myip='curl -s https://checkip.amazonaws.com | pbcopy && pbpaste'
+alias 755d='find . -type d -exec chmod 755 {} +'
+alias 644f='find . -type f -exec chmod 644 {} +'
+
 # ============================================================================
 # Shell Options
 # ============================================================================

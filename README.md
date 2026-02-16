@@ -244,13 +244,24 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty Features
 
-- **Transparency**: Background opacity (0.75) with blur for macOS visuals
-- **Shell Integration**: Enhanced shell integration for better Claude Code support
+- **Transparency**: Background opacity (0.75) with blur for macOS
+  visuals
+- **Shell Integration**: Enhanced shell integration with `path`
+  feature for working directory tracking (OSC 7)
 - **Smart Clipboard**: Protected paste with bracketed paste mode
 - **Option as Alt**: Left Option key acts as Alt for word movement
   (`Alt+B/F/D`)
-- **Custom Keybinds**: Split panes with `Cmd+D` (down) and
-  `Cmd+Shift+D` (right)
+- **Window Persistence**: Restores window layout across restarts
+  (`window-save-state`)
+- **Prompt Navigation**: `Cmd+Up/Down` to jump between shell
+  prompts in scrollback
+- **Split Zoom**: `Cmd+Shift+Enter` to maximize/restore a split
+  pane
+- **Resize Overlay**: Shows terminal dimensions while resizing
+- **Link Previews**: Hover over URLs to see previews
+- **Auto-Update**: Notifications when Ghostty updates are available
+- **Bell Notifications**: System notification, audio, and dock
+  bounce for permission requests
 - **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
   `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart
@@ -259,13 +270,16 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Key Settings
 
 - Transparent background with blur for modern macOS aesthetic
-- Shell integration with working directory tracking (OSC 7)
+- Balanced padding with extended cell background colors for a
+  seamless look
+- Shell integration with `path` for working directory tracking
 - Enhanced clipboard features with paste protection
 - Mouse support with focus-follows-mouse
-- Link clicking enabled
+- Link clicking and hover previews enabled
 
-Note: Shaders are located in `~/.config/ghostty/shaders/` and symlinked via
-bootstrap. Use `Cmd+Shift+,` to reload config after changes.
+Note: Shaders are located in `~/.config/ghostty/shaders/` and
+symlinked via bootstrap. Use `Cmd+Shift+,` to reload config after
+changes.
 
 ## 🐱 Kitty Terminal Configuration
 

@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "printf '\\a' > /dev/tty && osascript -e 'display notification \"Claude Code needs your attention\" with title \"Claude Code\"'"
+            "command": "~/.local/bin/claude-notify"
           }
         ]
       }
@@ -14,7 +14,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "ccusage statusline"
+    "command": "~/.local/bin/claude-statusline"
   },
   "model": "opus"
 }

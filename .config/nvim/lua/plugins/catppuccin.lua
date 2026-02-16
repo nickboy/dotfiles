@@ -55,9 +55,24 @@ return {
           GitSignsAdd = { bg = "NONE", fg = colors.green, bold = true },
           GitSignsChange = { bg = "NONE", fg = colors.yellow, bold = true },
           GitSignsDelete = { bg = "NONE", fg = colors.red, bold = true },
+
+          -- Tab line
+          TabLine = { bg = "NONE" },
         }
       end,
       integrations = {
+        lualine = {
+          all = function()
+            return {
+              normal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              insert = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              terminal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              command = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              visual = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              replace = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+            }
+          end,
+        },
         cmp = true,
         gitsigns = true,
         treesitter = true,
@@ -104,6 +119,12 @@ return {
         semantic_tokens = true,
         treesitter_context = true,
       },
+    },
+  },
+  {
+    "akinsho/bufferline.nvim",
+    opts = {
+      highlights = require("catppuccin.special.bufferline").get_theme(),
     },
   },
   {

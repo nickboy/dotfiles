@@ -19,8 +19,10 @@ configurations for macOS development environment.
 - **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi, and more
 - **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
+- **SSH**: Modular `config.d/` setup with multiplexing, keepalive, and agent forwarding
 - **Claude Code**: Integrated statusline with ccusage for cost tracking,
-  desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH)
+  desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH),
+  claudecode.nvim with 40% split width and diff-in-new-tab workflow
 
 ### 🤖 Automation Scripts
 
@@ -247,13 +249,16 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 - **Transparency**: Background opacity (0.75) with blur for macOS
   visuals
-- **Shell Integration**: Enhanced shell integration with `path`
-  feature for working directory tracking (OSC 7)
+- **Shell Integration**: Enhanced shell integration with `sudo`,
+  `title`, and `path` features (cursor feature disabled to avoid
+  conflict with custom GLSL cursor shaders)
 - **Smart Clipboard**: Protected paste with bracketed paste mode
 - **Option as Alt**: Left Option key acts as Alt for word movement
   (`Alt+B/F/D`)
-- **Window Persistence**: Restores window layout across restarts
-  (`window-save-state`)
+- **Window Persistence**: Always restores window layout across restarts
+  (`window-save-state = always`)
+- **Cell Width Tuning**: `adjust-cell-width = 1%` for Nerd Font icon
+  alignment
 - **Prompt Navigation**: `Cmd+Up/Down` to jump between shell
   prompts in scrollback
 - **Split Zoom**: `Cmd+Shift+Enter` to maximize/restore a split
@@ -276,7 +281,8 @@ rm ~/Library/Logs/daily-maintenance*.log
 - Transparent background with blur for modern macOS aesthetic
 - Balanced padding with extended cell background colors for a
   seamless look
-- Shell integration with `path` for working directory tracking
+- Shell integration with `sudo`, `title`, `path` (no `cursor` — shaders
+  handle cursor rendering)
 - Enhanced clipboard features with paste protection
 - Mouse support with focus-follows-mouse
 - Link clicking and hover previews enabled
@@ -299,6 +305,161 @@ OSC 9/777 escape sequences travel back through SSH to Ghostty,
 which displays macOS banner notifications. No additional tools
 (e.g., `terminal-notifier`) need to be installed on the remote
 machine. Ensure Ghostty is in your Focus mode allowed apps list.
+
+## 🔐 SSH Configuration
+
+### Modular Setup
+
+SSH configuration uses `Include config.d/*` to separate shared
+defaults from machine-specific settings. This allows the same
+dotfiles to work on both personal and work laptops without conflicts.
+
+```text
+~/.ssh/
+├── config              # Include directive + machine-specific entries
+├── config.d/
+│   └── 00-defaults.conf  # Shared defaults (tracked by yadm)
+└── sockets/            # ControlMaster socket directory
+```
+
+### Shared Defaults (`00-defaults.conf`)
+
+- **Connection Multiplexing**: `ControlMaster auto` with 10-minute
+  socket persistence — second SSH to the same host is instant
+- **Keepalive**: Send every 30s, tolerate 3 missed (90s detection)
+- **Agent Forwarding**: `ForwardAgent yes` for `git push` on remote
+  using local SSH keys
+- **Compression**: Enabled for all connections
+- **TERM Handling**: `SetEnv TERM=xterm-256color` for remote machines
+  lacking `xterm-ghostty` terminfo
+
+### Work Laptop Setup
+
+When pulling these dotfiles on a work laptop that already has
+corporate SSH configuration:
+
+1. **Back up existing SSH config** before pulling:
+
+   ```bash
+   cp ~/.ssh/config ~/.ssh/config.bak
+   ```
+
+2. **Pull the dotfiles**:
+
+   ```bash
+   yadm pull
+   ```
+
+3. **Merge corporate entries** — add them below the `Include` line in
+   `~/.ssh/config`:
+
+   ```ssh-config
+   # Load modular configs (YADM-managed defaults + any machine-specific overrides)
+   Include config.d/*
+
+   # Corporate SSH entries (from your previous config)
+   Host bastion.corp.example.com
+       User corporate-username
+       IdentityFile ~/.ssh/id_corporate
+       ProxyJump none
+
+   Host *.internal.corp.example.com
+       User corporate-username
+       ProxyJump bastion.corp.example.com
+   ```
+
+   Alternatively, place corporate config in a separate file like
+   `~/.ssh/config.d/10-work.conf` (add to `.gitignore` if not
+   sharing via yadm).
+
+4. **Create required directories** (if not present):
+
+   ```bash
+   mkdir -p ~/.ssh/sockets ~/.ssh/config.d && chmod 700 ~/.ssh/sockets
+   ```
+
+**Note**: SSH uses "first match wins" — specific `Host` entries
+(corporate config) always take precedence over `Host *` defaults in
+`00-defaults.conf`. Your corporate settings will not be overridden.
+
+## 🧠 Neovim Claude Code Integration
+
+### claudecode.nvim Configuration
+
+Custom settings for the LazyVim claudecode extra
+(`~/.config/nvim/lua/plugins/claudecode.lua`):
+
+| Setting | Value | Description |
+| --- | --- | --- |
+| `split_width_percentage` | `0.40` | 40% width (default 30%) for more room |
+| `git_repo_cwd` | `true` | Start Claude at git repo root |
+| `show_native_term_exit_tip` | `false` | Suppress exit tip |
+| `diff_opts.open_in_new_tab` | `true` | Diffs open in new tab |
+| `diff_opts.keep_terminal_focus` | `true` | Stay in Claude after diff |
+| `diff_opts.hide_terminal_in_new_tab` | `true` | Full-screen diff view |
+| `focus_after_send` | `true` | Focus Claude after sending selection |
+
+### Claude Code Keymaps
+
+| Keymap | Mode | Action |
+| --- | --- | --- |
+| `<leader>ac` | n | Toggle Claude terminal |
+| `<leader>af` | n | Focus Claude terminal |
+| `<leader>ar` | n | Resume Claude (`--resume`) |
+| `<leader>aC` | n | Continue Claude (`--continue`) |
+| `<leader>ab` | n | Add current buffer to context |
+| `<leader>as` | v | Send visual selection to Claude |
+| `<leader>aa` | n | Accept diff |
+| `<leader>ad` | n | Deny diff |
+| `<leader>am` | n | Select Claude model (Opus/Sonnet/Haiku) |
+| `<Esc><Esc>` | t | Exit terminal mode (scroll Claude output) |
+
+### OSC52 Clipboard (Remote Sessions)
+
+Neovim 0.10+ has built-in OSC52 clipboard support. The configuration
+(`~/.config/nvim/lua/plugins/osc52.lua`) automatically activates when
+`SSH_CONNECTION` or `TMUX` is detected, enabling yank-to-local-clipboard
+over SSH without any extra tools.
+
+The full clipboard chain: Neovim OSC52 → tmux passthrough (`all`) →
+SSH → Ghostty (`clipboard-write = allow`) → macOS clipboard.
+
+## 🌐 Remote Development
+
+### Shell TERM Handling
+
+The shell automatically sets `TERM` based on environment:
+
+- **Local (Ghostty)**: `xterm-ghostty` — enables Ghostty-specific
+  capabilities (extended keyboard protocol, better rendering)
+- **Remote (SSH)**: `xterm-256color` — compatible with all servers
+
+### Remote Work Helpers
+
+Available in SSH sessions (defined in `~/.zshrc`):
+
+```bash
+# OSC52 clipboard — copies to local macOS clipboard over SSH
+echo "text" | clip
+clip "some text"
+
+# pbcopy alias — works transparently on remote machines
+echo "text" | pbcopy
+
+# Quick SSH + tmux attach-or-create
+ssht hostname              # Attach to "main" session
+ssht hostname mysession    # Attach to named session
+```
+
+### Nested tmux Sessions
+
+When SSH-ing into a remote machine that also runs tmux, both local
+and remote tmux share the same prefix (`Ctrl-a`). Press **F12** to
+toggle:
+
+- **F12 once**: Disables outer tmux (status bar turns grey), all keys
+  pass to inner (remote) tmux
+- **F12 again**: Re-enables outer tmux, restores normal operation
 
 ## 🐱 Kitty Terminal Configuration
 
@@ -365,7 +526,8 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 - **Transparency Passthrough**: Ghostty background opacity and blur
   visible through tmux panes
 - **OSC52 Clipboard**: System clipboard integration via `set-clipboard on`
-- **DCS Passthrough**: Enables image protocols and shell integration through tmux
+- **DCS Passthrough**: Full passthrough (`all`) enables image protocols,
+  shell integration, and nested OSC52 clipboard through tmux
 - **Undercurl Support**: Colored wavy underlines for Neovim LSP diagnostics
 - **Window/Pane Numbering**: Starts at 1 instead of 0 for easier keyboard access
 - **Mouse Support**: Enabled for pane selection and scrolling
@@ -373,6 +535,12 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 - **Auto-renumber**: Windows automatically renumber when one is closed
 - **Theme**: Catppuccin Mocha theme with custom status bar
 - **Session Persistence**: Auto-saves and restores sessions via tmux-resurrect/continuum
+- **Current-Path Splits**: New splits and windows open in the current
+  working directory
+- **Nested Session Toggle**: F12 disables outer tmux for SSH remote
+  tmux sessions (status bar changes color to indicate)
+- **tmux-yank**: Consistent copy behavior with OSC52 fallback for
+  remote sessions
 
 ### Key Bindings
 
@@ -398,15 +566,20 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 
 | Keybinding | Action |
 | --- | --- |
-| `Ctrl-a + \\` | Split window horizontally |
-| `Ctrl-a + -` | Split window vertically |
+| `Ctrl-a + \\` | Split horizontally (current directory) |
+| `Ctrl-a + -` | Split vertically (current directory) |
+| `Ctrl-a + c` | New window (current directory) |
 | `Ctrl-a + h/j/k/l` | Navigate between panes (vim-style) |
+| `Ctrl-a + H/J/K/L` | Resize pane (repeatable, 5 cells) |
+| `Ctrl-a + <` | Swap window left (repeatable) |
+| `Ctrl-a + >` | Swap window right (repeatable) |
 | `Ctrl-a + x` | Kill current pane |
 | `Ctrl-a + z` | Toggle pane zoom (maximize/restore) |
 | `Ctrl-a + Space` | Toggle between pane layouts |
 | `Ctrl-a + {` | Move pane left |
 | `Ctrl-a + }` | Move pane right |
 | `Ctrl-a + r` | Reload tmux configuration |
+| `F12` | Toggle nested tmux (for SSH sessions) |
 
 #### Seamless Navigation
 
@@ -723,6 +896,10 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── kitty/         # Kitty terminal configuration
 │   ├── bat/           # Bat themes
 │   └── ripgrep/       # Ripgrep configuration
+├── .ssh/
+│   ├── config              # Include directive for modular SSH config
+│   └── config.d/
+│       └── 00-defaults.conf  # Shared SSH defaults
 ├── .local/
 │   └── bin/           # User scripts
 │       └── battery-status

@@ -18,8 +18,10 @@
 - **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop、yazi 等
 - **版本管理**: mise（多語言開發工具版本管理器）
 - **自動補全**: Carapace（通用指令自動補全）
+- **SSH**: 模組化 `config.d/` 架構，支援連線多工、keepalive 與 agent forwarding
 - **Claude Code**: 整合 ccusage 的狀態列成本追蹤，透過 OSC 9/777
-  桌面通知（支援 Ghostty、Neovim 及 SSH 遠端）
+  桌面通知（支援 Ghostty、Neovim 及 SSH 遠端），claudecode.nvim
+  搭配 40% 分割寬度與 diff-in-new-tab 工作流程
 
 ### 自動化腳本
 
@@ -243,13 +245,15 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Ghostty 功能特色
 
 - **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果
-- **Shell 整合**: 增強的 shell 整合，搭配 `path` 功能追蹤
-  工作目錄（OSC 7）
+- **Shell 整合**: 增強的 shell 整合，搭配 `sudo`、`title`、`path`
+  功能（停用 `cursor` 以避免與自訂 GLSL 游標著色器衝突）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
 - **Option 作為 Alt**: 左 Option 鍵作為 Alt 使用，支援
   單字移動（`Alt+B/F/D`）
-- **視窗狀態持久化**: 重新啟動時自動恢復視窗佈局
-  （`window-save-state`）
+- **視窗狀態持久化**: 重新啟動時總是恢復視窗佈局
+  （`window-save-state = always`）
+- **儲存格寬度微調**: `adjust-cell-width = 1%` 改善 Nerd Font
+  圖示對齊
 - **提示導航**: `Cmd+Up/Down` 在捲動緩衝區中跳轉 shell
   提示
 - **分割縮放**: `Cmd+Shift+Enter` 最大化/還原分割窗格
@@ -268,7 +272,8 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 - 透明背景搭配模糊效果，呈現現代 macOS 風格
 - 平衡內邊距搭配延伸儲存格背景色，呈現無縫外觀
-- Shell 整合搭配 `path` 功能追蹤工作目錄
+- Shell 整合搭配 `sudo`、`title`、`path`（停用 `cursor` — 著色器
+  處理游標渲染）
 - 增強剪貼簿功能與貼上保護
 - 滑鼠支援與焦點追隨滑鼠
 - 啟用連結點擊與懸停預覽
@@ -290,6 +295,158 @@ OSC 9/777 跳脫序列會透過 SSH 傳回 Ghostty，由 Ghostty
 顯示 macOS 橫幅通知。遠端機器不需要安裝額外工具（如
 `terminal-notifier`）。請確認 Ghostty 已加入專注模式的允許
 應用程式清單。
+
+## SSH 設定
+
+### 模組化架構
+
+SSH 設定使用 `Include config.d/*` 將共用預設值與機器特定設定
+分開。這讓同一份 dotfiles 可以在個人與工作筆電上使用而不衝突。
+
+```text
+~/.ssh/
+├── config              # Include 指令 + 機器特定設定
+├── config.d/
+│   └── 00-defaults.conf  # 共用預設值（yadm 追蹤）
+└── sockets/            # ControlMaster socket 目錄
+```
+
+### 共用預設值（`00-defaults.conf`）
+
+- **連線多工**: `ControlMaster auto` 搭配 10 分鐘 socket
+  持久化 — 第二次 SSH 到同一主機幾乎即時
+- **Keepalive**: 每 30 秒發送，容忍 3 次遺漏（90 秒偵測）
+- **Agent Forwarding**: `ForwardAgent yes` 讓遠端可用本地
+  SSH 金鑰執行 `git push`
+- **壓縮**: 所有連線啟用壓縮
+- **TERM 處理**: `SetEnv TERM=xterm-256color` 解決遠端機器
+  缺少 `xterm-ghostty` terminfo 的問題
+
+### 工作筆電設定
+
+在已有公司 SSH 設定的工作筆電上拉取這些 dotfiles 時：
+
+1. **拉取前備份現有 SSH 設定**：
+
+   ```bash
+   cp ~/.ssh/config ~/.ssh/config.bak
+   ```
+
+2. **拉取 dotfiles**：
+
+   ```bash
+   yadm pull
+   ```
+
+3. **合併公司設定** — 加在 `~/.ssh/config` 的 `Include` 行
+   下方：
+
+   ```ssh-config
+   # Load modular configs (YADM-managed defaults + any machine-specific overrides)
+   Include config.d/*
+
+   # 公司 SSH 設定（從備份檔案貼入）
+   Host bastion.corp.example.com
+       User corporate-username
+       IdentityFile ~/.ssh/id_corporate
+       ProxyJump none
+
+   Host *.internal.corp.example.com
+       User corporate-username
+       ProxyJump bastion.corp.example.com
+   ```
+
+   或者將公司設定放在獨立檔案如
+   `~/.ssh/config.d/10-work.conf`（如不想透過 yadm 分享，
+   可加入 `.gitignore`）。
+
+4. **建立必要目錄**（若不存在）：
+
+   ```bash
+   mkdir -p ~/.ssh/sockets ~/.ssh/config.d && chmod 700 ~/.ssh/sockets
+   ```
+
+**注意**：SSH 使用「第一個匹配勝出」規則 — 公司的特定
+`Host` 設定永遠優先於 `00-defaults.conf` 中的 `Host *`
+預設值。你的公司設定不會被覆蓋。
+
+## Neovim Claude Code 整合
+
+### claudecode.nvim 設定
+
+LazyVim claudecode extra 的自訂設定
+（`~/.config/nvim/lua/plugins/claudecode.lua`）：
+
+| 設定 | 值 | 說明 |
+| --- | --- | --- |
+| `split_width_percentage` | `0.40` | 40% 寬度（預設 30%） |
+| `git_repo_cwd` | `true` | 從 git repo 根目錄啟動 Claude |
+| `show_native_term_exit_tip` | `false` | 不顯示退出提示 |
+| `diff_opts.open_in_new_tab` | `true` | Diff 在新分頁開啟 |
+| `diff_opts.keep_terminal_focus` | `true` | Diff 開啟後保持焦點在 Claude |
+| `diff_opts.hide_terminal_in_new_tab` | `true` | 全螢幕 diff 檢視 |
+| `focus_after_send` | `true` | 傳送選取後聚焦 Claude |
+
+### Claude Code 快捷鍵
+
+| 快捷鍵 | 模式 | 動作 |
+| --- | --- | --- |
+| `<leader>ac` | n | 切換 Claude 終端機 |
+| `<leader>af` | n | 聚焦 Claude 終端機 |
+| `<leader>ar` | n | 恢復 Claude（`--resume`） |
+| `<leader>aC` | n | 繼續 Claude（`--continue`） |
+| `<leader>ab` | n | 將目前緩衝區加入上下文 |
+| `<leader>as` | v | 傳送視覺選取至 Claude |
+| `<leader>aa` | n | 接受 diff |
+| `<leader>ad` | n | 拒絕 diff |
+| `<leader>am` | n | 選擇 Claude 模型（Opus/Sonnet/Haiku） |
+| `<Esc><Esc>` | t | 退出終端機模式（捲動 Claude 輸出） |
+
+### OSC52 剪貼簿（遠端工作階段）
+
+Neovim 0.10+ 內建 OSC52 剪貼簿支援。設定檔
+（`~/.config/nvim/lua/plugins/osc52.lua`）在偵測到
+`SSH_CONNECTION` 或 `TMUX` 時自動啟用，無需額外工具即可
+透過 SSH 將 yank 內容傳回本地剪貼簿。
+
+完整剪貼簿鏈路：Neovim OSC52 → tmux passthrough（`all`）→
+SSH → Ghostty（`clipboard-write = allow`）→ macOS 剪貼簿。
+
+## 遠端開發
+
+### Shell TERM 處理
+
+Shell 會依環境自動設定 `TERM`：
+
+- **本地（Ghostty）**: `xterm-ghostty` — 啟用 Ghostty 專屬
+  功能（extended keyboard protocol、更好的渲染）
+- **遠端（SSH）**: `xterm-256color` — 與所有伺服器相容
+
+### 遠端工作輔助函式
+
+在 SSH 工作階段中可用（定義在 `~/.zshrc`）：
+
+```bash
+# OSC52 剪貼簿 — 透過 SSH 複製到本地 macOS 剪貼簿
+echo "text" | clip
+clip "some text"
+
+# pbcopy 別名 — 在遠端機器上透明運作
+echo "text" | pbcopy
+
+# 快速 SSH + tmux 附加或建立
+ssht hostname              # 附加到 "main" 工作階段
+ssht hostname mysession    # 附加到指定名稱的工作階段
+```
+
+### 巢狀 tmux 工作階段
+
+透過 SSH 連線到同樣執行 tmux 的遠端機器時，本地與遠端
+tmux 共用相同前綴（`Ctrl-a`）。按 **F12** 切換：
+
+- **按一次 F12**: 停用外層 tmux（狀態列變灰），所有按鍵
+  傳送到內層（遠端）tmux
+- **再按一次 F12**: 重新啟用外層 tmux，恢復正常操作
 
 ## Kitty 終端機設定
 
@@ -357,7 +514,8 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
   tmux 窗格顯示
 - **OSC52 剪貼簿**: 透過 `set-clipboard on` 整合系統
   剪貼簿
-- **DCS 穿透**: 啟用圖片協定與 shell 整合穿透 tmux
+- **DCS 穿透**: 完整穿透（`all`）啟用圖片協定、shell 整合與
+  巢狀 OSC52 剪貼簿穿透 tmux
 - **Undercurl 支援**: 為 Neovim LSP 診斷提供彩色波浪
   底線
 - **視窗/窗格編號**: 從 1 開始（方便鍵盤操作）
@@ -367,6 +525,10 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 - **主題**: Catppuccin Mocha 搭配自訂狀態列
 - **工作階段持久化**: 透過 tmux-resurrect/continuum
   自動儲存與復原
+- **當前路徑分割**: 新分割與視窗會在目前工作目錄開啟
+- **巢狀工作階段切換**: F12 停用外層 tmux，用於 SSH 遠端
+  tmux 工作階段（狀態列變色提示）
+- **tmux-yank**: 一致的複製行為，遠端工作階段自動使用 OSC52
 
 ### 按鍵綁定
 
@@ -392,15 +554,20 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 
 | 快捷鍵 | 動作 |
 | --- | --- |
-| `Ctrl-a + \` | 水平分割視窗 |
-| `Ctrl-a + -` | 垂直分割視窗 |
+| `Ctrl-a + \` | 水平分割（當前目錄） |
+| `Ctrl-a + -` | 垂直分割（當前目錄） |
+| `Ctrl-a + c` | 新視窗（當前目錄） |
 | `Ctrl-a + h/j/k/l` | 在窗格間導航（vim 風格） |
+| `Ctrl-a + H/J/K/L` | 調整窗格大小（可重複，5 格） |
+| `Ctrl-a + <` | 向左交換視窗（可重複） |
+| `Ctrl-a + >` | 向右交換視窗（可重複） |
 | `Ctrl-a + x` | 關閉目前窗格 |
 | `Ctrl-a + z` | 切換窗格縮放（最大化/復原） |
 | `Ctrl-a + Space` | 切換窗格版面 |
 | `Ctrl-a + {` | 向左移動窗格 |
 | `Ctrl-a + }` | 向右移動窗格 |
 | `Ctrl-a + r` | 重載 tmux 設定 |
+| `F12` | 切換巢狀 tmux（用於 SSH 工作階段） |
 
 #### 無縫導航
 
@@ -716,6 +883,10 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── kitty/         # Kitty 終端機設定
 │   ├── bat/           # Bat 主題
 │   └── ripgrep/       # Ripgrep 設定
+├── .ssh/
+│   ├── config              # 模組化 SSH 設定的 Include 指令
+│   └── config.d/
+│       └── 00-defaults.conf  # 共用 SSH 預設值
 ├── .local/
 │   └── bin/           # 使用者腳本
 │       └── battery-status

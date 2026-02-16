@@ -247,8 +247,12 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **Transparency**: Background opacity (0.75) with blur for macOS visuals
 - **Shell Integration**: Enhanced shell integration for better Claude Code support
 - **Smart Clipboard**: Protected paste with bracketed paste mode
-- **Custom Keybinds**: Split panes with `Cmd+D` (down) and `Cmd+Shift+D` (right)
-- **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`, `cursor_smear.glsl`)
+- **Option as Alt**: Left Option key acts as Alt for word movement
+  (`Alt+B/F/D`)
+- **Custom Keybinds**: Split panes with `Cmd+D` (down) and
+  `Cmd+Shift+D` (right)
+- **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
+  `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart
 - **Theme**: Catppuccin Mocha with Hack Nerd Font
 
@@ -525,11 +529,15 @@ youtube "vim tips"
 Atuin replaces traditional shell history with a SQLite database, providing
 syntax highlighting, fuzzy search, and rich metadata.
 
+Features: workspace-aware filtering (up-arrow shows repo-scoped history),
+vi keymap mode, compact style, and automatic secrets filtering.
+
 ```bash
 # Interactive history search (Ctrl+R)
 # - Fuzzy search with syntax highlighting
-# - Filter by: host, session, directory, or global
+# - Filter by: host, session, directory, workspace, or global
 # - Press Ctrl+R again to cycle filter modes
+# - Up-arrow filters by current git repo (workspace mode)
 
 # Statistics
 atuin stats              # Show command usage statistics
@@ -548,6 +556,19 @@ atuin search --cwd .     # Search only in current directory
 | `Enter` | Execute selected command |
 | `Tab` | Insert command to edit |
 | `Esc` | Exit search |
+
+### FZF-Powered Git Helpers
+
+```bash
+# Fuzzy branch checkout (sorted by most recent)
+gb
+
+# Fuzzy checkout from git log
+gl
+
+# Ripgrep + FZF interactive code search (Enter opens in nvim)
+rgf "pattern"
+```
 
 ### Usage Examples
 

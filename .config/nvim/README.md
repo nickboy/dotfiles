@@ -10,11 +10,20 @@ Enabled via `lazyvim.json`:
 - `ai.claudecode` -- Claude Code IDE integration
   ([coder/claudecode.nvim](https://github.com/coder/claudecode.nvim))
 - `ai.copilot` -- GitHub Copilot completions
+- `dap.core` -- Debug Adapter Protocol (step-through debugging)
+- `editor.dial` -- Toggle booleans, increment dates with `<C-a>/<C-x>`
+- `editor.harpoon2` -- Mark files and jump with `<leader>1-9`
+- `editor.refactoring` -- Extract variable/function, inline, rename
+- `lang.docker` -- Dockerfile and compose LSP
+- `lang.go` -- gopls, gofmt, delve debugger
 - `lang.java` -- Java LSP, DAP, and formatting
 - `lang.json` -- JSON schemas and validation
 - `lang.markdown` -- Markdown preview and linting
 - `lang.python` -- Pyright + Ruff
 - `lang.rust` -- rust-analyzer, crates.nvim
+- `lang.toml` -- TOML syntax and LSP (Cargo.toml, pyproject.toml)
+- `lang.typescript` -- ts\_ls, prettier, eslint
+- `test.core` -- Run tests from editor (`<leader>t` bindings)
 
 ## Custom Plugins
 

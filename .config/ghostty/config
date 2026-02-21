@@ -100,3 +100,6 @@ mouse-scroll-multiplier = 2
 
 # Option+Click to move cursor position in long commands
 cursor-click-to-move = true
+
+# Note: In tmux with `set -g mouse on`, use Cmd+Shift+Click to open URLs
+# (plain Cmd+Click works outside tmux)

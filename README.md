@@ -23,6 +23,8 @@ configurations for macOS development environment.
 - **Claude Code**: Integrated statusline with ccusage for cost tracking,
   desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH),
   claudecode.nvim with 40% split width and diff-in-new-tab workflow
+- **Git Diff View**: diffview.nvim for side-by-side diff review and file
+  history browsing directly in Neovim
 
 ### 🤖 Automation Scripts
 
@@ -413,6 +415,17 @@ Custom settings for the LazyVim claudecode extra
 | `<leader>ad` | n | Deny diff |
 | `<leader>am` | n | Select Claude model (Opus/Sonnet/Haiku) |
 | `<Esc><Esc>` | t | Exit terminal mode (scroll Claude output) |
+
+### Diffview (Git Diff Viewer)
+
+Side-by-side git diff viewer (`~/.config/nvim/lua/plugins/diffview.lua`):
+
+| Keymap | Action |
+| --- | --- |
+| `<leader>gd` | Open diff view (all changed files) |
+| `<leader>gf` | Current file history |
+| `<leader>gF` | Full branch/repo history |
+| `q` | Close diff view |
 
 ### OSC52 Clipboard (Remote Sessions)
 

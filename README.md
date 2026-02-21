@@ -279,6 +279,15 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
   `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart
+- **Quick Terminal**: `Cmd+`` global hotkey for Quake-style dropdown
+  terminal (70% height, auto-hides on focus loss)
+- **Unfocused Split Dimming**: Inactive split panes dim to 85% opacity
+- **Window Subtitle**: Shows current working directory below tab bar
+- **Mouse Scroll Multiplier**: 2x scroll speed for faster navigation
+- **Cursor Click-to-Move**: `Option+Click` to reposition cursor in
+  long commands
+- **Tab-Only Titlebar**: `macos-titlebar-style = tabs` removes traffic
+  lights, keeps tab bar
 - **Theme**: Catppuccin Mocha with Hack Nerd Font
 
 ### Key Settings

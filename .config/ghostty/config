@@ -19,7 +19,7 @@ window-save-state = always
 # Transparency and visual effects for macOS liquid visuals
 background-opacity = 0.75
 background-blur-radius = 20
-macos-titlebar-style = transparent
+macos-titlebar-style = tabs
 
 # Cursor settings
 cursor-style = block
@@ -81,3 +81,22 @@ bell-features = attention,title
 
 # Desktop notifications via OSC 9/777 (banner when unfocused)
 desktop-notifications = true
+
+# Quick Terminal (Quake-style dropdown from top of screen)
+keybind = global:cmd+grave_accent=toggle_quick_terminal
+quick-terminal-position = top
+quick-terminal-size = 70%
+quick-terminal-animation-duration = 0.15
+quick-terminal-autohide = true
+
+# Dim unfocused split panes for easier focus identification
+unfocused-split-opacity = 0.85
+
+# Show working directory in titlebar subtitle
+window-subtitle = working-directory
+
+# Faster mouse scroll (2x default speed)
+mouse-scroll-multiplier = 2
+
+# Option+Click to move cursor position in long commands
+cursor-click-to-move = true

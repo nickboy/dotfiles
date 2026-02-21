@@ -279,6 +279,24 @@ rm ~/Library/Logs/daily-maintenance*.log
   保留標籤列
 - **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
 
+### Ghostty 快捷鍵
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `Cmd+`` | Quick Terminal（全域，任何 app 都能用） |
+| `Cmd+D` | 向下分割 |
+| `Cmd+Shift+D` | 向右分割 |
+| `Cmd+Option+h/j/k/l` | vim 風格分割窗格導航 |
+| `Cmd+Shift+Enter` | 切換分割窗格縮放 |
+| `Cmd+Up/Down` | 跳至上一個/下一個提示 |
+| `Cmd+K` | 清除畫面 |
+| `Cmd+Shift+,` | 重載設定 |
+| `Cmd+Click` | 在瀏覽器開啟 URL |
+| `Option+Click` | 在指令列中移動游標 |
+
+> **注意**：在 tmux 中且 `set -g mouse on` 時，需用
+> `Cmd+Shift+Click` 開啟 URL（tmux 外使用 `Cmd+Click` 即可）。
+
 ### 主要設定
 
 - 透明背景搭配模糊效果，呈現現代 macOS 風格
@@ -412,6 +430,25 @@ LazyVim claudecode extra 的自訂設定
 | `<leader>ad` | n | 拒絕 diff |
 | `<leader>am` | n | 選擇 Claude 模型（Opus/Sonnet/Haiku） |
 | `<Esc><Esc>` | t | 退出終端機模式（捲動 Claude 輸出） |
+
+### Neovim UI 增強快捷鍵
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `<leader>ut` | 切換 treesitter-context（固定函式標頭） |
+| `<leader>ux` | 切換 illuminate（高亮游標下符號） |
+| `<leader>cr` | inc-rename（透過 LSP 即時重新命名預覽） |
+
+### Diffview（Git Diff 檢視器）
+
+並排 git diff 檢視器（`~/.config/nvim/lua/plugins/diffview.lua`）：
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `<leader>gd` | 開啟 diff 檢視（所有變更檔案） |
+| `<leader>gf` | 目前檔案歷史 |
+| `<leader>gF` | 完整分支/倉庫歷史 |
+| `q` | 關閉 diff 檢視 |
 
 ### OSC52 剪貼簿（遠端工作階段）
 

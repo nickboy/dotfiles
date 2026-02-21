@@ -290,6 +290,24 @@ rm ~/Library/Logs/daily-maintenance*.log
   lights, keeps tab bar
 - **Theme**: Catppuccin Mocha with Hack Nerd Font
 
+### Ghostty Keybindings
+
+| Keybinding | Action |
+| --- | --- |
+| `Cmd+`` | Quick Terminal (global, any app) |
+| `Cmd+D` | Split down |
+| `Cmd+Shift+D` | Split right |
+| `Cmd+Option+h/j/k/l` | Navigate splits (vim-style) |
+| `Cmd+Shift+Enter` | Toggle split zoom |
+| `Cmd+Up/Down` | Jump to previous/next prompt |
+| `Cmd+K` | Clear screen |
+| `Cmd+Shift+,` | Reload config |
+| `Cmd+Click` | Open URL in browser |
+| `Option+Click` | Move cursor in command line |
+
+> **Note**: In tmux with `set -g mouse on`, use `Cmd+Shift+Click`
+> to open URLs (plain `Cmd+Click` works outside tmux).
+
 ### Key Settings
 
 - Transparent background with blur for modern macOS aesthetic
@@ -427,6 +445,14 @@ Custom settings for the LazyVim claudecode extra
 | `<leader>ad` | n | Deny diff |
 | `<leader>am` | n | Select Claude model (Opus/Sonnet/Haiku) |
 | `<Esc><Esc>` | t | Exit terminal mode (scroll Claude output) |
+
+### Neovim UI Enhancements
+
+| Keymap | Action |
+| --- | --- |
+| `<leader>ut` | Toggle treesitter-context (sticky function header) |
+| `<leader>ux` | Toggle illuminate (highlight symbol under cursor) |
+| `<leader>cr` | Inc-rename (live rename preview via LSP) |
 
 ### Diffview (Git Diff Viewer)
 

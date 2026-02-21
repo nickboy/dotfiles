@@ -58,18 +58,51 @@ return {
 
           -- Tab line
           TabLine = { bg = "NONE" },
+
+          -- Status line
+          StatusLine = { bg = "NONE" },
+          StatusLineNC = { bg = "NONE" },
         }
       end,
       integrations = {
         lualine = {
-          all = function()
+          all = function(colors)
             return {
-              normal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
-              insert = { a = { bg = "NONE" }, b = { bg = "NONE" } },
-              terminal = { a = { bg = "NONE" }, b = { bg = "NONE" } },
-              command = { a = { bg = "NONE" }, b = { bg = "NONE" } },
-              visual = { a = { bg = "NONE" }, b = { bg = "NONE" } },
-              replace = { a = { bg = "NONE" }, b = { bg = "NONE" } },
+              normal = {
+                a = { bg = "NONE", fg = colors.blue, gui = "bold" },
+                b = { bg = "NONE", fg = colors.blue },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              insert = {
+                a = { bg = "NONE", fg = colors.green, gui = "bold" },
+                b = { bg = "NONE", fg = colors.green },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              terminal = {
+                a = { bg = "NONE", fg = colors.green, gui = "bold" },
+                b = { bg = "NONE", fg = colors.green },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              command = {
+                a = { bg = "NONE", fg = colors.peach, gui = "bold" },
+                b = { bg = "NONE", fg = colors.peach },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              visual = {
+                a = { bg = "NONE", fg = colors.mauve, gui = "bold" },
+                b = { bg = "NONE", fg = colors.mauve },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              replace = {
+                a = { bg = "NONE", fg = colors.red, gui = "bold" },
+                b = { bg = "NONE", fg = colors.red },
+                c = { bg = "NONE", fg = colors.text },
+              },
+              inactive = {
+                a = { bg = "NONE", fg = colors.overlay0 },
+                b = { bg = "NONE", fg = colors.overlay0 },
+                c = { bg = "NONE", fg = colors.overlay0 },
+              },
             }
           end,
         },
@@ -120,6 +153,35 @@ return {
         treesitter_context = true,
       },
     },
+  },
+  {
+    "nvim-lualine/lualine.nvim",
+    opts = function(_, opts)
+      local theme = require("catppuccin.utils.lualine")()
+      for _, mode_colors in pairs(theme) do
+        for section, _ in pairs(mode_colors) do
+          mode_colors[section].bg = "NONE"
+        end
+      end
+      opts.options = opts.options or {}
+      opts.options.theme = theme
+      opts.options.section_separators = { left = "", right = "" }
+      opts.options.component_separators = { left = "", right = "" }
+    end,
+    config = function(_, opts)
+      require("lualine").setup(opts)
+      -- Force-clear bg on ALL lualine highlight groups after setup
+      for name, _ in pairs(vim.api.nvim_get_hl(0, {})) do
+        if type(name) == "string" and name:find("^lualine_") then
+          local hl = vim.api.nvim_get_hl(0, { name = name })
+          if hl and not hl.link and hl.bg then
+            hl.bg = nil
+            hl.ctermbg = nil
+            vim.api.nvim_set_hl(0, name, hl)
+          end
+        end
+      end
+    end,
   },
   {
     "akinsho/bufferline.nvim",

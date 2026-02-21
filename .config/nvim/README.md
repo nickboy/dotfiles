@@ -13,6 +13,8 @@ Enabled via `lazyvim.json`:
 - `dap.core` -- Debug Adapter Protocol (step-through debugging)
 - `editor.dial` -- Toggle booleans, increment dates with `<C-a>/<C-x>`
 - `editor.harpoon2` -- Mark files and jump with `<leader>1-9`
+- `editor.illuminate` -- Highlight all instances of symbol under cursor
+- `editor.inc-rename` -- Live preview when renaming via LSP (`<leader>cr`)
 - `editor.refactoring` -- Extract variable/function, inline, rename
 - `lang.docker` -- Dockerfile and compose LSP
 - `lang.go` -- gopls, gofmt, delve debugger
@@ -24,11 +26,15 @@ Enabled via `lazyvim.json`:
 - `lang.toml` -- TOML syntax and LSP (Cargo.toml, pyproject.toml)
 - `lang.typescript` -- ts\_ls, prettier, eslint
 - `test.core` -- Run tests from editor (`<leader>t` bindings)
+- `ui.treesitter-context` -- Sticky header showing current function/class
 
 ## Custom Plugins
 
 - **Catppuccin Mocha** with transparent backgrounds for Ghostty
   compatibility (`lua/plugins/catppuccin.lua`)
+- **Custom Dashboard** with ASCII art header (`lua/plugins/dashboard.lua`)
+- **Smooth Scroll** tuning — 150ms linear animation
+  (`lua/plugins/snacks-extras.lua`)
 
 ## Notable Options
 

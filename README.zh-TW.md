@@ -22,6 +22,9 @@
 - **Claude Code**: 整合 ccusage 的狀態列成本追蹤，透過 OSC 9/777
   桌面通知（支援 Ghostty、Neovim 及 SSH 遠端），claudecode.nvim
   搭配 40% 分割寬度與 diff-in-new-tab 工作流程
+- **Neovim UI 增強**: treesitter-context（固定函式標頭）、
+  illuminate（高亮游標下符號）、inc-rename（即時重新命名預覽）、
+  自訂 ASCII 啟動畫面與平滑捲動動畫
 
 ### 自動化腳本
 
@@ -266,7 +269,33 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
   `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
+- **Quick Terminal**: `Cmd+`` 全域快捷鍵，Quake 風格下拉終端機
+  （70% 高度，失去焦點自動收起）
+- **非聚焦窗格變暗**: 非活躍分割窗格透明度降至 85%
+- **視窗副標題**: 標籤列下方顯示目前工作目錄
+- **滑鼠滾輪加速**: 2 倍滾輪速度，瀏覽更快
+- **游標點擊移動**: `Option+Click` 在長指令中直接移動游標位置
+- **純標籤列模式**: `macos-titlebar-style = tabs` 移除紅綠燈按鈕，
+  保留標籤列
 - **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
+
+### Ghostty 快捷鍵
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `Cmd+`` | Quick Terminal（全域，任何 app 都能用） |
+| `Cmd+D` | 向下分割 |
+| `Cmd+Shift+D` | 向右分割 |
+| `Cmd+Option+h/j/k/l` | vim 風格分割窗格導航 |
+| `Cmd+Shift+Enter` | 切換分割窗格縮放 |
+| `Cmd+Up/Down` | 跳至上一個/下一個提示 |
+| `Cmd+K` | 清除畫面 |
+| `Cmd+Shift+,` | 重載設定 |
+| `Cmd+Click` | 在瀏覽器開啟 URL |
+| `Option+Click` | 在指令列中移動游標 |
+
+> **注意**：在 tmux 中且 `set -g mouse on` 時，需用
+> `Cmd+Shift+Click` 開啟 URL（tmux 外使用 `Cmd+Click` 即可）。
 
 ### 主要設定
 
@@ -401,6 +430,25 @@ LazyVim claudecode extra 的自訂設定
 | `<leader>ad` | n | 拒絕 diff |
 | `<leader>am` | n | 選擇 Claude 模型（Opus/Sonnet/Haiku） |
 | `<Esc><Esc>` | t | 退出終端機模式（捲動 Claude 輸出） |
+
+### Neovim UI 增強快捷鍵
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `<leader>ut` | 切換 treesitter-context（固定函式標頭） |
+| `<leader>ux` | 切換 illuminate（高亮游標下符號） |
+| `<leader>cr` | inc-rename（透過 LSP 即時重新命名預覽） |
+
+### Diffview（Git Diff 檢視器）
+
+並排 git diff 檢視器（`~/.config/nvim/lua/plugins/diffview.lua`）：
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `<leader>gd` | 開啟 diff 檢視（所有變更檔案） |
+| `<leader>gf` | 目前檔案歷史 |
+| `<leader>gF` | 完整分支/倉庫歷史 |
+| `q` | 關閉 diff 檢視 |
 
 ### OSC52 剪貼簿（遠端工作階段）
 

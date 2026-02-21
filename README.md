@@ -23,6 +23,11 @@ configurations for macOS development environment.
 - **Claude Code**: Integrated statusline with ccusage for cost tracking,
   desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH),
   claudecode.nvim with 40% split width and diff-in-new-tab workflow
+- **Git Diff View**: diffview.nvim for side-by-side diff review and file
+  history browsing directly in Neovim
+- **Neovim UI Enhancements**: treesitter-context (sticky function header),
+  illuminate (highlight symbol under cursor), inc-rename (live rename preview),
+  custom ASCII dashboard, and smooth scroll animation
 
 ### 🤖 Automation Scripts
 
@@ -274,7 +279,34 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
   `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart
+- **Quick Terminal**: `Cmd+`` global hotkey for Quake-style dropdown
+  terminal (70% height, auto-hides on focus loss)
+- **Unfocused Split Dimming**: Inactive split panes dim to 85% opacity
+- **Window Subtitle**: Shows current working directory below tab bar
+- **Mouse Scroll Multiplier**: 2x scroll speed for faster navigation
+- **Cursor Click-to-Move**: `Option+Click` to reposition cursor in
+  long commands
+- **Tab-Only Titlebar**: `macos-titlebar-style = tabs` removes traffic
+  lights, keeps tab bar
 - **Theme**: Catppuccin Mocha with Hack Nerd Font
+
+### Ghostty Keybindings
+
+| Keybinding | Action |
+| --- | --- |
+| `Cmd+`` | Quick Terminal (global, any app) |
+| `Cmd+D` | Split down |
+| `Cmd+Shift+D` | Split right |
+| `Cmd+Option+h/j/k/l` | Navigate splits (vim-style) |
+| `Cmd+Shift+Enter` | Toggle split zoom |
+| `Cmd+Up/Down` | Jump to previous/next prompt |
+| `Cmd+K` | Clear screen |
+| `Cmd+Shift+,` | Reload config |
+| `Cmd+Click` | Open URL in browser |
+| `Option+Click` | Move cursor in command line |
+
+> **Note**: In tmux with `set -g mouse on`, use `Cmd+Shift+Click`
+> to open URLs (plain `Cmd+Click` works outside tmux).
 
 ### Key Settings
 
@@ -413,6 +445,25 @@ Custom settings for the LazyVim claudecode extra
 | `<leader>ad` | n | Deny diff |
 | `<leader>am` | n | Select Claude model (Opus/Sonnet/Haiku) |
 | `<Esc><Esc>` | t | Exit terminal mode (scroll Claude output) |
+
+### Neovim UI Enhancements
+
+| Keymap | Action |
+| --- | --- |
+| `<leader>ut` | Toggle treesitter-context (sticky function header) |
+| `<leader>ux` | Toggle illuminate (highlight symbol under cursor) |
+| `<leader>cr` | Inc-rename (live rename preview via LSP) |
+
+### Diffview (Git Diff Viewer)
+
+Side-by-side git diff viewer (`~/.config/nvim/lua/plugins/diffview.lua`):
+
+| Keymap | Action |
+| --- | --- |
+| `<leader>gd` | Open diff view (all changed files) |
+| `<leader>gf` | Current file history |
+| `<leader>gF` | Full branch/repo history |
+| `q` | Close diff view |
 
 ### OSC52 Clipboard (Remote Sessions)
 

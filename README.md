@@ -453,6 +453,19 @@ Custom settings for the LazyVim claudecode extra
 | `<leader>ut` | Toggle treesitter-context (sticky function header) |
 | `<leader>ux` | Toggle illuminate (highlight symbol under cursor) |
 | `<leader>cr` | Inc-rename (live rename preview via LSP) |
+| `<leader>cs` | Toggle symbol outline sidebar |
+| `<leader>uB` | Toggle inline git blame (GitLens-style) |
+| `gD` | Glance: peek definition |
+| `gR` | Glance: peek references |
+| `gY` | Glance: peek type definition |
+| `gM` | Glance: peek implementations |
+
+**Automatic features** (no keybinding needed):
+
+- **Dropbar**: VS Code-style breadcrumb navigation bar at top of buffer
+- **Rainbow indent guides**: Each indent level in a different color
+  (like VS Code Indent Rainbow)
+- **Mini-indentscope**: Animated indent guide for current scope
 
 ### Diffview (Git Diff Viewer)
 

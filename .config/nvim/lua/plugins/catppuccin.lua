@@ -151,6 +151,11 @@ return {
         },
         semantic_tokens = true,
         treesitter_context = true,
+        rainbow_delimiters = true,
+        dropbar = {
+          enabled = true,
+          color_mode = "fg",
+        },
       },
     },
   },

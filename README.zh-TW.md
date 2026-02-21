@@ -269,6 +269,14 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
   `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
+- **Quick Terminal**: `Cmd+`` 全域快捷鍵，Quake 風格下拉終端機
+  （70% 高度，失去焦點自動收起）
+- **非聚焦窗格變暗**: 非活躍分割窗格透明度降至 85%
+- **視窗副標題**: 標籤列下方顯示目前工作目錄
+- **滑鼠滾輪加速**: 2 倍滾輪速度，瀏覽更快
+- **游標點擊移動**: `Option+Click` 在長指令中直接移動游標位置
+- **純標籤列模式**: `macos-titlebar-style = tabs` 移除紅綠燈按鈕，
+  保留標籤列
 - **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
 
 ### 主要設定

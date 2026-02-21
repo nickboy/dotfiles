@@ -44,6 +44,10 @@ keybind = cmd+shift+comma=reload_config
 keybind = cmd+up=jump_to_prompt:-1
 keybind = cmd+down=jump_to_prompt:1
 keybind = cmd+shift+enter=toggle_split_zoom
+keybind = cmd+alt+h=goto_split:left
+keybind = cmd+alt+j=goto_split:bottom
+keybind = cmd+alt+k=goto_split:top
+keybind = cmd+alt+l=goto_split:right
 
 # Shell Integration for Claude Code
 shell-integration = detect

@@ -438,6 +438,18 @@ LazyVim claudecode extra 的自訂設定
 | `<leader>ut` | 切換 treesitter-context（固定函式標頭） |
 | `<leader>ux` | 切換 illuminate（高亮游標下符號） |
 | `<leader>cr` | inc-rename（透過 LSP 即時重新命名預覽） |
+| `<leader>cs` | 切換符號大綱側邊欄 |
+| `<leader>uB` | 切換行內 git blame（GitLens 風格） |
+| `gD` | Glance：預覽定義 |
+| `gR` | Glance：預覽參考 |
+| `gY` | Glance：預覽型別定義 |
+| `gM` | Glance：預覽實作 |
+
+**自動功能**（無需快捷鍵）：
+
+- **Dropbar**：VS Code 風格的麵包屑導航列，顯示於緩衝區頂部
+- **彩虹縮排指引線**：每層縮排以不同顏色顯示（類似 VS Code Indent Rainbow）
+- **Mini-indentscope**：目前作用域的動畫縮排指引線
 
 ### Diffview（Git Diff 檢視器）
 

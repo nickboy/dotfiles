@@ -282,10 +282,7 @@ if command -v carapace &> /dev/null; then
     source <(carapace _carapace)
 fi
 
-# Zoxide (better cd)
-if command -v zoxide &> /dev/null; then
-    eval "$(zoxide init zsh)"
-fi
+# Zoxide - init moved to end of file (before starship) to satisfy zoxide doctor
 
 # The fuck (command correction)
 if command -v thefuck &> /dev/null; then
@@ -326,7 +323,10 @@ alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 
 # Shortcuts
 alias c='clear'
-alias cd='z'  # Use zoxide for cd
+# Use zoxide for cd (skip in Claude Code to avoid interference)
+if [[ -z "$CLAUDECODE" ]]; then
+    alias cd='z'
+fi
 alias python='python3'
 alias pip='pip3'
 
@@ -474,7 +474,7 @@ zstyle ':completion:*:cd:*' ignored-patterns '(*/.git|*/.npm|*/node_modules|*/.c
 export BAT_THEME="Catppuccin Mocha"
 
 # ============================================================================
-# Prompt (Starship) - Load AFTER all shell integrations to avoid conflicts
+# Prompt (Starship) - Load before zoxide so zoxide doctor check passes
 # ============================================================================
 
 eval "$(starship init zsh)"
@@ -522,3 +522,11 @@ ssht() {
 
 # Source private/work specific configs if exists
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# ============================================================================
+# Zoxide (better cd) - Load LAST to satisfy zoxide doctor check
+# ============================================================================
+
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi

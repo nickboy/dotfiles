@@ -27,6 +27,8 @@ Enabled via `lazyvim.json`:
 - `lang.typescript` -- ts\_ls, prettier, eslint
 - `test.core` -- Run tests from editor (`<leader>t` bindings)
 - `ui.treesitter-context` -- Sticky header showing current function/class
+- `editor.outline` -- Symbol outline sidebar (`<leader>cs`)
+- `ui.mini-indentscope` -- Animated indent guide for current scope
 
 ## Custom Plugins
 
@@ -35,6 +37,14 @@ Enabled via `lazyvim.json`:
 - **Custom Dashboard** with ASCII art header (`lua/plugins/dashboard.lua`)
 - **Smooth Scroll** tuning — 150ms linear animation
   (`lua/plugins/snacks-extras.lua`)
+- **Dropbar** — VS Code-style breadcrumb navigation bar
+  (`lua/plugins/dropbar.lua`)
+- **Gitsigns inline blame** — GitLens-style inline git blame toggle
+  (`lua/plugins/gitsigns-blame.lua`)
+- **Glance** — Peek definitions, references, type definitions, and
+  implementations in a floating window (`lua/plugins/glance.lua`)
+- **Rainbow Indent** — Rainbow-colored indent guides for all levels
+  via indent-blankline + rainbow-delimiters (`lua/plugins/rainbow-indent.lua`)
 
 ## Notable Options
 

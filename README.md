@@ -25,6 +25,9 @@ configurations for macOS development environment.
   claudecode.nvim with 40% split width and diff-in-new-tab workflow
 - **Git Diff View**: diffview.nvim for side-by-side diff review and file
   history browsing directly in Neovim
+- **Neovim UI Enhancements**: treesitter-context (sticky function header),
+  illuminate (highlight symbol under cursor), inc-rename (live rename preview),
+  custom ASCII dashboard, and smooth scroll animation
 
 ### 🤖 Automation Scripts
 

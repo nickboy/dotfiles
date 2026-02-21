@@ -22,6 +22,9 @@
 - **Claude Code**: 整合 ccusage 的狀態列成本追蹤，透過 OSC 9/777
   桌面通知（支援 Ghostty、Neovim 及 SSH 遠端），claudecode.nvim
   搭配 40% 分割寬度與 diff-in-new-tab 工作流程
+- **Neovim UI 增強**: treesitter-context（固定函式標頭）、
+  illuminate（高亮游標下符號）、inc-rename（即時重新命名預覽）、
+  自訂 ASCII 啟動畫面與平滑捲動動畫
 
 ### 自動化腳本
 

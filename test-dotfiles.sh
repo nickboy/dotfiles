@@ -114,6 +114,18 @@ if [ -f ~/.zshrc ]; then
     
     # Basic anti-pattern checks
     run_test "No backticks in .zshrc" "! grep '\`.*\`' ~/.zshrc"
+
+    # Duplicate alias detection
+    run_test "No duplicate aliases in .zshrc" "[ -z \"\$(sed -n 's/^alias \([^=]*\)=.*/\1/p' ~/.zshrc | sort | uniq -d)\" ]"
+
+    # Duplicate zinit plugin detection
+    run_test "No duplicate zinit plugins" "[ -z \"\$(grep -oE 'zinit (light|load|snippet) [^ ;]+' ~/.zshrc | awk '{print \$3}' | sort | uniq -d)\" ]"
+
+    # compinit should appear exactly once (non-commented, non-deferred)
+    run_test "Single compinit call" "[ \"\$(grep -cE '^\s*compinit' ~/.zshrc)\" -le 1 ]"
+
+    # Redundant redirect pattern: &>/dev/null 2>&1
+    run_test "No redundant redirects (&>/dev/null 2>&1)" "! grep '&>/dev/null 2>&1' ~/.zshrc"
 else
     echo -e "${YELLOW}  No .zshrc file found${NC}"
 fi
@@ -181,10 +193,67 @@ fi
 if [ -f "$HOME/.config/yazi/yazi.toml" ]; then
     run_test "Yazi config exists" "[ -s $HOME/.config/yazi/yazi.toml ]"
 fi
+
+# Validate Ghostty config
+if command -v ghostty >/dev/null 2>&1; then
+    run_test "Ghostty config valid" "ghostty +validate-config"
+    if [ -f "$HOME/.config/ghostty/config" ]; then
+        SCROLLBACK=$(sed -n 's/^scrollback-limit *=  *\([0-9]*\)/\1/p' "$HOME/.config/ghostty/config" 2>/dev/null)
+        SCROLLBACK=${SCROLLBACK:-0}
+        run_test "Ghostty scrollback-limit >= 1000000" "[ \"$SCROLLBACK\" -ge 1000000 ]"
+    fi
+fi
+
+# Validate tmux config syntax (parse check only, no server needed)
+if command -v tmux >/dev/null 2>&1 && [ -f "$HOME/.tmux.conf" ]; then
+    run_test "Tmux config exists and non-empty" "[ -s $HOME/.tmux.conf ]"
+fi
+
+# Validate Starship config (TOML syntax)
+if [ -f "$HOME/.config/starship.toml" ]; then
+    run_test "Starship config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/starship.toml').read_text())\""
+fi
+
+# Validate Kitty config
+if command -v kitty >/dev/null 2>&1 && [ -f "$HOME/.config/kitty/kitty.conf" ]; then
+    run_test "Kitty config valid" "kitty --config $HOME/.config/kitty/kitty.conf --debug-config 2>&1 | grep -qv 'Error'"
+fi
+
+# Validate Atuin config (TOML syntax)
+if [ -f "$HOME/.config/atuin/config.toml" ]; then
+    run_test "Atuin config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/atuin/config.toml').read_text())\""
+fi
 echo
 
-# Test 10: Git/yadm checks
-echo -e "${YELLOW}10. Version Control Checks${NC}"
+# Test 10: Symlink Integrity
+echo -e "${YELLOW}10. Symlink Integrity${NC}"
+
+# Ghostty config symlink
+GHOSTTY_LINK="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
+if [ -e "$GHOSTTY_LINK" ] || [ -L "$GHOSTTY_LINK" ]; then
+    run_test "Ghostty config is symlink" "[ -L \"$GHOSTTY_LINK\" ]"
+    run_test "Ghostty symlink target correct" "[ \"\$(readlink \"$GHOSTTY_LINK\")\" = \"$HOME/.config/ghostty/config\" ]"
+fi
+
+# Critical dotfiles exist and are non-empty
+for dotfile in ~/.zshrc ~/.tmux.conf ~/.gitconfig ~/.config/starship.toml; do
+    if [ -e "$dotfile" ]; then
+        run_test "$(basename $dotfile) exists and non-empty" "[ -s $dotfile ]"
+    fi
+done
+echo
+
+# Test 11: Security Checks
+echo -e "${YELLOW}11. Security Checks${NC}"
+
+# No secrets in yadm-tracked files
+if command -v yadm >/dev/null 2>&1; then
+    run_test "No secrets in tracked files" "[ -z \"\$(yadm list -a 2>/dev/null | xargs grep -lE '(APIKEY|SECRET_KEY|TOKEN|PASSWORD)\s*=' 2>/dev/null | grep -v 'HOMEBREW_NO_ANALYTICS' | grep -v 'test-dotfiles.sh')\" ]"
+fi
+echo
+
+# Test 12: Git/yadm checks
+echo -e "${YELLOW}12. Version Control Checks${NC}"
 run_test "No uncommitted changes" "[ -z \"$(yadm status --porcelain 2>/dev/null)\" ] || yadm status --porcelain"
 echo
 

@@ -6,7 +6,7 @@
 
 # Use xterm-ghostty locally (enables Ghostty-specific capabilities)
 # Remote machines get xterm-256color via SSH SetEnv (see ~/.ssh/config)
-if [[ -z "$SSH_CONNECTION" ]] && infocmp xterm-ghostty &>/dev/null 2>&1; then
+if [[ -z "$SSH_CONNECTION" ]] && infocmp xterm-ghostty &>/dev/null; then
     export TERM="xterm-ghostty"
 else
     export TERM="xterm-256color"
@@ -96,10 +96,6 @@ zinit light-mode for \
 # Essential Plugins (Load immediately)
 # ============================================================================
 
-# Initialize completion system first (required for compdef)
-autoload -Uz compinit
-compinit
-
 # OMZ Libraries (load first as other plugins may depend on them)
 # Note: functions.zsh must come before termsupport.zsh (provides omz_urlencode)
 zinit snippet OMZ::lib/functions.zsh
@@ -119,6 +115,10 @@ for i in {1..9}; do alias $i="builtin cd -$i"; done
 setopt hist_ignore_all_dups
 setopt hist_save_no_dups
 setopt hist_find_no_dups
+
+# Initialize completion system (required by OMZ plugins that use compdef)
+autoload -Uz compinit
+compinit -C
 
 # OMZ Plugins (via Zinit for better control)
 zinit snippet OMZP::git
@@ -150,12 +150,10 @@ zinit light zdharma-continuum/fast-syntax-highlighting
 
 # Autosuggestions and completions
 zinit wait lucid for \
-    atinit"zicompinit; zicdreplay" \
+    blockf atinit"zicompinit; zicdreplay" \
     zsh-users/zsh-completions \
     atload"_zsh_autosuggest_start" \
-    zsh-users/zsh-autosuggestions \
-    blockf \
-    zsh-users/zsh-completions
+    zsh-users/zsh-autosuggestions
 
 # Additional useful plugins
 zinit wait lucid for \
@@ -282,10 +280,7 @@ if command -v carapace &> /dev/null; then
     source <(carapace _carapace)
 fi
 
-# Zoxide (better cd)
-if command -v zoxide &> /dev/null; then
-    eval "$(zoxide init zsh)"
-fi
+# Zoxide - init moved to end of file (before starship) to satisfy zoxide doctor
 
 # The fuck (command correction)
 if command -v thefuck &> /dev/null; then
@@ -326,7 +321,10 @@ alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 
 # Shortcuts
 alias c='clear'
-alias cd='z'  # Use zoxide for cd
+# Use zoxide for cd (skip in Claude Code to avoid interference)
+if [[ -z "$CLAUDECODE" ]]; then
+    alias cd='z'
+fi
 alias python='python3'
 alias pip='pip3'
 
@@ -359,7 +357,7 @@ alias sls='sesh list -t --icons'  # List only tmux sessions
 # Git extras (in addition to OMZ git plugin)
 alias gs='git status'
 alias gd='git diff'
-alias gl='git log --oneline --graph --decorate'
+alias gl='git log --oneline --graph --decorate --all'
 
 # Battery monitoring
 alias battery='battery-status'
@@ -432,7 +430,7 @@ fi
 
 # FZF-powered git helpers
 alias gb='git branch --sort=-committerdate | fzf --preview "git log --oneline -10 {1}" | xargs git checkout'
-alias gl='git log --oneline --all | fzf --preview "git show --stat {1}" | cut -d" " -f1 | xargs git checkout'
+alias gcof='git log --oneline --all --color=always | fzf --ansi --preview "git show --stat --color=always {1}" | cut -d" " -f1 | xargs git checkout'
 
 # Ripgrep + FZF for interactive code search (Enter opens in nvim)
 rgf() {
@@ -474,7 +472,7 @@ zstyle ':completion:*:cd:*' ignored-patterns '(*/.git|*/.npm|*/node_modules|*/.c
 export BAT_THEME="Catppuccin Mocha"
 
 # ============================================================================
-# Prompt (Starship) - Load AFTER all shell integrations to avoid conflicts
+# Prompt (Starship) - Load before zoxide so zoxide doctor check passes
 # ============================================================================
 
 eval "$(starship init zsh)"
@@ -522,3 +520,11 @@ ssht() {
 
 # Source private/work specific configs if exists
 [[ -f "$HOME/.zshrc.local" ]] && source "$HOME/.zshrc.local"
+
+# ============================================================================
+# Zoxide (better cd) - Load LAST to satisfy zoxide doctor check
+# ============================================================================
+
+if command -v zoxide &> /dev/null; then
+    eval "$(zoxide init zsh)"
+fi

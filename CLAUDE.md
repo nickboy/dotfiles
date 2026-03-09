@@ -70,6 +70,8 @@ automatically based on context:
   bob version manager, Zed settings
 - **dotfiles-shell** — Zsh/Zinit/Oh-My-Zsh architecture, tmux config,
   terminal emulators (Ghostty, Kitty), Atuin, sesh, aliases
+- **hackernews-summary** — Fetch and summarize top 30 HN stories
+  (full front page) in Traditional Chinese
 
 ---
 

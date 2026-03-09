@@ -7,25 +7,19 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
+local function set_transparent_bg()
+  local groups = { "Normal", "NormalNC", "NormalFloat", "SnacksNormal",
+    "SnacksNormalNC", "StatusLine", "StatusLineNC" }
+  for _, group in ipairs(groups) do
+    vim.api.nvim_set_hl(0, group, { bg = "NONE" })
+  end
+end
+
 vim.api.nvim_create_autocmd("ColorScheme", {
   pattern = "*",
-  callback = function()
-    vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "StatusLine", { bg = "NONE" })
-    vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "NONE" })
-  end,
+  callback = set_transparent_bg,
 })
 
 -- Apply immediately since this file loads on VeryLazy (after the
 -- initial colorscheme has already been set)
-vim.api.nvim_set_hl(0, "Normal", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "NormalNC", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "SnacksNormal", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "SnacksNormalNC", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "StatusLine", { bg = "NONE" })
-vim.api.nvim_set_hl(0, "StatusLineNC", { bg = "NONE" })
+set_transparent_bg()

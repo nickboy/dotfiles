@@ -5,7 +5,7 @@ font-thicken = false
 adjust-cell-width = 1%
 
 # Performance
-scrollback-limit = 10000
+scrollback-limit = 10000000
 
 # Window settings
 window-padding-x = 10
@@ -44,6 +44,10 @@ keybind = cmd+shift+comma=reload_config
 keybind = cmd+up=jump_to_prompt:-1
 keybind = cmd+down=jump_to_prompt:1
 keybind = cmd+shift+enter=toggle_split_zoom
+keybind = cmd+alt+h=goto_split:left
+keybind = cmd+alt+j=goto_split:down
+keybind = cmd+alt+k=goto_split:up
+keybind = cmd+alt+l=goto_split:right
 
 # Shell Integration for Claude Code
 shell-integration = detect
@@ -85,6 +89,7 @@ desktop-notifications = true
 # Quick Terminal (Quake-style dropdown from top of screen)
 keybind = global:cmd+grave_accent=toggle_quick_terminal
 quick-terminal-position = top
+quick-terminal-screen = mouse
 quick-terminal-size = 70%
 quick-terminal-animation-duration = 0.15
 quick-terminal-autohide = true

@@ -577,11 +577,45 @@ jobs:
             echo "No shell scripts found to test"
           fi
 
+  dotfiles-test-suite:
+    name: Dotfiles Test Suite
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up test environment
+        run: |
+          # Point HOME to workspace so dotfiles are found at ~/
+          export HOME=$GITHUB_WORKSPACE
+
+          # Create directories that the test expects
+          mkdir -p "$HOME/.config"
+
+          # Symlink configs that live under .config/
+          for dir in ghostty kitty starship.toml atuin yazi mise; do
+            if [ -e ".config/$dir" ]; then
+              ln -sfn "$GITHUB_WORKSPACE/.config/$dir" "$HOME/.config/$dir"
+            fi
+          done
+
+      - name: Install validation tools
+        run: |
+          brew install uv || true
+          uv tool install beautysh --with setuptools || true
+          export PATH="$HOME/.local/bin:$PATH"
+
+      - name: Run test-dotfiles.sh
+        run: |
+          export HOME=$GITHUB_WORKSPACE
+          export PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+          bash test-dotfiles.sh
+
   summary:
     name: CI Summary
     needs: [lint-all, shellcheck, bash-syntax, zsh-syntax, go-validation,
             yaml-validation, bootstrap-test, macos-integration, documentation,
-            security-scan, compatibility-matrix]
+            security-scan, compatibility-matrix, dotfiles-test-suite]
     runs-on: ubuntu-latest
     if: always()
     steps:

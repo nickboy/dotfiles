@@ -11,7 +11,7 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Configuration
-PLIST_FILE="$HOME/Library/LaunchAgents/com.nickboy.daily-maintenance.plist"
+PLIST_FILE="$HOME/Library/LaunchAgents/com.daily-maintenance.plist"
 LOG_DIR="$HOME/Library/Logs"
 
 echo -e "${BLUE}========================================${NC}"
@@ -32,7 +32,7 @@ if [[ ! $REPLY =~ ^[Yy]$ ]]; then
 fi
 
 # Unload the LaunchAgent if it's running
-if launchctl list | grep -q "com.nickboy.daily-maintenance"; then
+if launchctl list | grep -q "com.daily-maintenance"; then
     echo -e "${YELLOW}Stopping automation...${NC}"
     launchctl unload "$PLIST_FILE"
     if [ $? -eq 0 ]; then
@@ -74,7 +74,7 @@ echo
 echo "Script files are still available at:"
 echo "  • ~/daily-maintenance.sh"
 echo "  • ~/daily-maintenance-control.sh"
-echo "  • ~/Library/LaunchAgents/com.nickboy.daily-maintenance.plist"
+echo "  • ~/Library/LaunchAgents/com.daily-maintenance.plist"
 echo
 echo "To reinstall, run:"
 echo -e "  ${GREEN}bash ~/install-daily-maintenance.sh${NC}"

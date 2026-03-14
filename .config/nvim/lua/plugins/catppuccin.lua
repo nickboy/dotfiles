@@ -62,6 +62,10 @@ return {
           -- Status line
           StatusLine = { bg = "NONE" },
           StatusLineNC = { bg = "NONE" },
+
+          -- Markdown code blocks: transparent background
+          RenderMarkdownCode = { bg = "NONE" },
+          RenderMarkdownCodeInline = { bg = "NONE" },
         }
       end,
       integrations = {

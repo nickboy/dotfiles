@@ -37,8 +37,9 @@ macOS (Apple Silicon) development environment:
    Use `$HOME` instead of hardcoded user paths. Scripts must be `chmod +x`.
 
 4. **Lint-free commits** — Every commit MUST pass markdown linting.
-   Run `npx markdownlint-cli '**/*.md' --ignore node_modules` before
-   any commit. Fix ALL lint errors, no exceptions.
+   Run `yadm ls-files '*.md' | xargs npx markdownlint-cli` before
+   any commit. Fix ALL lint errors, no exceptions. Never use
+   `'**/*.md'` from `~` — it scans the entire home directory and hangs.
 
 5. **Run tests before committing** — `bash ~/test-dotfiles.sh`
 

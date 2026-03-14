@@ -254,6 +254,7 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 - **Transparency**: Background opacity (0.75) with blur for macOS
   visuals
+- **Scrollback**: 25 MB scrollback buffer for long Claude Code outputs
 - **Shell Integration**: Enhanced shell integration with `sudo`,
   `title`, and `path` features (cursor feature disabled to avoid
   conflict with custom GLSL cursor shaders)
@@ -262,12 +263,12 @@ rm ~/Library/Logs/daily-maintenance*.log
   (`Alt+B/F/D`)
 - **Window Persistence**: Always restores window layout across restarts
   (`window-save-state = always`)
-- **Cell Width Tuning**: `adjust-cell-width = 1%` for Nerd Font icon
-  alignment
+- **Cell Tuning**: `adjust-cell-width = 1%` for Nerd Font icon
+  alignment, `adjust-cell-height = 2` for improved line spacing
 - **Prompt Navigation**: `Cmd+Up/Down` to jump between shell
   prompts in scrollback
 - **Split Zoom**: `Cmd+Shift+Enter` to maximize/restore a split
-  pane
+  pane (zoom preserved when navigating between splits)
 - **Resize Overlay**: Shows terminal dimensions while resizing
 - **Link Previews**: Hover over URLs to see previews
 - **Auto-Update**: Notifications when Ghostty updates are available
@@ -276,6 +277,9 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **Desktop Notifications**: OSC 9/777 banner notifications via
   `claude-notify` hook (works in Ghostty direct, Neovim terminal,
   and SSH remote sessions)
+- **Command Finish Notifications**: macOS banner notifications
+  (not just bell) when commands running 5s+ finish in unfocused
+  splits (via `notify-on-command-finish`)
 - **Cursor Shaders**: Animated cursor effects (`cursor_slash.glsl`,
   `cursor_smear.glsl`)
 - **Config Reload**: `Cmd+Shift+,` to reload config without restart

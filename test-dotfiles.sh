@@ -248,7 +248,7 @@ echo -e "${YELLOW}11. Security Checks${NC}"
 
 # No secrets in yadm-tracked files
 if command -v yadm >/dev/null 2>&1; then
-    run_test "No secrets in tracked files" "[ -z \"\$(yadm list -a 2>/dev/null | xargs grep -lE '(APIKEY|SECRET_KEY|TOKEN|PASSWORD)\s*=' 2>/dev/null | grep -v 'HOMEBREW_NO_ANALYTICS' | grep -v 'test-dotfiles.sh')\" ]"
+    run_test "No secrets in tracked files" "[ -z \"\$(yadm list -a 2>/dev/null | xargs grep -lE '(APIKEY|SECRET_KEY|API_TOKEN|PRIVATE_KEY|TOKEN|PASSWORD|CREDENTIAL|AWS_SECRET)\s*=' 2>/dev/null | grep -v 'HOMEBREW_NO_ANALYTICS' | grep -v 'test-dotfiles.sh')\" ]"
 fi
 echo
 

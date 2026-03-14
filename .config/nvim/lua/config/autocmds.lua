@@ -9,7 +9,11 @@
 
 local function set_transparent_bg()
   local groups = { "Normal", "NormalNC", "NormalFloat", "SnacksNormal",
-    "SnacksNormalNC", "StatusLine", "StatusLineNC" }
+    "SnacksNormalNC", "StatusLine", "StatusLineNC",
+    "RenderMarkdownCode", "RenderMarkdownCodeInline",
+    "RenderMarkdownH1Bg", "RenderMarkdownH2Bg", "RenderMarkdownH3Bg",
+    "RenderMarkdownH4Bg", "RenderMarkdownH5Bg", "RenderMarkdownH6Bg",
+    "RenderMarkdownCodeLanguage" }
   for _, group in ipairs(groups) do
     vim.api.nvim_set_hl(0, group, { bg = "NONE" })
   end

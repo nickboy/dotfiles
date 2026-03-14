@@ -1,0 +1,59 @@
+# Shared git settings (tracked by yadm, synced across machines)
+# Machine-specific settings (user, credentials) stay in ~/.gitconfig
+
+[core]
+	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[include]
+	path = ~/.config/delta/catppuccin.gitconfig
+
+[delta]
+	features = catppuccin-mocha
+	navigate = true
+	side-by-side = true
+	line-numbers = true
+
+[init]
+	defaultBranch = main
+
+[merge]
+	conflictstyle = zdiff3
+
+[push]
+	default = current
+	autoSetupRemote = true
+
+[pull]
+	rebase = true
+
+[branch]
+	sort = -committerdate
+
+[diff]
+	colorMoved = default
+	algorithm = histogram
+
+[blame]
+	coloring = highlightRecent
+
+[rerere]
+	enabled = true
+
+[column]
+	ui = auto
+
+[rebase]
+	autostash = true
+
+[fetch]
+	prune = true
+	writeCommitGraph = true
+
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true

@@ -3,9 +3,10 @@ font-family = "Hack Nerd Font Mono"
 font-size = 14
 font-thicken = false
 adjust-cell-width = 1%
+adjust-cell-height = 2
 
 # Performance
-scrollback-limit = 10000000
+scrollback-limit = 25000000
 
 # Window settings
 window-padding-x = 10
@@ -52,6 +53,14 @@ keybind = cmd+alt+l=goto_split:right
 # Shell Integration for Claude Code
 shell-integration = detect
 shell-integration-features = sudo,title,path
+
+# Notify when commands finish in unfocused splits (great for Claude Code + split workflow)
+# Sends macOS banner notification instead of bell (1.3.0+)
+notify-on-command-finish = unfocused
+notify-on-command-finish-action = no-bell,notify
+
+# Keep zoom state when navigating between splits with Cmd+Alt+hjkl (1.3.0+)
+split-preserve-zoom = navigation
 
 # Enhanced clipboard for better Claude Code integration
 clipboard-read = allow

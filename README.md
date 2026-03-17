@@ -292,7 +292,9 @@ rm ~/Library/Logs/daily-maintenance*.log
   long commands
 - **Tab-Only Titlebar**: `macos-titlebar-style = tabs` removes traffic
   lights, keeps tab bar
-- **Theme**: Catppuccin Mocha with Hack Nerd Font
+- **Font**: Maple Mono NF CN with programming ligatures (`!=`→`≠`,
+  `=>`→`⇒`) and CJK support
+- **Theme**: Catppuccin Mocha
 
 ### Ghostty Keybindings
 

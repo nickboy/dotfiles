@@ -1,9 +1,12 @@
 theme = "Catppuccin Mocha"
-font-family = "Hack Nerd Font Mono"
+font-family = "Maple Mono NF CN"
 font-size = 14
-font-thicken = false
-adjust-cell-width = 1%
+font-thicken = true
 adjust-cell-height = 2
+
+# Programming ligatures (!=→≠, =>→⇒, ->→→, >=→≥)
+font-feature = calt
+font-feature = liga
 
 # Performance
 scrollback-limit = 25000000

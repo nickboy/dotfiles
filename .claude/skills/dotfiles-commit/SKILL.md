@@ -24,7 +24,7 @@ Before every commit, run these in order:
 2. Run markdown lint on all docs:
 
    ```bash
-   npx markdownlint-cli '**/*.md' --ignore node_modules
+   yadm ls-files '*.md' | xargs npx markdownlint-cli
    ```
 
 3. Fix ALL lint errors before proceeding — no exceptions.
@@ -93,7 +93,7 @@ yadm checkout -b feature/branch-name
 
 # Make changes, test, commit
 bash ~/test-dotfiles.sh
-npx markdownlint-cli '**/*.md' --ignore node_modules
+yadm ls-files '*.md' | xargs npx markdownlint-cli
 yadm add <files>
 yadm commit -m "feat: description"
 

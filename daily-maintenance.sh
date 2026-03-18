@@ -197,6 +197,19 @@ if command -v brew >/dev/null 2>&1; then
         echo "✗ FAILED"
         FAILED_COMMANDS+=("brew cleanup")
     fi
+
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Remove orphaned dependencies"
+    echo "Command: brew autoremove"
+    echo -n "Status: "
+
+    if brew autoremove 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("brew autoremove")
+    fi
 fi
 
 echo ""

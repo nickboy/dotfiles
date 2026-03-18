@@ -19,6 +19,13 @@ max_height = 900
 image_filter = "lanczos3"
 image_quality = 75
 
+[plugin]
+prepend_previewers = [
+	{ url = "*.md", run = "glow" },
+	{ url = "*.mdx", run = "glow" },
+	{ url = "*.markdown", run = "glow" },
+]
+
 [opener]
 edit = [
 	{ run = "${EDITOR:-nvim} \"$@\"", block = true, for = "unix" },

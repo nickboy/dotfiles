@@ -1,5 +1,5 @@
 {
-  "model": "opus",
+  "model": "opus[1m]",
   "hooks": {
     "Notification": [
       {
@@ -18,6 +18,28 @@
     "command": "~/.local/bin/claude-statusline"
   },
   "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true
+    "lua-lsp@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "github@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "apify-actor-development@apify-agent-skills": true,
+    "apify-ultimate-scraper@apify-agent-skills": true,
+    "ghostty-config@ghostty-config-dev": true
+  },
+  "extraKnownMarketplaces": {
+    "apify-agent-skills": {
+      "source": {
+        "source": "git",
+        "url": "https://github.com/apify/agent-skills.git"
+      }
+    },
+    "ghostty-config-dev": {
+      "source": {
+        "source": "github",
+        "repo": "shyuan/ghostty-config-plugin"
+      }
+    }
   }
 }

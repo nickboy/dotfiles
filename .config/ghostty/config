@@ -87,6 +87,7 @@ resize-overlay-duration = 750ms
 
 # Auto-update notifications
 auto-update = check
+auto-update-channel = tip
 
 # Additional features
 confirm-close-surface = false

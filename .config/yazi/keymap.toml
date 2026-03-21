@@ -9,4 +9,20 @@ prepend_keymap = [
 
 	# Open shell in current directory
 	{ on = ["g", "t"], run = "shell 'ghostty --working-directory=\"$PWD\"' --orphan", desc = "Open Ghostty here" },
+
+	# smart-enter: open file or enter directory with one key
+	{ on = "<Enter>", run = "plugin smart-enter", desc = "Enter dir or open file" },
+
+	# jump-to-char: vim-like f<char> to jump to file
+	{ on = "f", run = "plugin jump-to-char", desc = "Jump to char" },
+
+	# smart-filter: interactive file filtering
+	{ on = "F", run = "plugin smart-filter", desc = "Smart filter" },
+
+	# toggle-pane: maximize preview pane
+	{ on = "T", run = "plugin toggle-pane max-preview", desc = "Toggle max preview" },
+	{ on = "<C-t>", run = "plugin toggle-pane min-preview", desc = "Toggle hide preview" },
+
+	# chmod: change file permissions
+	{ on = ["c", "m"], run = "plugin chmod", desc = "Chmod selected files" },
 ]

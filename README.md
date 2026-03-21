@@ -253,7 +253,8 @@ rm ~/Library/Logs/daily-maintenance*.log
 ### Ghostty Features
 
 - **Transparency**: Background opacity (0.75) with blur for macOS
-  visuals
+  visuals, `background-opacity-cells` makes ANSI background colors
+  (e.g. diff highlights) also respect transparency
 - **Scrollback**: 25 MB scrollback buffer for long Claude Code outputs
 - **Shell Integration**: Enhanced shell integration with `sudo`,
   `title`, and `path` features (cursor feature disabled to avoid
@@ -898,6 +899,27 @@ tv              # Open television fuzzy finder
 [Yazi](https://yazi-rs.github.io/) is a blazing fast terminal file manager
 written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
 
+**Features:**
+
+- **Theme**: Catppuccin Mocha flavor (consistent with Ghostty/Kitty/Neovim)
+- **Git Integration**: git.yazi plugin shows git status inline next to files
+- **Markdown Preview**: glow.yazi plugin renders markdown with syntax
+  highlighting
+- **HiDPI Preview**: `max_width`/`max_height` set to 16384 so PDF and image
+  previews fill the entire column on Retina displays
+- **Status Bar**: Shows symlink targets and file owner:group
+- **Preview Quality**: `image_quality = 90` with `image_delay = 50` debounce
+
+**Quick Navigation Keybindings:**
+
+| Key | Action |
+| --- | --- |
+| `g` then `d` | Jump to ~/Downloads |
+| `g` then `p` | Jump to ~/Projects |
+| `g` then `c` | Jump to ~/.config |
+| `g` then `D` | Jump to ~/Desktop |
+| `g` then `t` | Open Ghostty in current directory |
+
 ```bash
 # Open yazi (use 'y' wrapper to cd on exit)
 y
@@ -910,7 +932,21 @@ y
 # Shift+Q     - Quit (cd to current dir, via 'y' wrapper)
 ```
 
-Configuration: `~/.config/yazi/yazi.toml`
+**Configuration files:**
+
+```text
+~/.config/yazi/
+├── yazi.toml      # Main config (preview, openers, plugin fetchers)
+├── keymap.toml    # Custom keybindings
+├── theme.toml     # Catppuccin Mocha flavor
+├── init.lua       # Status bar enhancements, git setup
+├── package.toml   # Package manifest (ya pkg)
+├── plugins/
+│   ├── git.yazi/  # Git status integration
+│   └── glow.yazi/ # Markdown preview with glow
+└── flavors/
+    └── catppuccin-mocha.yazi/  # Theme flavor
+```
 
 ### Mise Version Manager
 
@@ -963,6 +999,7 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── nvim/          # Neovim configuration (LazyVim)
 │   ├── zed/           # Zed editor configuration
 │   ├── ghostty/       # Ghostty terminal configuration
+│   ├── yazi/          # Yazi file manager (theme, plugins, keymaps)
 │   ├── kitty/         # Kitty terminal configuration
 │   ├── bat/           # Bat themes
 │   └── ripgrep/       # Ripgrep configuration
@@ -1052,4 +1089,4 @@ copy what you need.
 
 ---
 
-Last updated: February 2026
+Last updated: March 2026

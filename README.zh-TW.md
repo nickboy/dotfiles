@@ -247,7 +247,9 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty 功能特色
 
-- **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果
+- **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果，
+  `background-opacity-cells` 讓 ANSI 背景色（如 diff 高亮）
+  也跟著透明
 - **Shell 整合**: 增強的 shell 整合，搭配 `sudo`、`title`、`path`
   功能（停用 `cursor` 以避免與自訂 GLSL 游標著色器衝突）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
@@ -875,6 +877,26 @@ tv              # 開啟 television 模糊搜尋器
 [Yazi](https://yazi-rs.github.io/) 是以 Rust 撰寫的極速終端機檔案管理器，
 支援非同步 I/O。在 Ghostty 與 Kitty 中支援圖片預覽。
 
+**功能特色：**
+
+- **主題**: Catppuccin Mocha（與 Ghostty/Kitty/Neovim 統一風格）
+- **Git 整合**: git.yazi 外掛在檔案旁顯示 git 狀態
+- **Markdown 預覽**: glow.yazi 外掛搭配語法高亮渲染 markdown
+- **HiDPI 預覽**: `max_width`/`max_height` 設為 16384，PDF 和圖片
+  預覽在 Retina 螢幕上佔滿整個預覽欄
+- **狀態列**: 顯示 symlink 指向路徑和檔案擁有者:群組
+- **預覽品質**: `image_quality = 90` 搭配 `image_delay = 50` 防抖
+
+**快速導航快捷鍵：**
+
+| 按鍵 | 動作 |
+| --- | --- |
+| `g` 再按 `d` | 跳至 ~/Downloads |
+| `g` 再按 `p` | 跳至 ~/Projects |
+| `g` 再按 `c` | 跳至 ~/.config |
+| `g` 再按 `D` | 跳至 ~/Desktop |
+| `g` 再按 `t` | 在目前目錄開啟 Ghostty |
+
 ```bash
 # 開啟 yazi（使用 'y' 包裝函式，離開時 cd）
 y
@@ -887,7 +909,21 @@ y
 # Shift+Q     - 離開（cd 至目前目錄，透過 'y' 包裝函式）
 ```
 
-設定檔：`~/.config/yazi/yazi.toml`
+**設定檔結構：**
+
+```text
+~/.config/yazi/
+├── yazi.toml      # 主設定（預覽、開啟方式、外掛 fetcher）
+├── keymap.toml    # 自訂快捷鍵
+├── theme.toml     # Catppuccin Mocha 主題
+├── init.lua       # 狀態列增強、git 設定
+├── package.toml   # 套件清單（ya pkg）
+├── plugins/
+│   ├── git.yazi/  # Git 狀態整合
+│   └── glow.yazi/ # Markdown 預覽
+└── flavors/
+    └── catppuccin-mocha.yazi/  # 主題風格
+```
 
 ### Mise 版本管理器
 
@@ -940,6 +976,7 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── nvim/          # Neovim 設定 (LazyVim)
 │   ├── zed/           # Zed 編輯器設定
 │   ├── ghostty/       # Ghostty 終端機設定
+│   ├── yazi/          # Yazi 檔案管理器（主題、外掛、快捷鍵）
 │   ├── kitty/         # Kitty 終端機設定
 │   ├── bat/           # Bat 主題
 │   └── ripgrep/       # Ripgrep 設定
@@ -1029,4 +1066,4 @@ shellcheck *.sh  # 若已透過 brew 安裝
 
 ---
 
-最後更新：2026 年 2 月
+最後更新：2026 年 3 月

@@ -1,3 +1,4 @@
+-- luacheck: globals Status
 -- Show symlink target in status bar
 Status:children_add(function(self)
 	local h = self._current.hovered

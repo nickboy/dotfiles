@@ -21,7 +21,7 @@ window-theme = auto
 window-save-state = always
 
 # Transparency and visual effects for macOS liquid visuals
-background-opacity = 0.75
+background-opacity = 0.90
 background-blur-radius = 20
 macos-titlebar-style = tabs
 

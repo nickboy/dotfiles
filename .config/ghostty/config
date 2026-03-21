@@ -22,6 +22,7 @@ window-save-state = always
 
 # Transparency and visual effects for macOS liquid visuals
 background-opacity = 0.75
+background-opacity-cells = true
 background-blur-radius = 20
 macos-titlebar-style = tabs
 
@@ -69,7 +70,7 @@ split-preserve-zoom = navigation
 clipboard-read = allow
 clipboard-write = allow
 clipboard-trim-trailing-spaces = true
-clipboard-paste-protection = true
+clipboard-paste-protection = false
 clipboard-paste-bracketed-safe = true
 
 # Mouse and selection improvements

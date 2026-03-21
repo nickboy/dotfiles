@@ -899,6 +899,8 @@ tv              # 開啟 television 模糊搜尋器
 | `F` | 即時互動過濾檔案 |
 | `T` | 最大化預覽窗格 |
 | `Ctrl+t` | 隱藏預覽窗格 |
+| `Shift+j` | 預覽向下捲動（PDF 翻頁、程式碼、markdown） |
+| `Shift+k` | 預覽向上捲動 |
 | `g` 再按 `g` | 開啟 lazygit |
 | `g` 再按 `d` | 跳至 ~/Downloads |
 | `g` 再按 `p` | 跳至 ~/Projects |

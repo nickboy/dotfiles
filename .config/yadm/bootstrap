@@ -146,6 +146,15 @@ curl -sL -o "$EZA_CONFIG/theme.yml" \
     https://raw.githubusercontent.com/catppuccin/eza/main/themes/mocha/catppuccin-mocha-mauve.yml || \
     echo "    ⚠️  Failed to download Eza theme"
 
+# Install yazi packages (plugins and flavors from package.toml)
+if command -v ya &> /dev/null; then
+    echo "📂 Installing yazi packages..."
+    ya pkg install || echo "  ⚠️  Failed to install yazi packages"
+else
+    echo "  ⚠️  ya not found, skipping yazi package installation"
+    echo "     Install yazi first, then run 'ya pkg install' manually"
+fi
+
 # Install daily maintenance automation
 if [ -f "$HOME/install-daily-maintenance.sh" ]; then
     echo "🔧 Setting up daily maintenance automation..."

@@ -922,6 +922,8 @@ written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
 | `F` | Interactive real-time file filter |
 | `T` | Maximize preview pane |
 | `Ctrl+t` | Hide preview pane |
+| `Shift+j` | Scroll preview down (PDF pages, code, markdown) |
+| `Shift+k` | Scroll preview up |
 | `g` then `g` | Open lazygit |
 | `g` then `d` | Jump to ~/Downloads |
 | `g` then `p` | Jump to ~/Projects |

@@ -25,4 +25,10 @@ prepend_keymap = [
 
 	# chmod: change file permissions
 	{ on = ["c", "m"], run = "plugin chmod", desc = "Chmod selected files" },
+
+	# lazygit: open lazygit in current directory
+	{ on = ["g", "g"], run = "plugin lazygit", desc = "Open lazygit" },
+
+	# compress: compress selected files
+	{ on = ["c", "a"], run = "plugin compress", desc = "Compress selected files" },
 ]

@@ -142,6 +142,15 @@ if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob upd
     FAILED_COMMANDS+=("bob update nightly")
 fi
 
+# Update yazi packages (plugins and flavors)
+if command -v ya >/dev/null 2>&1; then
+    if ! run_command "Yazi package upgrade" ya pkg upgrade; then
+        FAILED_COMMANDS+=("ya pkg upgrade")
+    fi
+else
+    echo "Warning: ya not found, skipping yazi package upgrade"
+fi
+
 # Update LazyVim plugins
 if command -v nvim >/dev/null 2>&1; then
     echo ""

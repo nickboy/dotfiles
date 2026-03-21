@@ -21,3 +21,7 @@ end, 500, Status.RIGHT)
 
 -- Git integration
 require("git"):setup()
+
+-- Full border with rounded corners
+-- luacheck: globals ui
+require("full-border"):setup { type = ui.Border.ROUNDED }

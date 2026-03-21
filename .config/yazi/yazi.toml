@@ -14,8 +14,8 @@ title_format = "Yazi: {cwd}"
 [preview]
 wrap = "no"
 tab_size = 2
-max_width = 600
-max_height = 900
+max_width = 16384
+max_height = 16384
 image_filter = "lanczos3"
 image_quality = 75
 

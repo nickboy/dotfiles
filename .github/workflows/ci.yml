@@ -81,15 +81,24 @@ jobs:
           lua_pattern="*.lua"
           exclude_git="./.git/*"
           exclude_examples="*example*"
+          # Exclude third-party plugin/flavor files managed by ya pkg
+          exclude_third_party_plugins="./\.config/yazi/plugins/git.yazi/*"
+          exclude_flavors="./\.config/yazi/flavors/*"
           if find . -name "$lua_pattern" -type f \
-            ! -path "$exclude_git" ! -name "$exclude_examples" | grep -q .; then
+            ! -path "$exclude_git" ! -name "$exclude_examples" \
+            ! -path "$exclude_third_party_plugins" \
+            ! -path "$exclude_flavors" | grep -q .; then
             find . -name "$lua_pattern" -type f \
-              ! -path "$exclude_git" ! -name "$exclude_examples" -print0 | \
+              ! -path "$exclude_git" ! -name "$exclude_examples" \
+              ! -path "$exclude_third_party_plugins" \
+              ! -path "$exclude_flavors" -print0 | \
               while IFS= read -r -d '' file; do
               echo "  Validating: $file"
               # Use Neovim-specific globals for config files
               if [[ "$file" == *"nvim"* ]]; then
                 luacheck --globals vim require --std luajit "$file"
+              elif [[ "$file" == *"yazi"* ]]; then
+                luacheck --globals Status Linemode ya ui th fs Url Command Err ps rt cx --std luajit "$file"
               else
                 luacheck "$file"
               fi

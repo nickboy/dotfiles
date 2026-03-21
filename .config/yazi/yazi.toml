@@ -16,14 +16,19 @@ wrap = "no"
 tab_size = 2
 max_width = 16384
 max_height = 16384
+image_delay = 50
 image_filter = "lanczos3"
-image_quality = 75
+image_quality = 90
 
 [plugin]
 prepend_previewers = [
 	{ url = "*.md", run = "glow" },
 	{ url = "*.mdx", run = "glow" },
 	{ url = "*.markdown", run = "glow" },
+]
+prepend_fetchers = [
+	{ id = "git", url = "*", run = "git" },
+	{ id = "git", url = "*/", run = "git" },
 ]
 
 [opener]

@@ -25,13 +25,6 @@ prepend_previewers = [
 	{ url = "*.md", run = "glow" },
 	{ url = "*.mdx", run = "glow" },
 	{ url = "*.markdown", run = "glow" },
-	{ mime = "application/*zip", run = "ouch" },
-	{ mime = "application/x-tar", run = "ouch" },
-	{ mime = "application/x-bzip2", run = "ouch" },
-	{ mime = "application/x-7z-compressed", run = "ouch" },
-	{ mime = "application/x-rar", run = "ouch" },
-	{ mime = "application/x-xz", run = "ouch" },
-	{ mime = "application/zstd", run = "ouch" },
 ]
 prepend_fetchers = [
 	{ id = "git", url = "*", run = "git" },

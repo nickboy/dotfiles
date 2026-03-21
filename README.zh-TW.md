@@ -886,16 +886,27 @@ tv              # 開啟 television 模糊搜尋器
   預覽在 Retina 螢幕上佔滿整個預覽欄
 - **狀態列**: 顯示 symlink 指向路徑和檔案擁有者:群組
 - **預覽品質**: `image_quality = 90` 搭配 `image_delay = 50` 防抖
+- **圓角邊框**: full-border 外掛提供精緻外觀
+- **智慧外掛**: smart-enter、smart-filter、jump-to-char、
+  toggle-pane、chmod、lazygit、compress
 
-**快速導航快捷鍵：**
+**快捷鍵：**
 
 | 按鍵 | 動作 |
 | --- | --- |
+| `Enter` | 智慧進入（開檔或進目錄） |
+| `f` | 跳到指定字元開頭的檔案（類似 Vim） |
+| `F` | 即時互動過濾檔案 |
+| `T` | 最大化預覽窗格 |
+| `Ctrl+t` | 隱藏預覽窗格 |
+| `g` 再按 `g` | 開啟 lazygit |
 | `g` 再按 `d` | 跳至 ~/Downloads |
 | `g` 再按 `p` | 跳至 ~/Projects |
 | `g` 再按 `c` | 跳至 ~/.config |
 | `g` 再按 `D` | 跳至 ~/Desktop |
 | `g` 再按 `t` | 在目前目錄開啟 Ghostty |
+| `c` 再按 `m` | 修改檔案權限 |
+| `c` 再按 `a` | 壓縮選取的檔案 |
 
 ```bash
 # 開啟 yazi（使用 'y' 包裝函式，離開時 cd）
@@ -916,11 +927,13 @@ y
 ├── yazi.toml      # 主設定（預覽、開啟方式、外掛 fetcher）
 ├── keymap.toml    # 自訂快捷鍵
 ├── theme.toml     # Catppuccin Mocha 主題
-├── init.lua       # 狀態列增強、git 設定
-├── package.toml   # 套件清單（ya pkg）
+├── init.lua       # 狀態列、git、圓角邊框設定
+├── package.toml   # 套件清單（ya pkg install/upgrade）
 ├── plugins/
-│   ├── git.yazi/  # Git 狀態整合
-│   └── glow.yazi/ # Markdown 預覽
+│   ├── glow.yazi/ # Markdown 預覽（手動安裝）
+│   └── (其他)     # 由 ya pkg 管理：git、smart-enter、
+│                  # smart-filter、jump-to-char、toggle-pane、
+│                  # chmod、lazygit、compress、full-border
 └── flavors/
     └── catppuccin-mocha.yazi/  # 主題風格
 ```

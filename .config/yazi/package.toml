@@ -43,6 +43,11 @@ use = "KKV9/compress"
 rev = "46a6b9f"
 hash = "771af2becc575a3f43d0542de823969d"
 
+[[plugin.deps]]
+use = "Reledia/glow"
+rev = "bd3eaa5"
+hash = "92b5c58159a51c567f82b618cee2b78"
+
 [[flavor.deps]]
 use = "yazi-rs/flavors:catppuccin-mocha"
 rev = "9511cb0"

@@ -909,16 +909,27 @@ written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
   previews fill the entire column on Retina displays
 - **Status Bar**: Shows symlink targets and file owner:group
 - **Preview Quality**: `image_quality = 90` with `image_delay = 50` debounce
+- **Full Border**: Rounded border for polished appearance
+- **Smart Plugins**: smart-enter, smart-filter, jump-to-char,
+  toggle-pane, chmod, lazygit, compress
 
-**Quick Navigation Keybindings:**
+**Keybindings:**
 
 | Key | Action |
 | --- | --- |
+| `Enter` | Smart enter (open file or enter directory) |
+| `f` | Jump to file by first character (vim-like) |
+| `F` | Interactive real-time file filter |
+| `T` | Maximize preview pane |
+| `Ctrl+t` | Hide preview pane |
+| `g` then `g` | Open lazygit |
 | `g` then `d` | Jump to ~/Downloads |
 | `g` then `p` | Jump to ~/Projects |
 | `g` then `c` | Jump to ~/.config |
 | `g` then `D` | Jump to ~/Desktop |
 | `g` then `t` | Open Ghostty in current directory |
+| `c` then `m` | Chmod selected files |
+| `c` then `a` | Compress selected files |
 
 ```bash
 # Open yazi (use 'y' wrapper to cd on exit)
@@ -939,11 +950,13 @@ y
 ├── yazi.toml      # Main config (preview, openers, plugin fetchers)
 ├── keymap.toml    # Custom keybindings
 ├── theme.toml     # Catppuccin Mocha flavor
-├── init.lua       # Status bar enhancements, git setup
-├── package.toml   # Package manifest (ya pkg)
+├── init.lua       # Status bar, git, full-border setup
+├── package.toml   # Package manifest (ya pkg install/upgrade)
 ├── plugins/
-│   ├── git.yazi/  # Git status integration
-│   └── glow.yazi/ # Markdown preview with glow
+│   ├── glow.yazi/ # Markdown preview with glow (manual)
+│   └── (others)   # Managed by ya pkg: git, smart-enter,
+│                  # smart-filter, jump-to-char, toggle-pane,
+│                  # chmod, lazygit, compress, full-border
 └── flavors/
     └── catppuccin-mocha.yazi/  # Theme flavor
 ```

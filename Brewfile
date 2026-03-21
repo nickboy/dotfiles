@@ -163,8 +163,6 @@ cask "setapp"
 cask "soundsource"
 # Music streaming service
 cask "spotify"
-# Rust-based terminal
-cask "warp"
 # Multiplayer code editor
 cask "zed"
 # Open-source code editor

@@ -3,6 +3,9 @@
 # Git configuration (machine-specific)
 .gitconfig
 
+# Claude Code local settings (machine-specific permissions)
+.claude/settings.local.json
+
 .bin/assets/corona
 .config/vifm/vifminfo
 vim/plugged/

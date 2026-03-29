@@ -49,6 +49,8 @@ brew "go"
 brew "hexyl"
 # Command-line benchmarking tool
 brew "hyperfine"
+# Lightweight JSON processor (used by tmux-which-key)
+brew "jq"
 # Fast, Dynamic Programming Language
 brew "julia"
 # Git-compatible version control system
@@ -127,6 +129,8 @@ brew "uv"
 brew "yadm"
 # Blazing fast terminal file manager written in Rust
 brew "yazi"
+# Terminal multiplexer (modern tmux alternative)
+brew "zellij"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Magical shell history with sync and search

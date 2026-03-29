@@ -48,6 +48,21 @@ use = "yazi-rs/plugins:piper"
 rev = "1962818"
 hash = "384464b6df8cb807425c521f8cd790f3"
 
+[[plugin.deps]]
+use = "yazi-rs/plugins:diff"
+rev = "1962818"
+hash = "8b1af6b5a69797ee951f2a80ce570818"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:smart-paste"
+rev = "1962818"
+hash = "3f8d49413bc8691b4c652eb417a20178"
+
+[[plugin.deps]]
+use = "yazi-rs/plugins:mactag"
+rev = "1962818"
+hash = "e617e9570226ba22d43325796f73b85"
+
 [[flavor.deps]]
 use = "yazi-rs/flavors:catppuccin-mocha"
 rev = "9511cb0"

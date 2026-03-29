@@ -12,7 +12,8 @@
 
 - **Shell**: Zsh 搭配 zinit 外掛管理器與 Oh-My-Zsh 外掛
 - **編輯器**: Neovim (LazyVim) 與 Zed 設定
-- **終端機**: tmux 搭配 sesh 工作階段管理器、Ghostty 與 Kitty 設定
+- **終端機**: Ghostty 與 Kitty 設定（Catppuccin Mocha 主題）
+- **多工器**: tmux（搭配 sesh、which-key）與 Zellij（0.44+）
 - **套件管理**: 透過 Brewfile 管理 Homebrew 套件
 - **Git**: 全域 git 設定
 - **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop、yazi 等

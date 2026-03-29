@@ -13,7 +13,8 @@ configurations for macOS development environment.
 
 - **Shell**: Zsh configuration with zinit plugin manager and Oh-My-Zsh plugins
 - **Editor**: Neovim (LazyVim) and Zed configurations
-- **Terminal**: tmux with sesh session manager, Ghostty and Kitty configs
+- **Terminal**: Ghostty and Kitty configs (Catppuccin Mocha themed)
+- **Multiplexer**: tmux (with sesh, which-key) and Zellij (0.44+)
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
 - **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi, and more
@@ -580,6 +581,82 @@ Works seamlessly with image-capable tools:
 - **awrit**: Chromium-based terminal browser
 - **presenterm**: Markdown presentations with images
 
+## 🪟 Zellij Configuration
+
+[Zellij](https://zellij.dev/) is a modern terminal multiplexer (alternative
+to tmux) with built-in session persistence, floating/stacked panes, and a
+WASM plugin ecosystem. Configured for Zellij 0.44+.
+
+### Zellij Features
+
+- **Theme**: Catppuccin Mocha (consistent with Ghostty/tmux/Kitty)
+- **Session Persistence**: Built-in session serialization with viewport
+  and scrollback (replaces tmux-resurrect + tmux-continuum)
+- **Vim-Style Navigation**: hjkl keybindings for pane/tab/resize/move
+- **Tmux Compatibility Mode**: `Ctrl-b` prefix mode with familiar tmux
+  keybindings (`"` for horizontal split, `%` for vertical, etc.)
+- **Mouse Features (0.44)**: Drag pane borders to resize, `Ctrl+scroll`
+  to resize, `Alt+click` to open file paths in `$EDITOR`
+- **Focus Follows Mouse**: Matches Ghostty's `focus-follows-mouse`
+- **No Pane Frames**: Clean borderless look (toggle with `Ctrl-p z`)
+- **Layout Manager**: `Ctrl-o l` to save/apply/favorite layouts
+- **Session Manager**: `Ctrl-o w` for built-in session switcher
+
+### Zellij vs tmux vs Ghostty Splits
+
+| Feature | Ghostty Splits | Zellij | tmux |
+| --- | --- | --- | --- |
+| Sessions (detach/reattach) | No | Yes | Yes |
+| Survives SSH disconnect | No | Yes | Yes |
+| Session persistence | No | Built-in | Plugin |
+| Floating/stacked panes | No | Yes | No |
+| Plugin ecosystem | No | WASM | Shell |
+| Image preview (yazi) | Yes | No (no passthrough) | Yes |
+
+### Zellij Key Bindings
+
+| Keybinding | Action |
+| --- | --- |
+| `Alt+h/j/k/l` | Navigate panes/tabs |
+| `Alt+n` | New pane |
+| `Alt+f` | Toggle floating panes |
+| `Ctrl+p` | Pane mode (then h/j/k/l, n, d, r, x, z) |
+| `Ctrl+t` | Tab mode (then n, r, x, 1-9) |
+| `Ctrl+n` | Resize mode (then h/j/k/l) |
+| `Ctrl+s` | Scroll mode (then j/k, u/d, s for search) |
+| `Ctrl+o` | Session mode (w=sessions, l=layouts, p=plugins) |
+| `Ctrl+b` | Tmux mode (familiar tmux keybindings) |
+| `Ctrl+g` | Lock mode |
+| `Ctrl+q` | Quit |
+
+### Shell Aliases
+
+```bash
+zj              # zellij
+zja             # zellij attach
+zjl             # zellij list-sessions
+zjk             # zellij kill-session
+zjd             # zellij delete-session
+```
+
+### Known Limitations (0.44)
+
+- **No image passthrough**: Yazi image preview doesn't work in Zellij
+  (no Kitty graphics protocol or DCS passthrough support yet)
+- **Third-party WASM plugins**: Zellij 0.44 switched runtime from
+  wasmtime to wasmi; plugins compiled before March 2026 may not load
+  (e.g., zjstatus v0.22.0)
+
+### Configuration Files
+
+```text
+~/.config/zellij/
+├── config.kdl                    # Main config (keybindings, settings)
+├── themes/
+│   └── catppuccin-mocha.kdl      # Catppuccin Mocha theme
+└── plugins/                      # WASM plugins (gitignored)
+```
+
 ## 🖥️ Tmux Configuration
 
 ### Setup
@@ -612,6 +689,9 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
   tmux sessions (status bar changes color to indicate)
 - **tmux-yank**: Consistent copy behavior with OSC52 fallback for
   remote sessions
+- **Which-Key**: Press `Ctrl-a + ?` for an interactive popup showing
+  all available keybindings organized by category (pane, window,
+  session, buffer, layout, git)
 
 ### Key Bindings
 
@@ -650,6 +730,7 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 | `Ctrl-a + {` | Move pane left |
 | `Ctrl-a + }` | Move pane right |
 | `Ctrl-a + r` | Reload tmux configuration |
+| `Ctrl-a + ?` | Which-key popup (keybinding hints) |
 | `F12` | Toggle nested tmux (for SSH sessions) |
 
 #### Seamless Navigation
@@ -1014,6 +1095,7 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── nvim/          # Neovim configuration (LazyVim)
 │   ├── zed/           # Zed editor configuration
 │   ├── ghostty/       # Ghostty terminal configuration
+│   ├── zellij/        # Zellij multiplexer (config, theme)
 │   ├── yazi/          # Yazi file manager (theme, plugins, keymaps)
 │   ├── kitty/         # Kitty terminal configuration
 │   ├── bat/           # Bat themes

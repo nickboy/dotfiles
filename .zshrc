@@ -354,6 +354,13 @@ alias sl='sesh list --icons'  # List all sessions with icons
 alias sn='sesh connect $(basename $PWD)'  # New session named after current dir
 alias sls='sesh list -t --icons'  # List only tmux sessions
 
+# Zellij shortcuts
+alias zj='zellij'
+alias zja='zellij attach'
+alias zjl='zellij list-sessions'
+alias zjk='zellij kill-session'
+alias zjd='zellij delete-session'
+
 # Git extras (in addition to OMZ git plugin)
 alias gs='git status'
 alias gd='git diff'

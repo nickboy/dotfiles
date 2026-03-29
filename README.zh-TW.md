@@ -888,8 +888,11 @@ tv              # 開啟 television 模糊搜尋器
 - **狀態列**: 顯示 symlink 指向路徑和檔案擁有者:群組
 - **預覽品質**: `image_quality = 90` 搭配 `image_delay = 50` 防抖
 - **圓角邊框**: full-border 外掛提供精緻外觀
-- **智慧外掛**: smart-enter、smart-filter、jump-to-char、
-  toggle-pane、chmod、lazygit、compress
+- **檔案比較**: diff.yazi 快速比較檔案並產生 patch 到剪貼簿
+- **智慧貼上**: 自動貼到 hover 的目錄或目前目錄
+- **macOS 標籤**: mactag.yazi 整合 Finder 顏色標籤（Catppuccin 配色）
+- **智慧外掛**: smart-enter、smart-filter、smart-paste、
+  jump-to-char、toggle-pane、chmod、lazygit、compress
 
 **快捷鍵：**
 
@@ -910,6 +913,10 @@ tv              # 開啟 television 模糊搜尋器
 | `g` 再按 `t` | 在目前目錄開啟 Ghostty |
 | `c` 再按 `m` | 修改檔案權限 |
 | `c` 再按 `a` | 壓縮選取的檔案 |
+| `Ctrl+d` | 比較選取檔案與 hover 檔案 |
+| `p` | 智慧貼上（貼到 hover 的目錄或目前目錄） |
+| `b` 再按 `a` | 為選取檔案新增 macOS 標籤 |
+| `b` 再按 `r` | 移除 macOS 標籤 |
 
 ```bash
 # 開啟 yazi（使用 'y' 包裝函式，離開時 cd）

@@ -991,8 +991,13 @@ written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
 - **Status Bar**: Shows symlink targets and file owner:group
 - **Preview Quality**: `image_quality = 90` with `image_delay = 50` debounce
 - **Full Border**: Rounded border for polished appearance
-- **Smart Plugins**: smart-enter, smart-filter, jump-to-char,
-  toggle-pane, chmod, lazygit, compress
+- **File Diff**: diff.yazi for quick file comparison with patch
+  to clipboard
+- **Smart Paste**: Context-aware paste into hovered directories
+- **macOS Tags**: mactag.yazi for Finder color tag integration
+  (Catppuccin Mocha themed)
+- **Smart Plugins**: smart-enter, smart-filter, smart-paste,
+  jump-to-char, toggle-pane, chmod, lazygit, compress
 
 **Keybindings:**
 
@@ -1013,6 +1018,10 @@ written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
 | `g` then `t` | Open Ghostty in current directory |
 | `c` then `m` | Chmod selected files |
 | `c` then `a` | Compress selected files |
+| `Ctrl+d` | Diff selected file with hovered file |
+| `p` | Smart paste (into hovered dir or CWD) |
+| `b` then `a` | Add macOS Finder tags to selected files |
+| `b` then `r` | Remove macOS Finder tags |
 
 ```bash
 # Open yazi (use 'y' wrapper to cd on exit)
@@ -1037,8 +1046,9 @@ y
 ├── package.toml   # Package manifest (ya pkg install/upgrade)
 ├── plugins/
 │   └── (all)      # Managed by ya pkg: git, smart-enter,
-│                  # smart-filter, jump-to-char, toggle-pane,
-│                  # chmod, lazygit, compress, full-border, piper
+│                  # smart-filter, smart-paste, jump-to-char,
+│                  # toggle-pane, chmod, diff, mactag, piper,
+│                  # full-border, lazygit, compress
 └── flavors/
     └── catppuccin-mocha.yazi/  # Theme flavor
 ```

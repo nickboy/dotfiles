@@ -105,6 +105,8 @@ brew "tlrc"
 brew "terminal-notifier"
 # Fast fuzzy finder with built-in previews
 brew "television"
+# macOS file tagging CLI (used by yazi mactag plugin)
+brew "tag"
 # Count lines of code quickly
 brew "tokei"
 # Terminal multiplexer

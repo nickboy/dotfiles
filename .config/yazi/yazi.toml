@@ -29,6 +29,8 @@ prepend_previewers = [
 prepend_fetchers = [
 	{ id = "git", url = "*", run = "git" },
 	{ id = "git", url = "*/", run = "git" },
+	{ id = "mactag", url = "*", run = "mactag" },
+	{ id = "mactag", url = "*/", run = "mactag" },
 ]
 
 [opener]

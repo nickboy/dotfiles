@@ -3,6 +3,8 @@ tap "jstkdng/programs"
 brew "ast-grep"
 # Network bandwidth utilization tool
 brew "bandwhich"
+# Bourne-Again SHell, a UNIX command interpreter (v5, needed by tmux-which-key)
+brew "bash"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
 # Resource monitor (modern top/htop replacement)

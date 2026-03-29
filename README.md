@@ -984,8 +984,8 @@ written in Rust with async I/O. It supports image preview in Ghostty and Kitty.
 
 - **Theme**: Catppuccin Mocha flavor (consistent with Ghostty/Kitty/Neovim)
 - **Git Integration**: git.yazi plugin shows git status inline next to files
-- **Markdown Preview**: glow.yazi plugin renders markdown with syntax
-  highlighting
+- **Markdown Preview**: piper.yazi with glow for rendered markdown
+  previews
 - **HiDPI Preview**: `max_width`/`max_height` set to 16384 so PDF and image
   previews fill the entire column on Retina displays
 - **Status Bar**: Shows symlink targets and file owner:group
@@ -1036,10 +1036,9 @@ y
 ├── init.lua       # Status bar, git, full-border setup
 ├── package.toml   # Package manifest (ya pkg install/upgrade)
 ├── plugins/
-│   ├── glow.yazi/ # Markdown preview with glow (manual)
-│   └── (others)   # Managed by ya pkg: git, smart-enter,
+│   └── (all)      # Managed by ya pkg: git, smart-enter,
 │                  # smart-filter, jump-to-char, toggle-pane,
-│                  # chmod, lazygit, compress, full-border
+│                  # chmod, lazygit, compress, full-border, piper
 └── flavors/
     └── catppuccin-mocha.yazi/  # Theme flavor
 ```

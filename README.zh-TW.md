@@ -882,7 +882,7 @@ tv              # 開啟 television 模糊搜尋器
 
 - **主題**: Catppuccin Mocha（與 Ghostty/Kitty/Neovim 統一風格）
 - **Git 整合**: git.yazi 外掛在檔案旁顯示 git 狀態
-- **Markdown 預覽**: glow.yazi 外掛搭配語法高亮渲染 markdown
+- **Markdown 預覽**: piper.yazi 搭配 glow 渲染 markdown 預覽
 - **HiDPI 預覽**: `max_width`/`max_height` 設為 16384，PDF 和圖片
   預覽在 Retina 螢幕上佔滿整個預覽欄
 - **狀態列**: 顯示 symlink 指向路徑和檔案擁有者:群組

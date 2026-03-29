@@ -293,3 +293,10 @@ copy_command "pbcopy"
 session_serialization true
 serialize_pane_viewport true
 scrollback_lines_to_serialize 5000
+
+// Mouse behavior (new in 0.44)
+// Drag pane borders to resize, Ctrl+scroll to resize
+// Alt+click on file paths opens them in $EDITOR
+mouse_hover_effects true
+focus_follows_mouse true
+mouse_click_through true

@@ -3,6 +3,8 @@ tap "jstkdng/programs"
 brew "ast-grep"
 # Network bandwidth utilization tool
 brew "bandwhich"
+# Bourne-Again SHell, a UNIX command interpreter (v5, needed by tmux-which-key)
+brew "bash"
 # Clone of cat(1) with syntax highlighting and Git integration
 brew "bat"
 # Resource monitor (modern top/htop replacement)
@@ -47,6 +49,8 @@ brew "go"
 brew "hexyl"
 # Command-line benchmarking tool
 brew "hyperfine"
+# Lightweight JSON processor (used by tmux-which-key)
+brew "jq"
 # Fast, Dynamic Programming Language
 brew "julia"
 # Git-compatible version control system
@@ -103,6 +107,8 @@ brew "tlrc"
 brew "terminal-notifier"
 # Fast fuzzy finder with built-in previews
 brew "television"
+# macOS file tagging CLI (used by yazi mactag plugin)
+brew "tag"
 # Count lines of code quickly
 brew "tokei"
 # Terminal multiplexer
@@ -123,6 +129,8 @@ brew "uv"
 brew "yadm"
 # Blazing fast terminal file manager written in Rust
 brew "yazi"
+# Terminal multiplexer (modern tmux alternative)
+brew "zellij"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Magical shell history with sync and search

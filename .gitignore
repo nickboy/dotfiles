@@ -22,3 +22,6 @@ Library/LaunchAgents/com.daily-maintenance.plist
 # Yazi vendor files (managed by ya pkg, not yadm)
 .config/yazi/plugins/*/
 .config/yazi/flavors/*/
+
+# Zellij WASM plugins (binary, install separately)
+.config/zellij/plugins/*.wasm

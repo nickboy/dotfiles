@@ -31,4 +31,14 @@ prepend_keymap = [
 
 	# compress: compress selected files
 	{ on = ["c", "a"], run = "plugin compress", desc = "Compress selected files" },
+
+	# diff: compare selected file with hovered file
+	{ on = "<C-d>", run = "plugin diff", desc = "Diff selected with hovered" },
+
+	# smart-paste: paste into hovered directory or CWD
+	{ on = "p", run = "plugin smart-paste", desc = "Paste into hovered dir or CWD" },
+
+	# mactag: macOS Finder tag management
+	{ on = ["b", "a"], run = "plugin mactag add", desc = "Tag selected files" },
+	{ on = ["b", "r"], run = "plugin mactag remove", desc = "Untag selected files" },
 ]

@@ -25,3 +25,16 @@ require("git"):setup()
 -- Full border with rounded corners
 -- luacheck: globals ui
 require("full-border"):setup { type = ui.Border.ROUNDED }
+
+-- macOS Finder tags (Catppuccin Mocha colors)
+require("mactag"):setup {
+	keys = {
+		r = "Red", o = "Orange", y = "Yellow",
+		g = "Green", b = "Blue", p = "Purple",
+	},
+	colors = {
+		Red = "#f38ba8", Orange = "#fab387", Yellow = "#f9e2af",
+		Green = "#a6e3a1", Blue = "#89b4fa", Purple = "#cba6f7",
+	},
+	order = 500,
+}

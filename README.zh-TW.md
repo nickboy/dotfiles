@@ -12,7 +12,8 @@
 
 - **Shell**: Zsh 搭配 zinit 外掛管理器與 Oh-My-Zsh 外掛
 - **編輯器**: Neovim (LazyVim) 與 Zed 設定
-- **終端機**: tmux 搭配 sesh 工作階段管理器、Ghostty 與 Kitty 設定
+- **終端機**: Ghostty 與 Kitty 設定（Catppuccin Mocha 主題）
+- **多工器**: tmux（搭配 sesh、which-key）與 Zellij（0.44+）
 - **套件管理**: 透過 Brewfile 管理 Homebrew 套件
 - **Git**: 全域 git 設定
 - **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop、yazi 等
@@ -881,14 +882,17 @@ tv              # 開啟 television 模糊搜尋器
 
 - **主題**: Catppuccin Mocha（與 Ghostty/Kitty/Neovim 統一風格）
 - **Git 整合**: git.yazi 外掛在檔案旁顯示 git 狀態
-- **Markdown 預覽**: glow.yazi 外掛搭配語法高亮渲染 markdown
+- **Markdown 預覽**: piper.yazi 搭配 glow 渲染 markdown 預覽
 - **HiDPI 預覽**: `max_width`/`max_height` 設為 16384，PDF 和圖片
   預覽在 Retina 螢幕上佔滿整個預覽欄
 - **狀態列**: 顯示 symlink 指向路徑和檔案擁有者:群組
 - **預覽品質**: `image_quality = 90` 搭配 `image_delay = 50` 防抖
 - **圓角邊框**: full-border 外掛提供精緻外觀
-- **智慧外掛**: smart-enter、smart-filter、jump-to-char、
-  toggle-pane、chmod、lazygit、compress
+- **檔案比較**: diff.yazi 快速比較檔案並產生 patch 到剪貼簿
+- **智慧貼上**: 自動貼到 hover 的目錄或目前目錄
+- **macOS 標籤**: mactag.yazi 整合 Finder 顏色標籤（Catppuccin 配色）
+- **智慧外掛**: smart-enter、smart-filter、smart-paste、
+  jump-to-char、toggle-pane、chmod、lazygit、compress
 
 **快捷鍵：**
 
@@ -909,6 +913,10 @@ tv              # 開啟 television 模糊搜尋器
 | `g` 再按 `t` | 在目前目錄開啟 Ghostty |
 | `c` 再按 `m` | 修改檔案權限 |
 | `c` 再按 `a` | 壓縮選取的檔案 |
+| `Ctrl+d` | 比較選取檔案與 hover 檔案 |
+| `p` | 智慧貼上（貼到 hover 的目錄或目前目錄） |
+| `b` 再按 `a` | 為選取檔案新增 macOS 標籤 |
+| `b` 再按 `r` | 移除 macOS 標籤 |
 
 ```bash
 # 開啟 yazi（使用 'y' 包裝函式，離開時 cd）

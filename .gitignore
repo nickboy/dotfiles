@@ -26,5 +26,8 @@ Library/LaunchAgents/com.daily-maintenance.plist
 # Zellij WASM plugins (binary, install separately)
 .config/zellij/plugins/*.wasm
 
+# Atuin theme (downloaded by bootstrap)
+.config/atuin/themes/
+
 # btop theme (downloaded by bootstrap)
 .config/btop/themes/

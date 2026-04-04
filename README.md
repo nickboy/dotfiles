@@ -17,8 +17,8 @@ configurations for macOS development environment.
 - **Multiplexer**: tmux (with sesh, which-key) and Zellij (0.44+)
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop (Catppuccin
-  themed, transparent), yazi, and more
+- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi,
+  lazygit, and more (all Catppuccin Mocha themed where supported)
 - **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
 - **SSH**: Modular `config.d/` setup with multiplexing, keepalive, and agent forwarding

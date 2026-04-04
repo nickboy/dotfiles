@@ -16,8 +16,8 @@
 - **多工器**: tmux（搭配 sesh、which-key）與 Zellij（0.44+）
 - **套件管理**: 透過 Brewfile 管理 Homebrew 套件
 - **Git**: 全域 git 設定
-- **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop（Catppuccin
-  主題、透明背景）、yazi 等
+- **現代 CLI 工具**: ripgrep、bat、eza、dust、duf、btop、yazi、
+  lazygit 等（支援主題的工具皆使用 Catppuccin Mocha）
 - **版本管理**: mise（多語言開發工具版本管理器）
 - **自動補全**: Carapace（通用指令自動補全）
 - **SSH**: 模組化 `config.d/` 架構，支援連線多工、keepalive 與 agent forwarding

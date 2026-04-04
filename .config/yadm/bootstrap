@@ -146,6 +146,20 @@ curl -sL -o "$EZA_CONFIG/theme.yml" \
     https://raw.githubusercontent.com/catppuccin/eza/main/themes/mocha/catppuccin-mocha-mauve.yml || \
     echo "    ⚠️  Failed to download Eza theme"
 
+# Atuin Catppuccin theme
+echo "  Downloading Atuin Catppuccin Mocha theme..."
+mkdir -p ~/.config/atuin/themes
+curl -sL -o ~/.config/atuin/themes/catppuccin-mocha-blue.toml \
+    https://raw.githubusercontent.com/catppuccin/atuin/main/themes/mocha/catppuccin-mocha-blue.toml || \
+    echo "    ⚠️  Failed to download Atuin theme"
+
+# btop Catppuccin theme
+echo "  Downloading btop Catppuccin Mocha theme..."
+mkdir -p ~/.config/btop/themes
+curl -sL -o ~/.config/btop/themes/catppuccin_mocha.theme \
+    https://raw.githubusercontent.com/catppuccin/btop/main/themes/catppuccin_mocha.theme || \
+    echo "    ⚠️  Failed to download btop theme"
+
 # Install yazi packages (plugins and flavors from package.toml)
 if command -v ya &> /dev/null; then
     echo "📂 Installing yazi packages..."

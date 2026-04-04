@@ -20,8 +20,15 @@ Library/LaunchAgents/com.daily-maintenance.plist
 .config/nvim/lazy-lock.json
 
 # Yazi vendor files (managed by ya pkg, not yadm)
+.config/yazi/package.toml
 .config/yazi/plugins/*/
 .config/yazi/flavors/*/
 
 # Zellij WASM plugins (binary, install separately)
 .config/zellij/plugins/*.wasm
+
+# Atuin theme (downloaded by bootstrap)
+.config/atuin/themes/
+
+# btop theme (downloaded by bootstrap)
+.config/btop/themes/

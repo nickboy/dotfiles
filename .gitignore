@@ -20,6 +20,7 @@ Library/LaunchAgents/com.daily-maintenance.plist
 .config/nvim/lazy-lock.json
 
 # Yazi vendor files (managed by ya pkg, not yadm)
+.config/yazi/package.toml
 .config/yazi/plugins/*/
 .config/yazi/flavors/*/
 

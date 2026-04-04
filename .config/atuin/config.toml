@@ -172,6 +172,8 @@ history_filter = [
   "^export .*SECRET",
   "^export .*KEY",
   "^export .*PASSWORD",
+  "curl.*-H.*Authorization",
+  "curl.*-H.*Bearer",
 ]
 
 # Show preview for long commands
@@ -208,40 +210,19 @@ style = "compact"
 # prefers_reduced_motion = false
 
 [stats]
-## Set commands where we should consider the subcommand for statistics. Eg, kubectl get vs just kubectl
-# common_subcommands = [
-#   "apt",
-#   "cargo",
-#   "composer",
-#   "dnf",
-#   "docker",
-#   "dotnet",
-#   "git",
-#   "go",
-#   "ip",
-#   "jj",
-#   "kubectl",
-#   "nix",
-#   "nmcli",
-#   "npm",
-#   "pecl",
-#   "pnpm",
-#   "podman",
-#   "port",
-#   "systemctl",
-#   "tmux",
-#   "yarn",
-# ]
-
-## Set commands that should be totally stripped and ignored from stats
-# common_prefix = ["sudo"]
-
-## Set commands that will be completely ignored from stats
-# ignored_commands = [
-#   "cd",
-#   "ls",
-#   "vi"
-# ]
+common_subcommands = [
+  "cargo",
+  "docker",
+  "git",
+  "go",
+  "kubectl",
+  "npm",
+  "pnpm",
+  "yarn",
+  "brew",
+  "yadm",
+]
+common_prefix = ["sudo"]
 
 [keys]
 # Defaults to true. If disabled, using the up/down key won't exit the TUI when scrolled past the first/last entry.

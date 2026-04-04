@@ -28,3 +28,12 @@ theme:
     - '#cdd6f4'
 authorColors:
   '*': '#b4befe'
+
+git:
+  paging:
+    pager: delta --paging=never
+    colorArg: always
+
+gui:
+  nerdFontsVersion: "3"
+  border: rounded

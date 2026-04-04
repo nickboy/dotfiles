@@ -17,7 +17,8 @@ configurations for macOS development environment.
 - **Multiplexer**: tmux (with sesh, which-key) and Zellij (0.44+)
 - **Package Management**: Brewfile for Homebrew packages
 - **Git**: Global git configuration
-- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi, and more
+- **Modern CLI Tools**: ripgrep, bat, eza, dust, duf, btop, yazi,
+  lazygit, and more (all Catppuccin Mocha themed where supported)
 - **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
 - **SSH**: Modular `config.d/` setup with multiplexing, keepalive, and agent forwarding
@@ -888,7 +889,9 @@ Atuin replaces traditional shell history with a SQLite database, providing
 syntax highlighting, fuzzy search, and rich metadata.
 
 Features: workspace-aware filtering (up-arrow shows repo-scoped history),
-vi keymap mode, compact style, and automatic secrets filtering.
+vi keymap mode, compact style, Catppuccin Mocha theme, automatic secrets
+filtering (AWS keys, GitHub PATs, Slack tokens, curl auth headers),
+and stats grouping for git/docker/brew subcommands.
 
 ```bash
 # Interactive history search (Ctrl+R)
@@ -1052,6 +1055,25 @@ y
 └── flavors/
     └── catppuccin-mocha.yazi/  # Theme flavor
 ```
+
+### Lazygit (Git TUI)
+
+[Lazygit](https://github.com/jesseduffield/lazygit) is a terminal UI for
+git. Configured with Catppuccin Mocha theme, delta syntax-highlighted
+diffs, Nerd Font icons, and rounded borders.
+
+**Launch:** `lazygit` or `g g` inside Yazi.
+
+| Key | Action |
+| --- | --- |
+| `space` | Stage/unstage file |
+| `c` | Commit |
+| `p` / `P` | Pull / Push |
+| `enter` | View file diff (with delta highlighting) |
+| `[` / `]` | Navigate between panels |
+| `/` | Filter in any panel |
+| `?` | Show all keybindings |
+| `x` | Open action menu for current panel |
 
 ### Mise Version Manager
 

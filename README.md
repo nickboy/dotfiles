@@ -89,6 +89,8 @@ Automates daily system maintenance tasks including:
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Oh-My-Zsh updates
+- Bob self-update from git dev branch (SHA-cached cargo rebuild, only
+  recompiles when upstream advances)
 - Bob (Neovim version manager) nightly update with legacy-dir cleanup
   (`bob install nightly` + `bob use nightly`)
 - LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
@@ -1112,6 +1114,10 @@ brew upgrade --cask --greedy
 # Zinit updates (in zsh)
 zinit update --all
 
+# Bob self-update from dev branch (picks up upstream fixes before release)
+cargo install --git https://github.com/MordechaiHadad/bob \
+    --branch dev --locked --force
+
 # Bob nightly update (install is idempotent; use rewrites the proxy)
 bob install nightly && bob use nightly
 
@@ -1214,7 +1220,8 @@ copy what you need.
 - [yadm](https://yadm.io/) for dotfile management
 - [LazyVim](https://www.lazyvim.org/) for Neovim configuration
 - [zinit](https://github.com/zdharma-continuum/zinit) for Zsh plugin management
-- [bob](https://github.com/MordechaiHadad/bob) for Neovim version management
+- [bob](https://github.com/MordechaiHadad/bob) for Neovim version
+  management (tracked from the upstream `dev` branch via cargo)
 
 ---
 

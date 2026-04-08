@@ -78,6 +78,31 @@ else
     echo "     Run 'cargo install --locked tree-sitter-cli' manually after installing Rust"
 fi
 
+# Install bob (Neovim version manager) from git dev branch.
+# We intentionally track upstream dev instead of Homebrew or crates.io:
+# the dev branch contains the nvim proxy permission fix (issue #241) that
+# hasn't shipped in any tagged release yet. The daily maintenance script
+# keeps bob in sync with dev via SHA-cached cargo rebuilds.
+if command -v cargo &> /dev/null; then
+    if [ ! -x "$HOME/.cargo/bin/bob" ]; then
+        echo "🤖 Installing bob from MordechaiHadad/bob dev branch..."
+        cargo install --git https://github.com/MordechaiHadad/bob \
+            --branch dev --locked \
+            || echo "  ⚠️  Failed to install bob"
+        # Seed the SHA cache so the first maintenance run is a no-op.
+        if command -v bob &> /dev/null && [ -x "$HOME/.cargo/bin/bob" ]; then
+            mkdir -p "$HOME/.cache/dotfiles"
+            git ls-remote https://github.com/MordechaiHadad/bob.git refs/heads/dev \
+                2>/dev/null | awk '{print $1}' > "$HOME/.cache/dotfiles/bob-dev-sha" \
+                || rm -f "$HOME/.cache/dotfiles/bob-dev-sha"
+        fi
+    else
+        echo "🤖 bob already installed at ~/.cargo/bin/bob"
+    fi
+else
+    echo "  ⚠️  cargo not found, skipping bob installation"
+fi
+
 # Setup tmux plugin manager
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     echo "🔌 Installing tmux plugin manager..."

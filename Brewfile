@@ -137,8 +137,9 @@ brew "zoxide"
 brew "atuin"
 # GitHub command-line tool
 brew "gh"
-# Neovim version manager
-brew "bob"
+# Neovim version manager (bob) is installed from git dev branch via cargo
+# in the yadm bootstrap script. Homebrew's bob lags upstream and lacks the
+# nvim proxy permission fix for nightly upgrades. See daily-maintenance.sh.
 # Powerful, clean, object-oriented scripting language
 brew "ruby"
 # Drop in replacement for ueberzug written in C++

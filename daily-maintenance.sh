@@ -46,6 +46,130 @@ run_with_timeout() {
     fi
 }
 
+# Function to update Bob (Neovim version manager) nightly.
+#
+# Root causes this fixes:
+#   1. `bob use` writes the proxy at ~/.local/share/bob/nvim-bin/nvim
+#      with mode 555, so the NEXT `bob use` cannot overwrite it and
+#      errors with "Failed to copy file". `chmod u+w` before every
+#      `bob use` is the fix.
+#   2. `bob update nightly` warns "nightly is not installed" when the
+#      tracked install is only a legacy hash-suffixed dir. `bob install
+#      nightly` is the idempotent replacement that works in both states.
+#   3. Legacy `nightly-<hash>/` dirs from older bob versions accumulate
+#      forever; current bob installs into a single `nightly/` dir and
+#      `bob rollback` does not need the hash dirs. GC'd unconditionally.
+update_bob_nightly() {
+    local bob_bin="/opt/homebrew/bin/bob"
+    local bob_dir="$HOME/.local/share/bob"
+    local nvim_proxy="$bob_dir/nvim-bin/nvim"
+
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Bob (Neovim version manager) nightly update"
+
+    if [ ! -x "$bob_bin" ]; then
+        echo "Status: ⚠ SKIPPED (bob not installed)"
+        return 0
+    fi
+
+    # A running nvim has the proxy binary mmap'd; overwriting it would
+    # hit ETXTBSY regardless of file permissions. Skip the whole phase
+    # rather than risk a corrupt proxy.
+    local nvim_pids
+    nvim_pids=$(pgrep -x nvim 2>/dev/null | tr '\n' ' ')
+    if [ -n "$nvim_pids" ]; then
+        echo "Status: ⚠ SKIPPED (nvim running, pids: ${nvim_pids% })"
+        return 0
+    fi
+
+    # Make the proxy writable so `bob use` can overwrite it. Bob ships
+    # it at mode 555 - this is the whole reason this function exists.
+    if [ -e "$nvim_proxy" ]; then
+        chmod u+w "$nvim_proxy" 2>/dev/null || true
+    fi
+
+    echo "Command: bob install nightly"
+    echo -n "Status: "
+    if ! "$bob_bin" install nightly >/dev/null 2>&1; then
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("bob install nightly")
+        return 1
+    fi
+    echo "✓ SUCCESS"
+
+    echo "Command: bob use nightly"
+    echo -n "Status: "
+    if ! "$bob_bin" use nightly >/dev/null 2>&1; then
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("bob use nightly")
+        return 1
+    fi
+    echo "✓ SUCCESS"
+
+    # Prove the new build actually launches via the proxy.
+    echo "Command: $nvim_proxy --version"
+    echo -n "Status: "
+    local nvim_version
+    if ! nvim_version=$(run_with_timeout 5 "$nvim_proxy" --version 2>/dev/null | head -1); then
+        echo "✗ FAILED (nvim --version errored)"
+        FAILED_COMMANDS+=("bob: nvim verification failed")
+        return 1
+    fi
+    if [[ "$nvim_version" != NVIM* ]]; then
+        echo "✗ FAILED (unexpected: $nvim_version)"
+        FAILED_COMMANDS+=("bob: nvim verification failed")
+        return 1
+    fi
+    echo "✓ $nvim_version"
+
+    # GC: remove every legacy `nightly-<hash>` dir. Current bob installs
+    # into `nightly/` only, so anything hash-suffixed is an orphan from
+    # an older bob version. We `rm -rf` directly instead of calling
+    # `bob uninstall` - tested empirically, `bob uninstall nightly-<hash>`
+    # misinterprets the name and deletes the ACTIVE nightly/ dir while
+    # reporting success. Bob reads installs from the filesystem on each
+    # invocation, so filesystem removal is the whole story.
+    #
+    # The prefix check is a belt-and-braces guard against a malformed
+    # $bob_dir. Only runs after verification passes.
+    local -a legacy=()
+    local dir
+    for dir in "$bob_dir"/nightly-*; do
+        [ -d "$dir" ] && legacy+=("$dir")
+    done
+
+    if [ "${#legacy[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    echo "Command: rm -rf legacy nightly hash-dirs (${#legacy[@]})"
+    echo -n "Status: "
+    local erased=0
+    local failed=0
+    for dir in "${legacy[@]}"; do
+        if [[ "$dir" != "$bob_dir"/nightly-* ]]; then
+            failed=$((failed + 1))
+            echo ""
+            echo "  ⚠ refusing to remove unexpected path: $dir"
+            continue
+        fi
+        if rm -rf "$dir" 2>/dev/null; then
+            erased=$((erased + 1))
+        else
+            failed=$((failed + 1))
+            echo ""
+            echo "  ⚠ could not remove $(basename "$dir")"
+        fi
+    done
+    if [ "$failed" -eq 0 ]; then
+        echo "✓ erased $erased legacy build(s)"
+    else
+        echo "⚠ erased $erased, failed $failed"
+        FAILED_COMMANDS+=("bob: GC partial ($failed failed)")
+    fi
+}
+
 # Function to run command and check status
 run_command() {
     local description="$1"
@@ -138,9 +262,7 @@ else
     echo "Warning: Oh-My-Zsh not found, skipping OMZ update"
 fi
 
-if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob update nightly; then
-    FAILED_COMMANDS+=("bob update nightly")
-fi
+update_bob_nightly
 
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then

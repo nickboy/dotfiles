@@ -81,8 +81,15 @@ update_bob_self() {
         return 0
     fi
 
+    # Read the cached SHA, but only trust it if it's a well-formed
+    # 40-char hex string. An empty or corrupt cache file (e.g. from a
+    # killed run, disk-full, or manual mis-edit) gets discarded so the
+    # next equality check fails cleanly and we rebuild.
     local cached_sha=""
-    [ -f "$BOB_SHA_CACHE" ] && cached_sha=$(cat "$BOB_SHA_CACHE" 2>/dev/null)
+    if [ -f "$BOB_SHA_CACHE" ]; then
+        cached_sha=$(cat "$BOB_SHA_CACHE" 2>/dev/null)
+        [[ "$cached_sha" =~ ^[0-9a-f]{40}$ ]] || cached_sha=""
+    fi
 
     if [ -x "$BOB_BIN" ] && [ "$cached_sha" = "$remote_sha" ]; then
         echo "Status: ✓ up to date (${remote_sha:0:7})"
@@ -96,8 +103,12 @@ update_bob_self() {
         FAILED_COMMANDS+=("bob self-update (cargo install)")
         return 1
     fi
+    # Atomic cache write: a kill between the open and the final byte
+    # would otherwise leave a half-written cache file that fails the
+    # hex regex on the next run (forcing a redundant rebuild).
     mkdir -p "$(dirname "$BOB_SHA_CACHE")"
-    printf '%s\n' "$remote_sha" > "$BOB_SHA_CACHE"
+    printf '%s\n' "$remote_sha" > "$BOB_SHA_CACHE.tmp" \
+        && mv "$BOB_SHA_CACHE.tmp" "$BOB_SHA_CACHE"
     echo "✓ built ${remote_sha:0:7}"
 }
 

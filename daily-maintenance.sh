@@ -46,6 +46,192 @@ run_with_timeout() {
     fi
 }
 
+BOB_REPO="https://github.com/MordechaiHadad/bob"
+BOB_BRANCH="dev"
+BOB_BIN="$HOME/.cargo/bin/bob"
+BOB_SHA_CACHE="$HOME/.cache/dotfiles/bob-dev-sha"
+
+# Function to self-update Bob from its git dev branch.
+#
+# Why dev and not master/crates.io: upstream has shipped the proxy
+# permission fix (commit c18ba0a, "Changed: permissions to be write for
+# nvim proxy") on the dev branch, but not yet on master, crates.io, or
+# any tagged release. Homebrew lags the same way. We pin to dev until
+# the next release cuts.
+#
+# SHA caching: `cargo install --git --force` rebuilds every run (~1min),
+# so we short-circuit when the remote dev HEAD matches the cached SHA.
+# The cache lives at ~/.cache/dotfiles/bob-dev-sha and is seeded on the
+# first successful build. If the cache is missing we still run cargo,
+# which is the correct no-op for a fresh machine.
+update_bob_self() {
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Bob self-update (cargo git dev)"
+
+    if ! command -v cargo >/dev/null 2>&1; then
+        echo "Status: ⚠ SKIPPED (cargo not installed)"
+        return 0
+    fi
+
+    local remote_sha
+    remote_sha=$(run_with_timeout 15 git ls-remote "$BOB_REPO.git" "refs/heads/$BOB_BRANCH" 2>/dev/null | awk '{print $1}')
+    if [ -z "$remote_sha" ]; then
+        echo "Status: ⚠ SKIPPED (could not reach $BOB_REPO)"
+        return 0
+    fi
+
+    # Read the cached SHA, but only trust it if it's a well-formed
+    # 40-char hex string. An empty or corrupt cache file (e.g. from a
+    # killed run, disk-full, or manual mis-edit) gets discarded so the
+    # next equality check fails cleanly and we rebuild.
+    local cached_sha=""
+    if [ -f "$BOB_SHA_CACHE" ]; then
+        cached_sha=$(cat "$BOB_SHA_CACHE" 2>/dev/null)
+        [[ "$cached_sha" =~ ^[0-9a-f]{40}$ ]] || cached_sha=""
+    fi
+
+    if [ -x "$BOB_BIN" ] && [ "$cached_sha" = "$remote_sha" ]; then
+        echo "Status: ✓ up to date (${remote_sha:0:7})"
+        return 0
+    fi
+
+    echo "Command: cargo install --git $BOB_REPO --branch $BOB_BRANCH --locked --force"
+    echo -n "Status: "
+    if ! run_with_timeout 300 cargo install --git "$BOB_REPO" --branch "$BOB_BRANCH" --locked --force >/dev/null 2>&1; then
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("bob self-update (cargo install)")
+        return 1
+    fi
+    # Atomic cache write: a kill between the open and the final byte
+    # would otherwise leave a half-written cache file that fails the
+    # hex regex on the next run (forcing a redundant rebuild).
+    mkdir -p "$(dirname "$BOB_SHA_CACHE")"
+    printf '%s\n' "$remote_sha" > "$BOB_SHA_CACHE.tmp" \
+        && mv "$BOB_SHA_CACHE.tmp" "$BOB_SHA_CACHE"
+    echo "✓ built ${remote_sha:0:7}"
+}
+
+# Function to update Bob (Neovim version manager) nightly.
+#
+# Root causes this fixes:
+#   1. `bob use` writes the proxy at ~/.local/share/bob/nvim-bin/nvim
+#      with mode 555, so the NEXT `bob use` cannot overwrite it and
+#      errors with "Failed to copy file". `chmod u+w` before every
+#      `bob use` is the fix. (Fixed upstream on dev, kept defensively.)
+#   2. `bob update nightly` warns "nightly is not installed" when the
+#      tracked install is only a legacy hash-suffixed dir. `bob install
+#      nightly` is the idempotent replacement that works in both states.
+#   3. Legacy `nightly-<hash>/` dirs from older bob versions accumulate
+#      forever; current bob installs into a single `nightly/` dir and
+#      `bob rollback` does not need the hash dirs. GC'd unconditionally.
+update_bob_nightly() {
+    local bob_bin="$BOB_BIN"
+    local bob_dir="$HOME/.local/share/bob"
+    local nvim_proxy="$bob_dir/nvim-bin/nvim"
+
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Bob (Neovim version manager) nightly update"
+
+    if [ ! -x "$bob_bin" ]; then
+        echo "Status: ⚠ SKIPPED (bob not installed)"
+        return 0
+    fi
+
+    # A running nvim has the proxy binary mmap'd; overwriting it would
+    # hit ETXTBSY regardless of file permissions. Skip the whole phase
+    # rather than risk a corrupt proxy.
+    local nvim_pids
+    nvim_pids=$(pgrep -x nvim 2>/dev/null | tr '\n' ' ')
+    if [ -n "$nvim_pids" ]; then
+        echo "Status: ⚠ SKIPPED (nvim running, pids: ${nvim_pids% })"
+        return 0
+    fi
+
+    # Make the proxy writable so `bob use` can overwrite it. Bob ships
+    # it at mode 555 - this is the whole reason this function exists.
+    if [ -e "$nvim_proxy" ]; then
+        chmod u+w "$nvim_proxy" 2>/dev/null || true
+    fi
+
+    echo "Command: bob install nightly"
+    echo -n "Status: "
+    if ! "$bob_bin" install nightly >/dev/null 2>&1; then
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("bob install nightly")
+        return 1
+    fi
+    echo "✓ SUCCESS"
+
+    echo "Command: bob use nightly"
+    echo -n "Status: "
+    if ! "$bob_bin" use nightly >/dev/null 2>&1; then
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("bob use nightly")
+        return 1
+    fi
+    echo "✓ SUCCESS"
+
+    # Prove the new build actually launches via the proxy.
+    echo "Command: $nvim_proxy --version"
+    echo -n "Status: "
+    local nvim_version
+    nvim_version=$(run_with_timeout 5 "$nvim_proxy" --version 2>/dev/null | head -1)
+    if [[ "$nvim_version" != NVIM* ]]; then
+        echo "✗ FAILED (unexpected: ${nvim_version:-<empty>})"
+        FAILED_COMMANDS+=("bob: nvim verification failed")
+        return 1
+    fi
+    echo "✓ $nvim_version"
+
+    # GC: remove every legacy `nightly-<hash>` dir. Current bob installs
+    # into `nightly/` only, so anything hash-suffixed is an orphan from
+    # an older bob version. We `rm -rf` directly instead of calling
+    # `bob uninstall` - tested empirically, `bob uninstall nightly-<hash>`
+    # misinterprets the name and deletes the ACTIVE nightly/ dir while
+    # reporting success. Bob reads installs from the filesystem on each
+    # invocation, so filesystem removal is the whole story.
+    #
+    # The prefix check is a belt-and-braces guard against a malformed
+    # $bob_dir. Only runs after verification passes.
+    local -a legacy=()
+    local dir
+    for dir in "$bob_dir"/nightly-*; do
+        [ -d "$dir" ] && legacy+=("$dir")
+    done
+
+    if [ "${#legacy[@]}" -eq 0 ]; then
+        return 0
+    fi
+
+    echo "Command: rm -rf legacy nightly hash-dirs (${#legacy[@]})"
+    echo -n "Status: "
+    local erased=0
+    local failed=0
+    for dir in "${legacy[@]}"; do
+        if [[ "$dir" != "$bob_dir"/nightly-* ]]; then
+            failed=$((failed + 1))
+            echo ""
+            echo "  ⚠ refusing to remove unexpected path: $dir"
+            continue
+        fi
+        if rm -rf "$dir" 2>/dev/null; then
+            erased=$((erased + 1))
+        else
+            failed=$((failed + 1))
+            echo ""
+            echo "  ⚠ could not remove $(basename "$dir")"
+        fi
+    done
+    if [ "$failed" -eq 0 ]; then
+        echo "✓ erased $erased legacy build(s)"
+    else
+        echo "⚠ erased $erased, failed $failed"
+        FAILED_COMMANDS+=("bob: GC partial ($failed failed)")
+    fi
+}
+
 # Function to run command and check status
 run_command() {
     local description="$1"
@@ -138,9 +324,8 @@ else
     echo "Warning: Oh-My-Zsh not found, skipping OMZ update"
 fi
 
-if ! run_command "Bob (Neovim version manager) update" /opt/homebrew/bin/bob update nightly; then
-    FAILED_COMMANDS+=("bob update nightly")
-fi
+update_bob_self
+update_bob_nightly
 
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then

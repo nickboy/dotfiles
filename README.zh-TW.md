@@ -85,7 +85,10 @@ bash ~/install-daily-maintenance.sh
 - Homebrew cask 更新（`brew upgrade --cask --greedy`）
 - Zinit 外掛更新（`zinit update --all --quiet`）
 - Oh-My-Zsh 更新
-- Bob（Neovim 版本管理器）更新（`bob update`）
+- Bob 自我更新：從 git dev 分支重建（SHA 快取，僅在上游推進時才重新
+  編譯）
+- Bob（Neovim 版本管理器）nightly 更新與舊版目錄清理
+  （`bob install nightly` + `bob use nightly`）
 - LazyVim 外掛更新（`nvim --headless '+Lazy! sync' +qa`）
 - Treesitter parser 更新（`nvim --headless '+TSUpdate' +qa`）
 - Homebrew 清理（`brew cleanup --prune=all`）— 移除舊版本並清除快取
@@ -1006,8 +1009,12 @@ brew upgrade --cask --greedy
 # Zinit 更新（在 zsh 中）
 zinit update --all
 
-# Bob 更新
-bob update
+# Bob 自我更新：從 dev 分支取得尚未發佈的上游修正
+cargo install --git https://github.com/MordechaiHadad/bob \
+    --branch dev --locked --force
+
+# Bob nightly 更新（install 具冪等性；use 會重寫 proxy）
+bob install nightly && bob use nightly
 
 # LazyVim 更新（在 Neovim 中）
 nvim --headless '+Lazy! sync' +qa
@@ -1108,6 +1115,7 @@ shellcheck *.sh  # 若已透過 brew 安裝
 - [LazyVim](https://www.lazyvim.org/) — Neovim 設定
 - [zinit](https://github.com/zdharma-continuum/zinit) — Zsh 外掛管理
 - [bob](https://github.com/MordechaiHadad/bob) — Neovim 版本管理
+  （透過 cargo 追蹤上游 `dev` 分支）
 
 ---
 

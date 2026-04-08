@@ -89,7 +89,8 @@ Automates daily system maintenance tasks including:
 - Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Oh-My-Zsh updates
-- Bob (Neovim version manager) updates (`bob update`)
+- Bob (Neovim version manager) nightly update with legacy-dir cleanup
+  (`bob install nightly` + `bob use nightly`)
 - LazyVim plugin updates (`nvim --headless '+Lazy! sync' +qa`)
 - Treesitter parser updates (`nvim --headless '+TSUpdate' +qa`)
 - Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and
@@ -1111,8 +1112,8 @@ brew upgrade --cask --greedy
 # Zinit updates (in zsh)
 zinit update --all
 
-# Bob updates
-bob update
+# Bob nightly update (install is idempotent; use rewrites the proxy)
+bob install nightly && bob use nightly
 
 # LazyVim updates (in Neovim)
 nvim --headless '+Lazy! sync' +qa

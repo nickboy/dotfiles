@@ -1,4 +1,5 @@
 tap "jstkdng/programs"
+tap "charmbracelet/tap"
 # Code searching, linting, rewriting
 brew "ast-grep"
 # Network bandwidth utilization tool
@@ -61,6 +62,8 @@ brew "just"
 brew "lazygit"
 # Package manager for the Lua programming language
 brew "luarocks"
+# AI on the command-line (pipe shell output to LLMs)
+brew "charmbracelet/tap/mods"
 # Polyglot dev tool version manager (replaces asdf/nvm/pyenv)
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility

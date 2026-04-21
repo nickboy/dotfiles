@@ -486,16 +486,6 @@ export BAT_THEME="Catppuccin Mocha"
 eval "$(starship init zsh)"
 
 # ============================================================================
-# 1Password SSH Agent
-# ============================================================================
-# Route SSH_AUTH_SOCK to 1Password agent for biometric-unlocked keys.
-# Requires: 1Password → Settings → Developer → "Use the SSH agent" enabled.
-# When the app is running, the socket lives at the path below.
-if [[ -z "$SSH_CONNECTION" ]]; then
-    export SSH_AUTH_SOCK="$HOME/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock"
-fi
-
-# ============================================================================
 # Remote Work Helpers
 # ============================================================================
 

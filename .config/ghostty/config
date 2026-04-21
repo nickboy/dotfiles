@@ -20,6 +20,9 @@ window-decoration = true
 window-theme = auto
 window-save-state = always
 
+# Wide-gamut colorspace (M-series Mac + Catppuccin render more vibrantly)
+window-colorspace = display-p3
+
 # Transparency and visual effects for macOS liquid visuals
 background-opacity = 0.75
 background-opacity-cells = true

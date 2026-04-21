@@ -2,8 +2,10 @@
 # Per-project overrides: create .mise.toml in any project directory
 
 [tools]
+# Pin Python to 3.13 so local + CI agree (brew also keeps python@3.13 since
+# thefuck/liblqr depend on it, but mise is the userland default).
 node = "lts"
-python = "latest"
+python = "3.13"
 go = "latest"
 ruby = "latest"
 

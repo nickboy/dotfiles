@@ -10,7 +10,8 @@ brew "bash"
 brew "bat"
 # Resource monitor (modern top/htop replacement)
 brew "btop"
-# Interpreted, interactive, object-oriented programming language
+# Python kept in brew for formula deps (thefuck, liblqr);
+# userland Python is managed by mise (see ~/.config/mise/config.toml)
 brew "python@3.13"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
@@ -68,7 +69,8 @@ brew "charmbracelet/tap/mods"
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Platform built on V8 to build network applications
+# Node kept in brew for formula deps (ccusage, pyright);
+# userland Node is managed by mise
 brew "node"
 # Development kit for the Java programming language
 brew "openjdk"
@@ -141,8 +143,6 @@ brew "gh"
 # Neovim version manager (bob) is installed from git dev branch via cargo
 # in the yadm bootstrap script. Homebrew's bob lags upstream and lacks the
 # nvim proxy permission fix for nightly upgrades. See daily-maintenance.sh.
-# Powerful, clean, object-oriented scripting language
-brew "ruby"
 # Drop in replacement for ueberzug written in C++
 brew "jstkdng/programs/ueberzugpp"
 # Password manager that keeps all passwords secure behind one password

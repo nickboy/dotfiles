@@ -282,9 +282,13 @@ fi
 
 # Zoxide - init moved to end of file (before starship) to satisfy zoxide doctor
 
-# The fuck (command correction)
+# The fuck (command correction) - lazy-loaded to save ~5ms on shell startup
 if command -v thefuck &> /dev/null; then
-    eval "$(thefuck --alias fk)"
+    fk() {
+        unfunction fk
+        eval "$(thefuck --alias fk)"
+        fk "$@"
+    }
 fi
 
 # Atuin (enhanced shell history with syntax highlighting)
@@ -368,7 +372,6 @@ alias gl='git log --oneline --graph --decorate --all'
 
 # Battery monitoring
 alias battery='battery-status'
-alias batteryv='battery-status -v'  # verbose output
 
 # Daily maintenance shortcuts
 alias mr='~/daily-maintenance-control.sh run'      # maintenance run
@@ -451,8 +454,6 @@ rgf() {
 # Quick utilities (inspired by nickjj/dotfiles)
 alias sz='source ~/.zshrc'
 alias myip='curl -s https://checkip.amazonaws.com | pbcopy && pbpaste'
-alias 755d='find . -type d -exec chmod 755 {} +'
-alias 644f='find . -type f -exec chmod 644 {} +'
 
 # ============================================================================
 # Shell Options

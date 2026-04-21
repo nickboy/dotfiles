@@ -68,8 +68,6 @@ brew "charmbracelet/tap/mods"
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
-# Control nvim processes using `nvr` command-line tool
-brew "neovim-remote"
 # Platform built on V8 to build network applications
 brew "node"
 # Development kit for the Java programming language

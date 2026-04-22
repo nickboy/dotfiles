@@ -257,9 +257,11 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty Features
 
-- **Transparency**: Background opacity (0.75) with blur for macOS
-  visuals, `background-opacity-cells` makes ANSI background colors
-  (e.g. diff highlights) also respect transparency
+- **Transparency**: Background opacity (0.82) with blur (radius 15)
+  tuned for text contrast, `background-opacity-cells` makes ANSI
+  background colors (e.g. diff highlights) also respect transparency
+- **Wide-Gamut Color**: `window-colorspace = display-p3` renders
+  Catppuccin Mocha with richer purples/blues on M-series Macs
 - **Scrollback**: 25 MB scrollback buffer for long Claude Code outputs
 - **Shell Integration**: Enhanced shell integration with `sudo`,
   `title`, and `path` features (cursor feature disabled to avoid
@@ -307,8 +309,6 @@ rm ~/Library/Logs/daily-maintenance*.log
 | Keybinding | Action |
 | --- | --- |
 | `Cmd+`` | Quick Terminal (global, any app) |
-| `Cmd+D` | Split down |
-| `Cmd+Shift+D` | Split right |
 | `Cmd+Option+h/j/k/l` | Navigate splits (vim-style) |
 | `Cmd+Shift+Enter` | Toggle split zoom |
 | `Cmd+Up/Down` | Jump to previous/next prompt |
@@ -317,8 +317,13 @@ rm ~/Library/Logs/daily-maintenance*.log
 | `Cmd+Click` | Open URL in browser |
 | `Option+Click` | Move cursor in command line |
 
-> **Note**: In tmux with `set -g mouse on`, use `Cmd+Shift+Click`
-> to open URLs (plain `Cmd+Click` works outside tmux).
+> **Notes**:
+>
+> - In tmux with `set -g mouse on`, use `Cmd+Shift+Click` to open URLs
+>   (plain `Cmd+Click` works outside tmux).
+> - Native Ghostty splits (`Cmd+D` / `Cmd+Shift+D`) are intentionally
+>   unbound — tmux handles splits (`prefix + |` / `prefix + -`) so
+>   `vim-tmux-navigator` can traverse panes cleanly.
 
 ### Key Settings
 
@@ -693,6 +698,9 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
   tmux sessions (status bar changes color to indicate)
 - **tmux-yank**: Consistent copy behavior with OSC52 fallback for
   remote sessions
+- **tmux-thumbs**: Press `prefix + F` to highlight URLs / commit hashes /
+  file paths on screen; type the overlay letter to copy to clipboard
+  (use uppercase to copy **and** open the URL via `open`)
 - **Which-Key**: Press `Ctrl-a + ?` for an interactive popup showing
   all available keybindings organized by category (pane, window,
   session, buffer, layout, git)
@@ -735,6 +743,7 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 | `Ctrl-a + }` | Move pane right |
 | `Ctrl-a + r` | Reload tmux configuration |
 | `Ctrl-a + ?` | Which-key popup (keybinding hints) |
+| `Ctrl-a + F` | Highlight URLs/hashes/paths (tmux-thumbs) |
 | `F12` | Toggle nested tmux (for SSH sessions) |
 
 #### Seamless Navigation
@@ -746,6 +755,13 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 #### Session Management (sesh)
 
 Sesh is a smart tmux session manager integrated with zoxide.
+Configured with project templates in `~/.config/sesh/sesh.toml`:
+
+- `dotfiles ~` — home directory, auto-runs `yadm status && nvim .`
+- `claude config` — `~/.claude`
+- `nvim config` — `~/.config/nvim`, opens `init.lua`
+- `ghostty config` — `~/.config/ghostty`, opens `config`
+- Plus any directories visited via zoxide (`Ctrl-x` mode in picker)
 
 **Shell Commands:**
 
@@ -825,6 +841,7 @@ Modern Rust-based replacements for traditional Unix tools:
 | - | **serpl** | TUI search & replace | `sr` |
 | - | **television** | Fuzzy finder with previews | `tv` |
 | - | **glow** | Terminal markdown renderer | `md` |
+| - | **mods** | Pipe shell output to LLMs (Charm) | `mods` |
 | `git` | **jujutsu** | Git-compatible VCS | `jj` |
 | `nvm`/`pyenv` | **mise** | Polyglot version manager | `mise` |
 

@@ -1,0 +1,269 @@
+#!/usr/bin/env bash
+# Claude Code status line — single-line compact display, pure DIY (no ccusage).
+#
+# Layout:
+# 🤖 Model │ 💰 $cost │ 🔥 $rate/hr │ ⏱ dur │ 📁 dir 🌿 branch │ 5h:NN% ↻Hh:Mm │ 7d:NN% │ [███░░] NN%
+#
+# Performance:
+# - Single jq invocation extracts all fields
+# - Git branch cached per session_id in /tmp (5s TTL), yadm fallback for ~
+# - Add "refreshInterval": 5 to ~/.claude/settings.json statusLine for auto-refresh
+
+set -uo pipefail
+
+INPUT=$(cat)
+
+# -----------------------------------------------------------------------------
+# Parse stdin once
+# -----------------------------------------------------------------------------
+# Use Unit Separator (\x1f) rather than \t because bash's `read` collapses
+# consecutive whitespace separators (tab, space), which loses empty fields.
+# \x1f is non-whitespace so `read` preserves empty fields correctly.
+IFS=$'\x1f' read -r \
+    SESSION_ID MODEL DIR EFFORT_STDIN \
+    PCT_RAW COST_RAW DURATION_MS \
+    FIVE_H FIVE_H_RESET \
+    SEVEN_D SEVEN_D_RESET < <(
+    printf '%s' "$INPUT" | jq -r '
+        [
+            (.session_id // "nosession"),
+            (.model.display_name // .model.id // "Claude"),
+            (.workspace.current_dir // .cwd // "."),
+            (.effort_level // .effortLevel // ""),
+            (.context_window.used_percentage // 0),
+            (.cost.total_cost_usd // 0),
+            (.cost.total_duration_ms // 0),
+            (.rate_limits.five_hour.used_percentage // -1),
+            (.rate_limits.five_hour.resets_at // .rate_limits.five_hour.reset_at // ""),
+            (.rate_limits.seven_day.used_percentage // -1),
+            (.rate_limits.seven_day.resets_at // .rate_limits.seven_day.reset_at // "")
+        ] | map(tostring) | join("")
+    ' 2>/dev/null
+)
+
+# Fall back to reading effortLevel from settings.json (Claude Code may not
+# expose it in stdin); global user setting is authoritative either way.
+EFFORT=${EFFORT_STDIN:-}
+if [ -z "$EFFORT" ] && [ -f "$HOME/.claude/settings.json" ]; then
+    EFFORT=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+fi
+
+: "${SESSION_ID:=nosession}"
+: "${MODEL:=Claude}"
+: "${DIR:=.}"
+: "${PCT_RAW:=0}"
+: "${COST_RAW:=0}"
+: "${DURATION_MS:=0}"
+
+PCT=${PCT_RAW%.*}
+[[ "$PCT" =~ ^[0-9]+$ ]] || PCT=0
+FIVE_H_INT=${FIVE_H%.*}
+SEVEN_D_INT=${SEVEN_D%.*}
+
+# -----------------------------------------------------------------------------
+# Colors — Catppuccin Mocha palette (24-bit truecolor) to match starship/tmux
+# -----------------------------------------------------------------------------
+# shellcheck disable=SC2034  # palette kept complete for future segment styling
+C_BASE=$'\033[38;2;30;30;46m'        # base (#1e1e2e) — fg on light bg
+C_TEXT=$'\033[38;2;205;214;244m'     # text (#cdd6f4)
+C_SUBTEXT=$'\033[38;2;186;194;222m'  # subtext1 (#bac2de)
+C_OVERLAY=$'\033[38;2;127;132;156m'  # overlay1 (#7f849c) — dim
+C_SAPPHIRE=$'\033[38;2;116;199;236m' # sapphire (#74c7ec)
+C_SKY=$'\033[38;2;137;220;235m'      # sky (#89dceb)
+C_TEAL=$'\033[38;2;148;226;213m'     # teal (#94e2d5)
+C_GREEN=$'\033[38;2;166;227;161m'    # green (#a6e3a1)
+C_YELLOW=$'\033[38;2;249;226;175m'   # yellow (#f9e2af)
+C_PEACH=$'\033[38;2;250;179;135m'    # peach (#fab387)
+C_RED=$'\033[38;2;243;139;168m'      # red (#f38ba8)
+C_MAUVE=$'\033[38;2;203;166;247m'    # mauve (#cba6f7)
+C_PINK=$'\033[38;2;245;194;231m'     # pink (#f5c2e7)
+C_BLUE=$'\033[38;2;137;180;250m'     # blue (#89b4fa)
+C_LAVENDER=$'\033[38;2;180;190;254m' # lavender (#b4befe)
+
+# Backgrounds (for pill-style segments à la starship prompt)
+BG_SAPPHIRE=$'\033[48;2;116;199;236m'
+BG_SURFACE=$'\033[48;2;49;50;68m'    # surface0 (#313244)
+
+# Style
+C_BOLD=$'\033[1m'
+C_RESET=$'\033[0m'
+
+# Backwards-compat aliases for existing code paths
+C_CYAN=$C_SAPPHIRE
+C_MAGENTA=$C_PINK
+C_DIM=$C_OVERLAY
+
+sep() { printf '%s' " ${C_OVERLAY}│${C_RESET} "; }
+
+threshold_color() {
+    local v=$1 low=$2 med=$3
+    if   [ "$v" -ge "$med" ]; then printf '%s' "$C_RED"
+    elif [ "$v" -ge "$low" ]; then printf '%s' "$C_YELLOW"
+    else                           printf '%s' "$C_GREEN"
+    fi
+}
+
+# Convert ISO 8601 or epoch reset timestamp → "Hh:Mm" human-readable remaining.
+# Returns empty string if not parseable or already expired.
+relative_reset() {
+    local ts=$1
+    [ -z "$ts" ] || [ "$ts" = "null" ] && return
+
+    local target_epoch now diff
+    if [[ "$ts" =~ ^[0-9]+$ ]]; then
+        target_epoch=$ts
+    else
+        target_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${ts%%.*}" "+%s" 2>/dev/null) || \
+        target_epoch=$(date -j -f "%Y-%m-%dT%H:%M:%SZ" "${ts%%.*}Z" "+%s" 2>/dev/null)
+    fi
+    [ -z "$target_epoch" ] && return
+
+    now=$(date +%s)
+    diff=$(( target_epoch - now ))
+    [ "$diff" -le 0 ] && return
+
+    local h=$(( diff / 3600 ))
+    local m=$(( (diff % 3600) / 60 ))
+    if [ "$h" -gt 0 ]; then
+        printf '%dh%02dm' "$h" "$m"
+    else
+        printf '%dm' "$m"
+    fi
+}
+
+# -----------------------------------------------------------------------------
+# Cost / burn rate / duration
+# -----------------------------------------------------------------------------
+COST_FMT=$(printf '$%.2f' "$COST_RAW" 2>/dev/null || printf '$0.00')
+COST_COLOR=$(threshold_color "${COST_RAW%.*}" 5 20)
+
+BURN_STR=""
+if [ "$DURATION_MS" -gt 60000 ]; then
+    BURN_RATE=$(awk -v c="$COST_RAW" -v d="$DURATION_MS" 'BEGIN{
+        if (d > 0) printf "%.2f", (c / (d / 3600000))
+        else print "0.00"
+    }')
+    BURN_COLOR=$(threshold_color "${BURN_RATE%.*}" 5 15)
+    BURN_STR="$(sep)🔥 ${BURN_COLOR}\$${BURN_RATE}/hr${C_RESET}"
+fi
+
+DUR_STR=""
+if [ "$DURATION_MS" -gt 1000 ]; then
+    DUR_FMT=$(awk -v ms="$DURATION_MS" 'BEGIN{
+        s = int(ms/1000)
+        h = int(s/3600); m = int((s%3600)/60); sec = s%60
+        if (h > 0)       printf "%dh%dm", h, m
+        else if (m > 0)  printf "%dm%ds", m, sec
+        else             printf "%ds", sec
+    }')
+    DUR_STR="$(sep)⏱ ${C_DIM}${DUR_FMT}${C_RESET}"
+fi
+
+# -----------------------------------------------------------------------------
+# Git / yadm branch (cached per session_id)
+# -----------------------------------------------------------------------------
+GIT_CACHE="/tmp/claude-statusline-git-${SESSION_ID}"
+CACHE_TTL=5
+
+refresh_git_cache() {
+    local branch=""
+    if command -v git >/dev/null 2>&1; then
+        branch=$(cd "$DIR" 2>/dev/null && git symbolic-ref --short HEAD 2>/dev/null || \
+                 cd "$DIR" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)
+    fi
+    # yadm fallback for home-dir / dotfile contexts where GIT_DIR lives elsewhere
+    if [ -z "$branch" ] && command -v yadm >/dev/null 2>&1; then
+        branch=$(yadm symbolic-ref --short HEAD 2>/dev/null || \
+                 yadm rev-parse --short HEAD 2>/dev/null)
+        [ -n "$branch" ] && branch="⚡${branch}"  # ⚡ marks yadm-managed
+    fi
+    printf '%s' "${branch:-}" > "$GIT_CACHE"
+}
+
+if [ ! -f "$GIT_CACHE" ] || \
+   [ "$(( $(date +%s) - $(stat -f %m "$GIT_CACHE" 2>/dev/null || echo 0) ))" -gt "$CACHE_TTL" ]; then
+    refresh_git_cache
+fi
+BRANCH=$(cat "$GIT_CACHE" 2>/dev/null || echo "")
+
+# -----------------------------------------------------------------------------
+# Assemble rate-limit segment (with reset countdown)
+# -----------------------------------------------------------------------------
+RL_STR=""
+if [ "${FIVE_H_INT:-0}" != "-1" ] && [ -n "${FIVE_H_INT:-}" ]; then
+    RL_COLOR=$(threshold_color "$FIVE_H_INT" 50 80)
+    reset_5h=$(relative_reset "$FIVE_H_RESET")
+    if [ -n "$reset_5h" ]; then
+        RL_STR="$(sep)5h: ${RL_COLOR}${FIVE_H_INT}%${C_RESET} ${C_DIM}↻${reset_5h}${C_RESET}"
+    else
+        RL_STR="$(sep)5h: ${RL_COLOR}${FIVE_H_INT}%${C_RESET}"
+    fi
+fi
+if [ "${SEVEN_D_INT:-0}" != "-1" ] && [ -n "${SEVEN_D_INT:-}" ]; then
+    RL_COLOR=$(threshold_color "$SEVEN_D_INT" 50 80)
+    reset_7d=$(relative_reset "$SEVEN_D_RESET")
+    if [ -n "$reset_7d" ]; then
+        RL_STR="${RL_STR}$(sep)7d: ${RL_COLOR}${SEVEN_D_INT}%${C_RESET} ${C_DIM}↻${reset_7d}${C_RESET}"
+    else
+        RL_STR="${RL_STR}$(sep)7d: ${RL_COLOR}${SEVEN_D_INT}%${C_RESET}"
+    fi
+fi
+
+# -----------------------------------------------------------------------------
+# Compact context progress bar (inline)
+# -----------------------------------------------------------------------------
+BAR_WIDTH=10
+FILLED=$(( PCT * BAR_WIDTH / 100 ))
+[ "$FILLED" -gt "$BAR_WIDTH" ] && FILLED=$BAR_WIDTH
+[ "$FILLED" -lt 0 ] && FILLED=0
+EMPTY=$(( BAR_WIDTH - FILLED ))
+
+if   [ "$PCT" -ge 90 ]; then BAR_COLOR="$C_RED"
+elif [ "$PCT" -ge 70 ]; then BAR_COLOR="$C_YELLOW"
+else                         BAR_COLOR="$C_GREEN"
+fi
+
+BAR=""
+for ((i = 0; i < FILLED; i++)); do BAR+="█"; done
+for ((i = 0; i < EMPTY;  i++)); do BAR+="░"; done
+BAR_STR="$(sep)${BAR_COLOR}${BAR}${C_RESET} ${C_BOLD}${PCT}%${C_RESET} ctx"
+
+# -----------------------------------------------------------------------------
+# Assemble folder/branch segment
+# -----------------------------------------------------------------------------
+# Folder display: just the basename (keeps statusline compact).
+# Special-case ~ to avoid showing the literal username.
+if [ "$DIR" = "$HOME" ]; then
+    DIR_DISP="~"
+else
+    DIR_DISP=${DIR##*/}
+    [ -z "$DIR_DISP" ] && DIR_DISP="/"
+fi
+DIR_STR="$(sep)📁 ${C_LAVENDER}${DIR_DISP}${C_RESET}"
+[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_BLUE}${BRANCH}${C_RESET}"
+
+# -----------------------------------------------------------------------------
+# Effort level badge (xhigh → 🚀, high → ⚡, medium → ·, low → 🌱)
+# -----------------------------------------------------------------------------
+EFFORT_STR=""
+if [ -n "$EFFORT" ] && [ "$EFFORT" != "null" ]; then
+    case "$EFFORT" in
+        xhigh|max) EFFORT_ICON="🚀"; EFFORT_COLOR="$C_RED" ;;
+        high)      EFFORT_ICON="⚡"; EFFORT_COLOR="$C_YELLOW" ;;
+        medium|med) EFFORT_ICON="·"; EFFORT_COLOR="$C_GREEN" ;;
+        low)       EFFORT_ICON="🌱"; EFFORT_COLOR="$C_DIM" ;;
+        *)         EFFORT_ICON="⚙"; EFFORT_COLOR="$C_DIM" ;;
+    esac
+    EFFORT_STR="$(sep)${EFFORT_ICON} ${EFFORT_COLOR}${EFFORT}${C_RESET}"
+fi
+
+# -----------------------------------------------------------------------------
+# Emit single line
+# -----------------------------------------------------------------------------
+printf '🤖 %s%s%s%s%s💰 %s%s%s%s%s%s%s%s\n' \
+    "$C_BLUE" "$MODEL" "$C_RESET" \
+    "$EFFORT_STR" \
+    "$(sep)" \
+    "$COST_COLOR" "$COST_FMT" "$C_RESET" \
+    "$BURN_STR" "$DUR_STR" \
+    "$DIR_STR" "$RL_STR" "$BAR_STR"

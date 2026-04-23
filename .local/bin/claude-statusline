@@ -41,12 +41,19 @@ IFS=$'\x1f' read -r \
     ' 2>/dev/null
 )
 
-# Fall back to reading effortLevel from settings.json (Claude Code may not
-# expose it in stdin); global user setting is authoritative either way.
+# Fall back to reading effortLevel from on-disk settings. Claude Code may
+# not expose it in stdin. Check settings.local.json first (machine-specific),
+# then settings.json (shared); the former overrides the latter in Claude Code's
+# own merge logic, so we mirror that precedence.
 EFFORT=${EFFORT_STDIN:-}
-if [ -z "$EFFORT" ] && [ -f "$HOME/.claude/settings.json" ]; then
-    EFFORT=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
-fi
+for _settings_file in \
+    "$HOME/.claude/settings.local.json" \
+    "$HOME/.claude/settings.json"; do
+    [ -n "$EFFORT" ] && break
+    [ -f "$_settings_file" ] || continue
+    EFFORT=$(jq -r '.effortLevel // empty' "$_settings_file" 2>/dev/null)
+done
+unset _settings_file
 
 : "${SESSION_ID:=nosession}"
 : "${MODEL:=Claude}"

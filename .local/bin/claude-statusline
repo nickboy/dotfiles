@@ -16,8 +16,11 @@ INPUT=$(cat)
 # -----------------------------------------------------------------------------
 # Parse stdin once
 # -----------------------------------------------------------------------------
-IFS=$'\t' read -r \
-    SESSION_ID MODEL DIR \
+# Use Unit Separator (\x1f) rather than \t because bash's `read` collapses
+# consecutive whitespace separators (tab, space), which loses empty fields.
+# \x1f is non-whitespace so `read` preserves empty fields correctly.
+IFS=$'\x1f' read -r \
+    SESSION_ID MODEL DIR EFFORT_STDIN \
     PCT_RAW COST_RAW DURATION_MS \
     FIVE_H FIVE_H_RESET \
     SEVEN_D SEVEN_D_RESET < <(
@@ -26,6 +29,7 @@ IFS=$'\t' read -r \
             (.session_id // "nosession"),
             (.model.display_name // .model.id // "Claude"),
             (.workspace.current_dir // .cwd // "."),
+            (.effort_level // .effortLevel // ""),
             (.context_window.used_percentage // 0),
             (.cost.total_cost_usd // 0),
             (.cost.total_duration_ms // 0),
@@ -33,9 +37,16 @@ IFS=$'\t' read -r \
             (.rate_limits.five_hour.resets_at // .rate_limits.five_hour.reset_at // ""),
             (.rate_limits.seven_day.used_percentage // -1),
             (.rate_limits.seven_day.resets_at // .rate_limits.seven_day.reset_at // "")
-        ] | @tsv
+        ] | map(tostring) | join("")
     ' 2>/dev/null
 )
+
+# Fall back to reading effortLevel from settings.json (Claude Code may not
+# expose it in stdin); global user setting is authoritative either way.
+EFFORT=${EFFORT_STDIN:-}
+if [ -z "$EFFORT" ] && [ -f "$HOME/.claude/settings.json" ]; then
+    EFFORT=$(jq -r '.effortLevel // empty' "$HOME/.claude/settings.json" 2>/dev/null)
+fi
 
 : "${SESSION_ID:=nosession}"
 : "${MODEL:=Claude}"
@@ -200,17 +211,38 @@ BAR_STR="$(sep)${BAR_COLOR}${BAR}${C_RESET} ${C_BOLD}${PCT}%${C_RESET} ctx"
 # -----------------------------------------------------------------------------
 # Assemble folder/branch segment
 # -----------------------------------------------------------------------------
-DIR_BASE=${DIR##*/}
-[ -z "$DIR_BASE" ] && DIR_BASE="/"
-
-DIR_STR="$(sep)📁 ${C_BLUE}${DIR_BASE}${C_RESET}"
+# Folder display: just the basename (keeps statusline compact).
+# Special-case ~ to avoid showing the literal username.
+if [ "$DIR" = "$HOME" ]; then
+    DIR_DISP="~"
+else
+    DIR_DISP=${DIR##*/}
+    [ -z "$DIR_DISP" ] && DIR_DISP="/"
+fi
+DIR_STR="$(sep)📁 ${C_BLUE}${DIR_DISP}${C_RESET}"
 [ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_MAGENTA}${BRANCH}${C_RESET}"
+
+# -----------------------------------------------------------------------------
+# Effort level badge (xhigh → 🚀, high → ⚡, medium → ·, low → 🌱)
+# -----------------------------------------------------------------------------
+EFFORT_STR=""
+if [ -n "$EFFORT" ] && [ "$EFFORT" != "null" ]; then
+    case "$EFFORT" in
+        xhigh|max) EFFORT_ICON="🚀"; EFFORT_COLOR="$C_RED" ;;
+        high)      EFFORT_ICON="⚡"; EFFORT_COLOR="$C_YELLOW" ;;
+        medium|med) EFFORT_ICON="·"; EFFORT_COLOR="$C_GREEN" ;;
+        low)       EFFORT_ICON="🌱"; EFFORT_COLOR="$C_DIM" ;;
+        *)         EFFORT_ICON="⚙"; EFFORT_COLOR="$C_DIM" ;;
+    esac
+    EFFORT_STR="$(sep)${EFFORT_ICON} ${EFFORT_COLOR}${EFFORT}${C_RESET}"
+fi
 
 # -----------------------------------------------------------------------------
 # Emit single line
 # -----------------------------------------------------------------------------
-printf '🤖 %s%s%s%s💰 %s%s%s%s%s%s%s%s\n' \
+printf '🤖 %s%s%s%s%s💰 %s%s%s%s%s%s%s%s\n' \
     "$C_CYAN" "$MODEL" "$C_RESET" \
+    "$EFFORT_STR" \
     "$(sep)" \
     "$COST_COLOR" "$COST_FMT" "$C_RESET" \
     "$BURN_STR" "$DUR_STR" \

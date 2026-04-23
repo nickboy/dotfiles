@@ -239,8 +239,8 @@ else
     DIR_DISP=${DIR##*/}
     [ -z "$DIR_DISP" ] && DIR_DISP="/"
 fi
-DIR_STR="$(sep)📁 ${C_BLUE}${DIR_DISP}${C_RESET}"
-[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_SAPPHIRE}${BRANCH}${C_RESET}"
+DIR_STR="$(sep)📁 ${C_LAVENDER}${DIR_DISP}${C_RESET}"
+[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_BLUE}${BRANCH}${C_RESET}"
 
 # -----------------------------------------------------------------------------
 # Effort level badge (xhigh → 🚀, high → ⚡, medium → ·, low → 🌱)
@@ -261,7 +261,7 @@ fi
 # Emit single line
 # -----------------------------------------------------------------------------
 printf '🤖 %s%s%s%s%s💰 %s%s%s%s%s%s%s%s\n' \
-    "$C_CYAN" "$MODEL" "$C_RESET" \
+    "$C_BLUE" "$MODEL" "$C_RESET" \
     "$EFFORT_STR" \
     "$(sep)" \
     "$COST_COLOR" "$COST_FMT" "$C_RESET" \

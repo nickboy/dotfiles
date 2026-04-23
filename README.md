@@ -22,9 +22,11 @@ configurations for macOS development environment.
 - **Version Management**: mise (polyglot dev tool manager for node, python, etc.)
 - **Completions**: Carapace (universal command completions)
 - **SSH**: Modular `config.d/` setup with multiplexing, keepalive, and agent forwarding
-- **Claude Code**: Integrated statusline with ccusage for cost tracking,
-  desktop notifications via OSC 9/777 (works in Ghostty, Neovim, and SSH),
-  claudecode.nvim with 40% split width and diff-in-new-tab workflow
+- **Claude Code**: Rich single-line statusline (cost, burn rate, session
+  duration, model, effort level, folder, git branch, rate limits,
+  context progress bar), Catppuccin Mocha custom theme, OSC 9/777 desktop
+  notifications (works in Ghostty, Neovim, and SSH), claudecode.nvim with
+  40% split width and diff-in-new-tab workflow
 - **Git Diff View**: diffview.nvim for side-by-side diff review and file
   history browsing directly in Neovim
 - **Neovim UI Enhancements**: treesitter-context (sticky function header),
@@ -504,6 +506,70 @@ over SSH without any extra tools.
 
 The full clipboard chain: Neovim OSC52 → tmux passthrough (`all`) →
 SSH → Ghostty (`clipboard-write = allow`) → macOS clipboard.
+
+## 🧰 Claude Code Customizations
+
+### Rich Statusline
+
+`~/.local/bin/claude-statusline` (bash, shellcheck-clean) emits a single
+compact line with Catppuccin Mocha coloring:
+
+```text
+🤖 Opus 4.7 | 🚀 xhigh | 💰 $14.12 | 🔥 $4/hr | ⏱ 3h32m |
+  📁 ~ 🌿 ⚡branch | 5h: 41% | 7d: 64% ↻15h | ████░░░░░░ 44% ctx
+```
+
+Segments:
+
+- **🤖 Model** (blue) — model.display_name
+- **🚀 Effort level** (color by tier) — from `.effortLevel` in
+  `settings.local.json`, red for `xhigh`
+- **💰 Session cost** (threshold color) — `.cost.total_cost_usd`
+- **🔥 Burn rate** — computed from cost / duration
+- **⏱ Duration** (dim) — session wall clock
+- **📁 Folder** (lavender) — basename, `~` for home
+- **🌿 Branch** (blue) — `git symbolic-ref` with yadm fallback (`⚡`
+  prefix marks a yadm-managed home directory)
+- **5h / 7d** (green / yellow / red by threshold) — rate-limit usage
+  with reset countdown (`↻Hh:Mm`) when `resets_at` is provided
+- **Progress bar** (green / yellow / red at 70% / 90%) — context
+  window used percentage
+
+Performance: git branch cached under
+`/tmp/claude-statusline-git-<session_id>` with 5 s TTL; all field
+extraction runs through one `jq` invocation.
+
+### Catppuccin Mocha Theme
+
+`~/.claude/themes/my-theme.json` overrides ~70 Claude Code color tokens
+(text, borders, diffs, rainbow sequence, rate-limit bars, subagent
+swatches, etc.) to match the Ghostty / tmux / fzf Catppuccin palette.
+
+Activate once per machine:
+
+```text
+/theme my-theme
+```
+
+The selection is stored in `~/.claude.json` (runtime state, not
+yadm-tracked). The definition file is shared across machines — pulling
+the repo makes the theme *available*, not *active*.
+
+### Shared vs Machine-Local Settings
+
+Claude Code reads from both `settings.json` (yadm-tracked, shared) and
+`settings.local.json` (gitignored, per-machine). The split keeps
+sensitive or personal preferences off the shared dotfiles repo:
+
+- `~/.claude/settings.json` — model, Notification hook, enabled plugins,
+  extra marketplaces
+- `~/.claude/settings.local.json` — `statusLine` (points to
+  `claude-statusline`), `effortLevel`, permission-bypass flags,
+  `permissions.defaultMode`
+
+This is the same split pattern as `~/.gitconfig` vs
+`~/.config/git/config`: safe defaults travel via yadm; anything that
+could change the security profile of a different machine stays local.
 
 ## 🌐 Remote Development
 

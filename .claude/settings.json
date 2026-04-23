@@ -13,10 +13,6 @@
       }
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "~/.local/bin/claude-statusline"
-  },
   "enabledPlugins": {
     "lua-lsp@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,
@@ -26,7 +22,9 @@
     "superpowers@claude-plugins-official": true,
     "apify-actor-development@apify-agent-skills": true,
     "apify-ultimate-scraper@apify-agent-skills": true,
-    "ghostty-config@ghostty-config-dev": true
+    "ghostty-config@ghostty-config-dev": true,
+    "pyright-lsp@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true
   },
   "extraKnownMarketplaces": {
     "apify-agent-skills": {
@@ -39,6 +37,12 @@
       "source": {
         "source": "github",
         "repo": "shyuan/ghostty-config-plugin"
+      }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
       }
     }
   }

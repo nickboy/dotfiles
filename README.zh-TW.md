@@ -21,9 +21,11 @@
 - **版本管理**: mise（多語言開發工具版本管理器）
 - **自動補全**: Carapace（通用指令自動補全）
 - **SSH**: 模組化 `config.d/` 架構，支援連線多工、keepalive 與 agent forwarding
-- **Claude Code**: 整合 ccusage 的狀態列成本追蹤，透過 OSC 9/777
-  桌面通知（支援 Ghostty、Neovim 及 SSH 遠端），claudecode.nvim
-  搭配 40% 分割寬度與 diff-in-new-tab 工作流程
+- **Claude Code**: 豐富單行狀態列（成本、燒錢速率、session 時長、
+  model、effort level、資料夾、git branch、rate limit、context 進度條）、
+  Catppuccin Mocha 自訂主題、透過 OSC 9/777 桌面通知（支援 Ghostty、
+  Neovim 及 SSH 遠端），claudecode.nvim 搭配 40% 分割寬度與 diff-in-new-tab
+  工作流程
 - **Neovim UI 增強**: treesitter-context（固定函式標頭）、
   illuminate（高亮游標下符號）、inc-rename（即時重新命名預覽）、
   自訂 ASCII 啟動畫面與平滑捲動動畫
@@ -483,6 +485,66 @@ Neovim 0.10+ 內建 OSC52 剪貼簿支援。設定檔
 
 完整剪貼簿鏈路：Neovim OSC52 → tmux passthrough（`all`）→
 SSH → Ghostty（`clipboard-write = allow`）→ macOS 剪貼簿。
+
+## Claude Code 客製化
+
+### 豐富狀態列
+
+`~/.local/bin/claude-statusline`（bash、shellcheck 乾淨）產出一條
+緊湊單行，配色為 Catppuccin Mocha：
+
+```text
+🤖 Opus 4.7 | 🚀 xhigh | 💰 $14.12 | 🔥 $4/hr | ⏱ 3h32m |
+  📁 ~ 🌿 ⚡branch | 5h: 41% | 7d: 64% ↻15h | ████░░░░░░ 44% ctx
+```
+
+各段落：
+
+- **🤖 Model**（blue）— `model.display_name`
+- **🚀 Effort level**（依等級變色）— 從 `settings.local.json` 的
+  `.effortLevel` 讀，`xhigh` 顯示紅色
+- **💰 Session 成本**（依門檻變色）— `.cost.total_cost_usd`
+- **🔥 燒錢速率**— 成本 ÷ 時長即時算
+- **⏱ 時長**（dim）— session wall clock
+- **📁 資料夾**（lavender）— basename，home 顯示 `~`
+- **🌿 Branch**（blue）— `git symbolic-ref`，yadm 後備（`⚡`
+  前綴代表 yadm 管的 home）
+- **5h / 7d**（依門檻綠 / 黃 / 紅）— rate limit 使用率，若有
+  `resets_at` 會附倒數（`↻Hh:Mm`）
+- **進度條**（70% 黃、90% 紅）— context window 使用百分比
+
+效能：git branch 快取到 `/tmp/claude-statusline-git-<session_id>`，
+TTL 5 秒；欄位擷取一次 `jq` 搞定。
+
+### Catppuccin Mocha 主題
+
+`~/.claude/themes/my-theme.json` 覆寫約 70 個 Claude Code 色彩 token
+（text、邊框、diff、彩虹序列、rate-limit bar、subagent swatch 等），
+讓 Claude Code 畫面與 Ghostty / tmux / fzf 的 Catppuccin 色盤一致。
+
+每台機器各自啟用一次：
+
+```text
+/theme my-theme
+```
+
+選擇存在 `~/.claude.json`（runtime 狀態，不進 yadm）。主題定義檔跨機共用 —
+pull 之後主題只是**可用**，不是**啟用**。
+
+### 共享 vs 機器專屬設定
+
+Claude Code 同時讀 `settings.json`（yadm 追蹤、共享）與
+`settings.local.json`（gitignore、本機專屬）。拆分能讓敏感/個人設定
+不會跑到共享 dotfiles repo：
+
+- `~/.claude/settings.json` — model、Notification hook、啟用的 plugin、
+  額外 marketplace
+- `~/.claude/settings.local.json` — `statusLine`（指向
+  `claude-statusline`）、`effortLevel`、權限 bypass flag、
+  `permissions.defaultMode`
+
+跟 `~/.gitconfig` vs `~/.config/git/config` 同樣思路：安全預設走 yadm，
+會改變其他機器安全姿態的東西留本機。
 
 ## 遠端開發
 

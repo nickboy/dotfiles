@@ -240,8 +240,7 @@ else
     [ -z "$DIR_DISP" ] && DIR_DISP="/"
 fi
 DIR_STR="$(sep)📁 ${C_BLUE}${DIR_DISP}${C_RESET}"
-# Branch gets a sapphire pill (starship-style) to make it pop
-[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} ${BG_SAPPHIRE}${C_BASE}${C_BOLD} 🌿 ${BRANCH} ${C_RESET}"
+[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_SAPPHIRE}${BRANCH}${C_RESET}"
 
 # -----------------------------------------------------------------------------
 # Effort level badge (xhigh → 🚀, high → ⚡, medium → ·, low → 🌱)

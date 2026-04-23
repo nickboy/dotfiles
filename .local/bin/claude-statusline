@@ -55,9 +55,9 @@ fi
 : "${COST_RAW:=0}"
 : "${DURATION_MS:=0}"
 
-# Strip parenthetical suffix from model name (e.g. "Opus 4.7 (1M context)" → "Opus 4.7")
-# Saves horizontal space in narrow terminals.
-MODEL=${MODEL% (*}
+# Abbreviate " context)" → ")" to keep the window-size marker while
+# saving horizontal space. "Opus 4.7 (1M context)" → "Opus 4.7 (1M)".
+MODEL=${MODEL/ context)/)}
 
 PCT=${PCT_RAW%.*}
 [[ "$PCT" =~ ^[0-9]+$ ]] || PCT=0

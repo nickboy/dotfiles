@@ -64,6 +64,16 @@ if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
     brew bundle --file="$HOME/Brewfile" || true
 fi
 
+# Install mise-managed runtimes defined in ~/.config/mise/config.toml
+# (node, python, ruby, go). Without this step, `mise ls` shows "(missing)"
+# on a fresh clone and userland falls back to brew's runtimes only.
+if command -v mise &> /dev/null; then
+    echo "🧰 Installing mise-managed runtimes..."
+    mise install || echo "  ⚠️  Some mise runtimes failed to install"
+else
+    echo "  ⚠️  mise not found, skipping runtime install"
+fi
+
 # Install tree-sitter-cli (required for nvim-treesitter main branch)
 # Note: Homebrew's tree-sitter is just a library, not the CLI
 if command -v cargo &> /dev/null; then

@@ -20,10 +20,13 @@ window-decoration = true
 window-theme = auto
 window-save-state = always
 
+# Wide-gamut colorspace (M-series Mac + Catppuccin render more vibrantly)
+window-colorspace = display-p3
+
 # Transparency and visual effects for macOS liquid visuals
-background-opacity = 0.75
+background-opacity = 0.82
 background-opacity-cells = true
-background-blur-radius = 20
+background-blur-radius = 15
 macos-titlebar-style = tabs
 
 # Cursor settings
@@ -43,8 +46,10 @@ macos-option-as-alt = left
 # Custom keybinds
 keybind = shift+enter=text:\n
 keybind = cmd+k=clear_screen
-keybind = cmd+shift+d=new_split:right
-keybind = cmd+d=new_split:down
+# Unbind native splits — let tmux handle splits via prefix (|, -).
+# Native Ghostty splits don't traverse vim-tmux-navigator across tmux panes.
+keybind = cmd+d=unbind
+keybind = cmd+shift+d=unbind
 keybind = cmd+shift+comma=reload_config
 keybind = cmd+up=jump_to_prompt:-1
 keybind = cmd+down=jump_to_prompt:1

@@ -252,9 +252,11 @@ rm ~/Library/Logs/daily-maintenance*.log
 
 ### Ghostty 功能特色
 
-- **透明度**: 背景透明度 (0.75) 搭配 macOS 模糊效果，
-  `background-opacity-cells` 讓 ANSI 背景色（如 diff 高亮）
-  也跟著透明
+- **透明度**: 背景透明度 (0.82) 搭配模糊半徑 15 的 macOS
+  玻璃效果（針對文字對比度調校），`background-opacity-cells`
+  讓 ANSI 背景色（如 diff 高亮）也跟著透明
+- **廣色域**: `window-colorspace = display-p3` 讓 Catppuccin Mocha
+  的紫藍色在 M 系列 Mac 上渲染更飽和
 - **Shell 整合**: 增強的 shell 整合，搭配 `sudo`、`title`、`path`
   功能（停用 `cursor` 以避免與自訂 GLSL 游標著色器衝突）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
@@ -291,8 +293,6 @@ rm ~/Library/Logs/daily-maintenance*.log
 | 快捷鍵 | 動作 |
 | --- | --- |
 | `Cmd+`` | Quick Terminal（全域，任何 app 都能用） |
-| `Cmd+D` | 向下分割 |
-| `Cmd+Shift+D` | 向右分割 |
 | `Cmd+Option+h/j/k/l` | vim 風格分割窗格導航 |
 | `Cmd+Shift+Enter` | 切換分割窗格縮放 |
 | `Cmd+Up/Down` | 跳至上一個/下一個提示 |
@@ -301,8 +301,13 @@ rm ~/Library/Logs/daily-maintenance*.log
 | `Cmd+Click` | 在瀏覽器開啟 URL |
 | `Option+Click` | 在指令列中移動游標 |
 
-> **注意**：在 tmux 中且 `set -g mouse on` 時，需用
-> `Cmd+Shift+Click` 開啟 URL（tmux 外使用 `Cmd+Click` 即可）。
+> **注意**：
+>
+> - 在 tmux 中且 `set -g mouse on` 時，需用 `Cmd+Shift+Click` 開啟 URL
+>   （tmux 外使用 `Cmd+Click` 即可）。
+> - Ghostty 原生分割（`Cmd+D` / `Cmd+Shift+D`）已刻意 unbind，改由
+>   tmux 處理分割（`prefix + |` / `prefix + -`），避免
+>   `vim-tmux-navigator` 無法跨越原生 pane 的問題。
 
 ### 主要設定
 
@@ -596,6 +601,9 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 - **巢狀工作階段切換**: F12 停用外層 tmux，用於 SSH 遠端
   tmux 工作階段（狀態列變色提示）
 - **tmux-yank**: 一致的複製行為，遠端工作階段自動使用 OSC52
+- **tmux-thumbs**: 按 `prefix + F` 將畫面上的 URL / commit hash /
+  檔案路徑覆蓋字母標示，輸入字母即複製到剪貼簿；大寫字母會
+  複製後透過 `open` 開啟 URL
 
 ### 按鍵綁定
 
@@ -634,6 +642,7 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 | `Ctrl-a + {` | 向左移動窗格 |
 | `Ctrl-a + }` | 向右移動窗格 |
 | `Ctrl-a + r` | 重載 tmux 設定 |
+| `Ctrl-a + F` | 高亮畫面上的 URL/hash/路徑（tmux-thumbs） |
 | `F12` | 切換巢狀 tmux（用於 SSH 工作階段） |
 
 #### 無縫導航
@@ -645,6 +654,13 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 #### 工作階段管理（sesh）
 
 Sesh 是整合 zoxide 的智慧 tmux 工作階段管理器。
+透過 `~/.config/sesh/sesh.toml` 設定了幾個專案模板：
+
+- `dotfiles ~` — home 目錄，自動執行 `yadm status && nvim .`
+- `claude config` — `~/.claude`
+- `nvim config` — `~/.config/nvim`，開啟 `init.lua`
+- `ghostty config` — `~/.config/ghostty`，開啟 `config`
+- 以及 zoxide 訪問過的目錄（選取器的 `Ctrl-x` 模式）
 
 **Shell 指令：**
 
@@ -724,6 +740,7 @@ sesh clone https://github.com/user/repo
 | - | **serpl** | TUI 搜尋取代 | `sr` |
 | - | **television** | 帶預覽的模糊搜尋器 | `tv` |
 | - | **glow** | 終端機 Markdown 閱讀器 | `md` |
+| - | **mods** | 將 shell 輸出管線送進 LLM（Charm） | `mods` |
 | `git` | **jujutsu** | Git 相容版本控制系統 | `jj` |
 | `nvm`/`pyenv` | **mise** | 多語言版本管理器 | `mise` |
 

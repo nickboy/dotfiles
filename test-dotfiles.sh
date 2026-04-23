@@ -174,6 +174,13 @@ echo "Script structure is valid"
 EOF
 
 run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
+
+# Content checks: ensure key upgrade sections are present
+# (regression guards for accidental removal)
+if [ -f "$HOME/daily-maintenance.sh" ]; then
+    run_test "Daily maintenance includes mise upgrade" \
+        "grep -qE '^[[:space:]]*(run_command|mise upgrade|\"Mise runtime upgrade\")' $HOME/daily-maintenance.sh && grep -q 'mise upgrade' $HOME/daily-maintenance.sh"
+fi
 echo
 
 # Test 9: Config file validation
@@ -222,6 +229,11 @@ fi
 # Validate Atuin config (TOML syntax)
 if [ -f "$HOME/.config/atuin/config.toml" ]; then
     run_test "Atuin config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/atuin/config.toml').read_text())\""
+fi
+
+# Validate sesh config (TOML syntax)
+if [ -f "$HOME/.config/sesh/sesh.toml" ]; then
+    run_test "Sesh config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/sesh/sesh.toml').read_text())\""
 fi
 echo
 

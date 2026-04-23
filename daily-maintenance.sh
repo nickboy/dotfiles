@@ -327,6 +327,17 @@ fi
 update_bob_self
 update_bob_nightly
 
+# Mise-managed runtimes (node, python, ruby, go)
+# `mise upgrade` keeps pinned ranges (e.g. python 3.13.x patches) without
+# jumping major versions. Use `--bump` manually if you want to move to 3.14.
+if command -v mise >/dev/null 2>&1; then
+    if ! run_command "Mise runtime upgrade" mise upgrade; then
+        FAILED_COMMANDS+=("mise upgrade")
+    fi
+else
+    echo "Warning: mise not found, skipping runtime upgrade"
+fi
+
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then
     if ! run_command "Yazi package upgrade" ya pkg upgrade; then

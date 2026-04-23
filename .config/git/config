@@ -1,6 +1,15 @@
 # Shared git settings (tracked by yadm, synced across machines)
 # Machine-specific settings (user, credentials) stay in ~/.gitconfig
 
+[credential]
+	# Use macOS built-in keychain helper by default.
+	# Previously used git-credential-manager but gcm 2.7.3's bundled Avalonia
+	# UI framework segfaults when macOS Accessibility services query its views
+	# (see crash reports in ~/Library/Logs/DiagnosticReports).
+	# osxkeychain is macOS-native and sufficient for GitHub HTTPS.
+	# Override in ~/.gitconfig on machines needing gcm (Azure DevOps, etc.).
+	helper = osxkeychain
+
 [core]
 	pager = delta
 

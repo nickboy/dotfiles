@@ -1,0 +1,28 @@
+# Sesh session manager config
+# Docs: https://github.com/joshmedeski/sesh
+
+[default_session]
+startup_command = "nvim ."
+preview_command = "eza --all --icons --git --color=always {}"
+
+[[session]]
+name = "dotfiles ~"
+path = "~"
+startup_command = "yadm status && nvim ."
+
+[[session]]
+name = "claude config"
+path = "~/.claude"
+startup_command = "nvim ."
+
+[[session]]
+name = "nvim config"
+path = "~/.config/nvim"
+startup_command = "nvim init.lua"
+
+[[session]]
+name = "ghostty config"
+path = "~/.config/ghostty"
+startup_command = "nvim config"
+
+blacklist = ["scratch"]

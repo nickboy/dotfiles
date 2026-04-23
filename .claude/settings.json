@@ -13,6 +13,11 @@
       }
     ]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "~/.local/bin/claude-statusline",
+    "refreshInterval": 5
+  },
   "enabledPlugins": {
     "lua-lsp@claude-plugins-official": true,
     "frontend-design@claude-plugins-official": true,

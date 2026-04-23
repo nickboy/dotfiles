@@ -1,0 +1,130 @@
+#!/usr/bin/env bash
+# Claude Code status line wrapper — 3-line rich display
+#
+# Line 1: ccusage native (session cost, 5hr block, burn rate)
+# Line 2: [Model] 📁 dir 🌿 branch │ 5h: NN% │ 7d: NN%
+# Line 3: ████████░░ NN% context (green/yellow/red by threshold)
+#
+# Performance:
+# - Git branch cached per session_id in /tmp (5s TTL)
+# - ccusage has its own internal cache
+# - Claude Code suggests refreshInterval=5s in settings.json
+
+set -uo pipefail
+
+INPUT=$(cat)
+
+# -----------------------------------------------------------------------------
+# Line 1: ccusage
+# -----------------------------------------------------------------------------
+# ccusage native line; keep only first line so malformed input doesn't
+# bloat the statusline, and show a compact fallback if ccusage chokes.
+LINE1=$(printf '%s' "$INPUT" | ccusage statusline \
+    --visual-burn-rate emoji-text \
+    --cost-source auto 2>/dev/null | head -1)
+if [ -z "$LINE1" ] || [[ "$LINE1" == *"❌"* ]]; then
+    LINE1='⚠ ccusage error (run ccusage statusline manually to diagnose)'
+fi
+printf '%s\n' "$LINE1"
+
+# -----------------------------------------------------------------------------
+# Parse stdin once for all DIY fields (// fallback for older CC versions)
+# -----------------------------------------------------------------------------
+IFS=$'\t' read -r SESSION_ID MODEL DIR PCT_RAW FIVE_H SEVEN_D < <(
+    printf '%s' "$INPUT" | jq -r '
+        [
+            (.session_id // "nosession"),
+            (.model.display_name // .model.id // "Claude"),
+            (.workspace.current_dir // .cwd // "."),
+            (.context_window.used_percentage // 0),
+            (.rate_limits.five_hour.used_percentage // -1),
+            (.rate_limits.seven_day.used_percentage // -1)
+        ] | @tsv
+    ' 2>/dev/null
+)
+
+# Sanitize (jq may emit "null" for missing fields even with //)
+: "${SESSION_ID:=nosession}"
+: "${MODEL:=Claude}"
+: "${DIR:=.}"
+: "${PCT_RAW:=0}"
+
+# Integer percentages (strip decimals)
+PCT=${PCT_RAW%.*}
+[[ "$PCT" =~ ^[0-9]+$ ]] || PCT=0
+
+FIVE_H_INT=${FIVE_H%.*}
+SEVEN_D_INT=${SEVEN_D%.*}
+
+# -----------------------------------------------------------------------------
+# Git branch (cached per session_id)
+# -----------------------------------------------------------------------------
+GIT_CACHE="/tmp/claude-statusline-git-${SESSION_ID}"
+CACHE_TTL=5
+BRANCH=""
+
+refresh_git_cache() {
+    local branch=""
+    if command -v git >/dev/null 2>&1; then
+        branch=$(cd "$DIR" 2>/dev/null && git symbolic-ref --short HEAD 2>/dev/null || \
+                 cd "$DIR" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null || echo "")
+    fi
+    printf '%s' "$branch" > "$GIT_CACHE"
+}
+
+if [ ! -f "$GIT_CACHE" ] || \
+   [ "$(( $(date +%s) - $(stat -f %m "$GIT_CACHE" 2>/dev/null || echo 0) ))" -gt "$CACHE_TTL" ]; then
+    refresh_git_cache
+fi
+BRANCH=$(cat "$GIT_CACHE" 2>/dev/null || echo "")
+
+# -----------------------------------------------------------------------------
+# Colors (ANSI)
+# -----------------------------------------------------------------------------
+C_CYAN=$'\033[36m'
+C_GREEN=$'\033[32m'
+C_YELLOW=$'\033[33m'
+C_RED=$'\033[31m'
+C_DIM=$'\033[2m'
+C_RESET=$'\033[0m'
+
+# Context bar color by threshold
+if   [ "$PCT" -ge 90 ]; then BAR_COLOR="$C_RED"
+elif [ "$PCT" -ge 70 ]; then BAR_COLOR="$C_YELLOW"
+else                         BAR_COLOR="$C_GREEN"
+fi
+
+# -----------------------------------------------------------------------------
+# Line 2: [Model] 📁 dir 🌿 branch │ 5h: NN% │ 7d: NN%
+# -----------------------------------------------------------------------------
+DIR_BASE=${DIR##*/}
+[ -z "$DIR_BASE" ] && DIR_BASE="/"
+
+LINE2="${C_CYAN}[${MODEL}]${C_RESET} 📁 ${DIR_BASE}"
+[ -n "$BRANCH" ] && LINE2="${LINE2} 🌿 ${BRANCH}"
+
+# Rate limits only if Pro/Max subscription provides them
+if [ "${FIVE_H_INT:-0}" != "-1" ] && [ -n "${FIVE_H_INT:-}" ]; then
+    LINE2="${LINE2} ${C_DIM}│${C_RESET} 5h: ${FIVE_H_INT}%"
+fi
+if [ "${SEVEN_D_INT:-0}" != "-1" ] && [ -n "${SEVEN_D_INT:-}" ]; then
+    LINE2="${LINE2} ${C_DIM}│${C_RESET} 7d: ${SEVEN_D_INT}%"
+fi
+
+printf '%b\n' "$LINE2"
+
+# -----------------------------------------------------------------------------
+# Line 3: progress bar + context %
+# -----------------------------------------------------------------------------
+BAR_WIDTH=10
+FILLED=$(( PCT * BAR_WIDTH / 100 ))
+[ "$FILLED" -gt "$BAR_WIDTH" ] && FILLED=$BAR_WIDTH
+[ "$FILLED" -lt 0 ] && FILLED=0
+EMPTY=$(( BAR_WIDTH - FILLED ))
+
+# Build bar string
+BAR=""
+for ((i = 0; i < FILLED; i++)); do BAR+="█"; done
+for ((i = 0; i < EMPTY;  i++)); do BAR+="░"; done
+
+printf '%b%s%b %d%% context\n' "$BAR_COLOR" "$BAR" "$C_RESET" "$PCT"

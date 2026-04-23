@@ -61,19 +61,39 @@ FIVE_H_INT=${FIVE_H%.*}
 SEVEN_D_INT=${SEVEN_D%.*}
 
 # -----------------------------------------------------------------------------
-# Colors (ANSI)
+# Colors — Catppuccin Mocha palette (24-bit truecolor) to match starship/tmux
 # -----------------------------------------------------------------------------
-C_CYAN=$'\033[36m'
-C_GREEN=$'\033[32m'
-C_YELLOW=$'\033[33m'
-C_RED=$'\033[31m'
-C_MAGENTA=$'\033[35m'
-C_BLUE=$'\033[34m'
-C_DIM=$'\033[2m'
+# shellcheck disable=SC2034  # palette kept complete for future segment styling
+C_BASE=$'\033[38;2;30;30;46m'        # base (#1e1e2e) — fg on light bg
+C_TEXT=$'\033[38;2;205;214;244m'     # text (#cdd6f4)
+C_SUBTEXT=$'\033[38;2;186;194;222m'  # subtext1 (#bac2de)
+C_OVERLAY=$'\033[38;2;127;132;156m'  # overlay1 (#7f849c) — dim
+C_SAPPHIRE=$'\033[38;2;116;199;236m' # sapphire (#74c7ec)
+C_SKY=$'\033[38;2;137;220;235m'      # sky (#89dceb)
+C_TEAL=$'\033[38;2;148;226;213m'     # teal (#94e2d5)
+C_GREEN=$'\033[38;2;166;227;161m'    # green (#a6e3a1)
+C_YELLOW=$'\033[38;2;249;226;175m'   # yellow (#f9e2af)
+C_PEACH=$'\033[38;2;250;179;135m'    # peach (#fab387)
+C_RED=$'\033[38;2;243;139;168m'      # red (#f38ba8)
+C_MAUVE=$'\033[38;2;203;166;247m'    # mauve (#cba6f7)
+C_PINK=$'\033[38;2;245;194;231m'     # pink (#f5c2e7)
+C_BLUE=$'\033[38;2;137;180;250m'     # blue (#89b4fa)
+C_LAVENDER=$'\033[38;2;180;190;254m' # lavender (#b4befe)
+
+# Backgrounds (for pill-style segments à la starship prompt)
+BG_SAPPHIRE=$'\033[48;2;116;199;236m'
+BG_SURFACE=$'\033[48;2;49;50;68m'    # surface0 (#313244)
+
+# Style
 C_BOLD=$'\033[1m'
 C_RESET=$'\033[0m'
 
-sep() { printf '%s' " ${C_DIM}│${C_RESET} "; }
+# Backwards-compat aliases for existing code paths
+C_CYAN=$C_SAPPHIRE
+C_MAGENTA=$C_PINK
+C_DIM=$C_OVERLAY
+
+sep() { printf '%s' " ${C_OVERLAY}│${C_RESET} "; }
 
 threshold_color() {
     local v=$1 low=$2 med=$3
@@ -220,7 +240,8 @@ else
     [ -z "$DIR_DISP" ] && DIR_DISP="/"
 fi
 DIR_STR="$(sep)📁 ${C_BLUE}${DIR_DISP}${C_RESET}"
-[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} 🌿 ${C_MAGENTA}${BRANCH}${C_RESET}"
+# Branch gets a sapphire pill (starship-style) to make it pop
+[ -n "$BRANCH" ] && DIR_STR="${DIR_STR} ${BG_SAPPHIRE}${C_BASE}${C_BOLD} 🌿 ${BRANCH} ${C_RESET}"
 
 # -----------------------------------------------------------------------------
 # Effort level badge (xhigh → 🚀, high → ⚡, medium → ·, low → 🌱)

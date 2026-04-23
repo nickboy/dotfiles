@@ -55,6 +55,10 @@ fi
 : "${COST_RAW:=0}"
 : "${DURATION_MS:=0}"
 
+# Strip parenthetical suffix from model name (e.g. "Opus 4.7 (1M context)" → "Opus 4.7")
+# Saves horizontal space in narrow terminals.
+MODEL=${MODEL% (*}
+
 PCT=${PCT_RAW%.*}
 [[ "$PCT" =~ ^[0-9]+$ ]] || PCT=0
 FIVE_H_INT=${FIVE_H%.*}
@@ -185,6 +189,14 @@ if [ ! -f "$GIT_CACHE" ] || \
     refresh_git_cache
 fi
 BRANCH=$(cat "$GIT_CACHE" 2>/dev/null || echo "")
+
+# Truncate long branch names to keep statusline on one line in narrow terminals.
+# Preserves yadm ⚡ prefix if present.
+BRANCH_MAX=28
+if [ -n "$BRANCH" ] && [ "${#BRANCH}" -gt "$BRANCH_MAX" ]; then
+    keep=$(( BRANCH_MAX - 1 ))
+    BRANCH="${BRANCH:0:$keep}…"
+fi
 
 # -----------------------------------------------------------------------------
 # Assemble rate-limit segment (with reset countdown)

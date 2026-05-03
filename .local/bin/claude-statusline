@@ -178,14 +178,21 @@ CACHE_TTL=5
 
 refresh_git_cache() {
     local branch=""
+    # Subshell + explicit || so rev-parse only runs when symbolic-ref fails.
+    # Previous form (inline '&& ... ||') had a precedence bug that
+    # concatenated branch name AND commit hash with a newline, wrapping
+    # the statusline to two rows on a branch like 'main'.
     if command -v git >/dev/null 2>&1; then
-        branch=$(cd "$DIR" 2>/dev/null && git symbolic-ref --short HEAD 2>/dev/null || \
-                 cd "$DIR" 2>/dev/null && git rev-parse --short HEAD 2>/dev/null)
+        branch=$(
+            cd "$DIR" 2>/dev/null || exit 0
+            git symbolic-ref --short HEAD 2>/dev/null \
+                || git rev-parse --short HEAD 2>/dev/null
+        )
     fi
     # yadm fallback for home-dir / dotfile contexts where GIT_DIR lives elsewhere
     if [ -z "$branch" ] && command -v yadm >/dev/null 2>&1; then
-        branch=$(yadm symbolic-ref --short HEAD 2>/dev/null || \
-                 yadm rev-parse --short HEAD 2>/dev/null)
+        branch=$(yadm symbolic-ref --short HEAD 2>/dev/null \
+                 || yadm rev-parse --short HEAD 2>/dev/null)
         [ -n "$branch" ] && branch="⚡${branch}"  # ⚡ marks yadm-managed
     fi
     printf '%s' "${branch:-}" > "$GIT_CACHE"

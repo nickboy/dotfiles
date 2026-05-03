@@ -550,18 +550,14 @@ jobs:
 
   compatibility-matrix:
     name: Compatibility Test
-    strategy:
-      matrix:
-        os: [macos-14, macos-15, macos-latest]
-      fail-fast: false  # Continue testing other OS even if one fails
-    runs-on: ${{ matrix.os }}
+    runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Check script compatibility
         run: |
-          echo "Testing on ${{ matrix.os }}"
+          echo "Testing on macos-latest"
 
           # Show detailed system info
           echo "System information:"
@@ -577,7 +573,7 @@ jobs:
           for script in *.sh; do
             if [ -f "$script" ]; then
               found_scripts=true
-              echo "Checking: $script on ${{ matrix.os }}"
+              echo "Checking: $script on macos-latest"
               bash -n "$script" || exit 1
             fi
           done

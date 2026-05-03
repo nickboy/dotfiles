@@ -50,5 +50,7 @@
         "repo": "kepano/obsidian-skills"
       }
     }
-  }
+  },
+  "theme": "custom:my-theme",
+  "skipAutoPermissionPrompt": true
 }

@@ -1,5 +1,5 @@
 -- OSC52 clipboard for remote SSH sessions
--- Uses Neovim's built-in OSC52 support (0.10+, you have 0.12.0-dev)
+-- Uses Neovim's built-in OSC52 support (0.10+)
 -- Only activates when SSH_CONNECTION or TMUX is detected
 return {
   {

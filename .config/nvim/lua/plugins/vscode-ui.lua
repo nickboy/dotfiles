@@ -5,6 +5,12 @@ return {
     event = "LazyFile",
     opts = {
       bar = {
+        -- Neovim 0.13 removed BufModifiedSet; bridge added in config() below.
+        update_events = {
+          win = { "CursorMoved", "WinResized" },
+          buf = { "FileChangedShellPost", "TextChanged", "ModeChanged" },
+          global = { "DirChanged", "VimResized" },
+        },
         sources = function(buf, _)
           local sources = require("dropbar.sources")
           local utils = require("dropbar.utils")
@@ -23,6 +29,17 @@ return {
         end,
       },
     },
+    config = function(_, opts)
+      require("dropbar").setup(opts)
+      vim.api.nvim_create_autocmd("OptionSet", {
+        pattern = "modified",
+        group = vim.api.nvim_create_augroup("DropbarModifiedBridge", { clear = true }),
+        callback = function(args)
+          require("dropbar.utils").bar.exec("update", { buf = args.buf })
+        end,
+        desc = "dropbar: replacement for removed BufModifiedSet (Neovim 0.13+)",
+      })
+    end,
   },
 
   -- Inline git blame (like VS Code GitLens)

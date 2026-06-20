@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# SessionStart hook — auto-name Claude Code sessions after their
+# project/branch so they are identifiable in /resume and the terminal/tab
+# title, no matter how they were launched (shell, claudecode.nvim,
+# ClaudeDeck, or over SSH). Reads the hook payload as JSON on stdin and
+# prints a SessionStart hookSpecificOutput with `sessionTitle` (same effect
+# as /rename).
+#
+# Naming policy (verified against the real payloads on 2.1.183):
+#   - source=startup : always name (new session, no title yet)
+#   - source=resume  : the payload carries `session_title`; name only when it
+#                      is EMPTY (rescues older, never-named sessions) — never
+#                      overwrite a title set with /rename or plan-accept
+#   - clear/compact  : skip (sessionTitle is ignored there anyway)
+#
+# Portable: no macOS-only commands; parses/emits with jq, falling back to
+# python3 on minimal remotes; if neither exists it no-ops so the session
+# still starts.
+
+have() { command -v "$1" >/dev/null 2>&1; }
+have jq || have python3 || exit 0
+
+input="$(cat)"
+
+jget() {  # $1 = top-level key
+    if have jq; then
+        printf '%s' "$input" | jq -r --arg k "$1" '.[$k] // empty'
+    else
+        printf '%s' "$input" | python3 -c \
+            'import sys,json;print(json.load(sys.stdin).get(sys.argv[1],"") or "")' "$1"
+    fi
+}
+
+emit() {  # $1 = title
+    if have jq; then
+        jq -n --arg t "$1" \
+            '{hookSpecificOutput: {hookEventName: "SessionStart", sessionTitle: $t}}'
+    else
+        python3 -c \
+            'import sys,json;print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","sessionTitle":sys.argv[1]}}))' \
+            "$1"
+    fi
+}
+
+case "$(jget source)" in
+    startup) ;;
+    resume) [ -n "$(jget session_title)" ] && exit 0 ;;
+    *) exit 0 ;;
+esac
+
+cwd="$(jget cwd)"
+[ -n "$cwd" ] || cwd="$PWD"
+
+# Label = <project>[/<branch>]. The yadm-managed $HOME is not a plain git
+# repo, so fall back to yadm's branch there (mirrors claude-statusline).
+branch=""
+root="$(git -C "$cwd" rev-parse --show-toplevel 2>/dev/null)"
+if [ -n "$root" ]; then
+    label="$(basename "$root")"
+    branch="$(git -C "$cwd" symbolic-ref --quiet --short HEAD 2>/dev/null)"
+elif [ "$cwd" = "$HOME" ]; then
+    label="home"
+    branch="$(yadm rev-parse --abbrev-ref HEAD 2>/dev/null)"
+else
+    label="$(basename "$cwd")"
+fi
+
+case "$branch" in
+    "" | main | master | trunk) ;;
+    *) label="$label/$branch" ;;
+esac
+
+if [ -n "${SSH_CONNECTION:-}" ]; then
+    host="${HOSTNAME:-$(hostname -s 2>/dev/null)}"
+    label="${host%%.*}:$label"
+fi
+
+emit "$label"

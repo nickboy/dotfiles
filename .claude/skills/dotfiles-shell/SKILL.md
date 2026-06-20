@@ -105,6 +105,26 @@ sl              # List all sessions
 Inside tmux, `Ctrl-A + T` opens the advanced session switcher with:
 Tab/Shift-Tab to navigate, Ctrl-x for zoxide dirs, Ctrl-d to kill session.
 
+## Claude Code Sessions
+
+- **Auto-naming** via a `SessionStart` hook
+  (`~/.local/bin/claude-name-session`, wired in `settings.json`): sets each
+  new session's `sessionTitle` to `project/branch` (`host:project/branch`
+  over SSH) — works for every launch method (shell, nvim, ClaudeDeck, SSH).
+  Names on `startup`, and on `resume` only when still unnamed (the resume
+  payload carries `session_title`, so a manual `/rename` is never clobbered;
+  this also back-names old unnamed sessions when you resume them). Portable:
+  jq with a python3 fallback for minimal remotes.
+- **`claude()` wrapper** (`.zshrc`): decorates tmux only — renames the
+  window to `🤖 <project/branch>` and restores auto-rename on exit.
+  Subcommands and print mode pass through untouched.
+- **Find/resume sessions:** `/resume` → `Ctrl+A` (all projects), `Ctrl+W`
+  (worktrees), `Ctrl+B` (branch), `/` search, or paste a PR URL.
+  `claude --resume <name>`, `claude --continue`, `claude agents --all`.
+- **Remote (SSH + tmux):** prefer **detach (`Ctrl-a d`), not exit** — the
+  agent keeps running; reconnect with `ssht host`. Run `/resume` on the
+  remote to browse that host's sessions. F12 toggles nested tmux.
+
 ## Git Configuration (.gitconfig)
 
 - Pager: **delta** with syntax highlighting

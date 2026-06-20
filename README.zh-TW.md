@@ -546,6 +546,40 @@ Claude Code 同時讀 `settings.json`（yadm 追蹤、共享）與
 跟 `~/.gitconfig` vs `~/.config/git/config` 同樣思路：安全預設走 yadm，
 會改變其他機器安全姿態的東西留本機。
 
+### 尋找與恢復 Claude 工作階段
+
+Claude Code 本身已內建跨專案的工作階段探索 — 關鍵在於替工作階段命名,
+事後才認得出來。`SessionStart` hook(`~/.local/bin/claude-name-session`,
+掛在 `settings.json`)會依專案與分支(`專案/分支`;SSH 時 `host:專案/分支`)
+自動設定每個新工作階段的標題(效果等同 `/rename`),所以**不論用哪種方式
+啟動**(終端、claudecode.nvim、ClaudeDeck、SSH)都會命名,並顯示在 prompt
+列、`/resume` 選單、以及終端機/分頁標題。`.zshrc` 的 `claude()` 包裝函式
+則額外把 tmux 視窗改名為 `🤖 <專案/分支>`(離開時恢復自動命名),讓執行中
+的 Claude pane 在狀態列一眼可辨。
+
+**本機探索:**
+
+- `/resume` 開啟選單 — `Ctrl+A` 擴展到**所有專案**,`Ctrl+W` 到所有
+  worktree,`Ctrl+B` 依分支過濾,`/` 依文字搜尋,貼上 PR URL 可找到
+  建立該工作階段的 session。
+- `claude --resume <名稱>` 依名稱恢復;`claude --continue` 恢復當前
+  目錄最近的對話。
+- `claude agents --all` 列出執行中、阻塞中、已完成的工作階段。
+- `/rename` 替進行中的工作階段改名(接受 plan 時會自動命名)。
+
+**遠端(SSH + tmux):**
+
+- **用 detach,不要 exit。** 在遠端 tmux 視窗裡跑 `claude`,離開時按
+  `Ctrl-a d` — Claude 會繼續執行。用 `ssht host` 重連即可回到原處
+  (ControlMaster 讓重連幾乎瞬間;resurrect/continuum 撐過 tmux server
+  重啟)。
+- 包裝函式會把遠端視窗命名為 `🤖 host:專案`,讓巢狀 tmux 不混淆;
+  按 **F12** 切換外層 tmux。
+- 要找已退出的遠端工作階段,在遠端執行 `/resume` → `Ctrl+A`
+  (它讀的是該主機的 `~/.claude/projects`)。
+- `claude-notify`(OSC 9/777)與 OSC52 剪貼簿已把通知與複製橋接回
+  Ghostty。
+
 ## 遠端開發
 
 ### Shell TERM 處理

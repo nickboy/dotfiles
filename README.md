@@ -571,6 +571,42 @@ This is the same split pattern as `~/.gitconfig` vs
 `~/.config/git/config`: safe defaults travel via yadm; anything that
 could change the security profile of a different machine stays local.
 
+### Finding & Resuming Claude Sessions
+
+Claude Code already ships cross-project session discovery — the trick is
+naming sessions so they are recognizable later. A `SessionStart` hook
+(`~/.local/bin/claude-name-session`, wired in `settings.json`) auto-sets
+each new session's title from its project and branch (`project/branch`;
+`host:project/branch` over SSH) — the same effect as `/rename` — so naming
+works no matter how Claude is launched (shell, claudecode.nvim, ClaudeDeck,
+or over SSH) and shows up in the prompt box, the `/resume` picker, and the
+terminal/tab title. The `claude()` shell wrapper additionally renames the
+tmux window to `🤖 <project/branch>` (restored to auto-rename on exit) so
+live Claude panes are identifiable in the status bar.
+
+**Local discovery:**
+
+- `/resume` opens the picker — `Ctrl+A` widens it to **all projects**,
+  `Ctrl+W` to all worktrees, `Ctrl+B` filters by branch, `/` searches by
+  text, and pasting a PR URL finds the session that created it.
+- `claude --resume <name>` resumes by name; `claude --continue` resumes
+  the most recent conversation in the current directory.
+- `claude agents --all` lists running, blocked, and completed sessions.
+- `/rename` renames the active session (accepting a plan auto-names it).
+
+**Remote (SSH + tmux):**
+
+- **Detach, don't exit.** Run `claude` in a remote tmux window and leave
+  with `Ctrl-a d` — Claude keeps running. Reconnect with `ssht host` and
+  you land exactly where you left off (ControlMaster makes reconnect
+  instant; resurrect/continuum survive a tmux server restart).
+- The wrapper names the remote window `🤖 host:project` so nested tmux
+  views stay unambiguous; press **F12** to toggle the outer tmux.
+- To find an exited remote session, run `/resume` → `Ctrl+A` on the
+  remote (it reads that host's `~/.claude/projects`).
+- `claude-notify` (OSC 9/777) and OSC52 clipboard already bridge
+  notifications and copy back to Ghostty.
+
 ## 🌐 Remote Development
 
 ### Shell TERM Handling

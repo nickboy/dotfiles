@@ -92,6 +92,9 @@ user-invocable: true
 - **tmux-resurrect** — Session persistence across restarts
 - **tmux-continuum** — Auto-save sessions
 - **Catppuccin theme** — Mocha variant
+- **tmux-claude-session-manager** — `prefix+y` launch/attach Claude for the
+  cwd; `prefix+u` fzf picker of live Claude sessions (working/waiting/idle
+  status via `scripts/state.sh` hooks + live preview)
 
 ### Session Management (sesh)
 

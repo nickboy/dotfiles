@@ -700,6 +700,10 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 - **tmux-thumbs**: 按 `prefix + F` 將畫面上的 URL / commit hash /
   檔案路徑覆蓋字母標示，輸入字母即複製到剪貼簿；大寫字母會
   複製後透過 `open` 開啟 URL
+- **Claude Session Manager**: `Ctrl-a + y` 啟動/接上當前目錄的 Claude Code
+  工作階段；`Ctrl-a + u` 開啟 live Claude session 的 fzf 選單，含
+  working/waiting/idle 狀態與即時預覽（`craftzdog/tmux-claude-session-manager`；
+  狀態由接進 `~/.claude/settings.json` 的 `state.sh` hook 提供）
 
 ### 按鍵綁定
 
@@ -739,6 +743,8 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
 | `Ctrl-a + }` | 向右移動窗格 |
 | `Ctrl-a + r` | 重載 tmux 設定 |
 | `Ctrl-a + F` | 高亮畫面上的 URL/hash/路徑（tmux-thumbs） |
+| `Ctrl-a + y` | 啟動/接上當前目錄的 Claude session |
+| `Ctrl-a + u` | Claude session 選單（狀態+即時預覽） |
 | `F12` | 切換巢狀 tmux（用於 SSH 工作階段） |
 
 #### 無縫導航

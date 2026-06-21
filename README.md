@@ -806,6 +806,11 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 - **Which-Key**: Press `Ctrl-a + ?` for an interactive popup showing
   all available keybindings organized by category (pane, window,
   session, buffer, layout, git)
+- **Claude Session Manager**: `Ctrl-a + y` launches/attaches a Claude Code
+  session for the current directory; `Ctrl-a + u` opens an fzf picker of
+  live Claude sessions with working/waiting/idle status and a live preview
+  (`craftzdog/tmux-claude-session-manager`; status fed by `state.sh` hooks
+  wired in `~/.claude/settings.json`)
 
 ### Key Bindings
 
@@ -846,6 +851,8 @@ TPM (Tmux Plugin Manager) is installed via Homebrew. After installing dotfiles:
 | `Ctrl-a + r` | Reload tmux configuration |
 | `Ctrl-a + ?` | Which-key popup (keybinding hints) |
 | `Ctrl-a + F` | Highlight URLs/hashes/paths (tmux-thumbs) |
+| `Ctrl-a + y` | Launch/attach Claude session for current dir |
+| `Ctrl-a + u` | Claude session picker (status + live preview) |
 | `F12` | Toggle nested tmux (for SSH sessions) |
 
 #### Seamless Navigation

@@ -88,7 +88,8 @@ bash ~/install-daily-maintenance.sh
 Automates daily system maintenance tasks including:
 
 - Homebrew formula updates (`brew upgrade`)
-- Homebrew cask updates with greedy flag (`brew upgrade --cask --greedy`)
+- Homebrew cask updates (`brew upgrade --cask --greedy-latest --yes`),
+  skipping self-updating apps so upgrades don't fail repeatedly
 - Zinit plugin updates (`zinit update --all --quiet`)
 - Oh-My-Zsh updates
 - Bob self-update from git dev branch (SHA-cached cargo rebuild, only
@@ -1234,8 +1235,8 @@ If you prefer to run updates manually:
 
 ```bash
 # Homebrew updates
-brew upgrade
-brew upgrade --cask --greedy
+brew upgrade --yes
+brew upgrade --cask --greedy-latest --yes
 
 # Zinit updates (in zsh)
 zinit update --all

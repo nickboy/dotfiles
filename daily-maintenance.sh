@@ -259,12 +259,15 @@ run_command() {
 FAILED_COMMANDS=()
 
 # Run your daily maintenance commands
-if ! run_command "Homebrew formula upgrade" brew upgrade; then
+if ! run_command "Homebrew formula upgrade" brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
-if ! run_command "Homebrew cask upgrade (greedy)" brew upgrade --cask --greedy; then
-    FAILED_COMMANDS+=("brew upgrade --cask --greedy")
+# --greedy-latest (not --greedy): upgrade version-less casks but leave
+# self-updating apps (auto_updates, e.g. WhatsApp) to manage themselves,
+# which avoids recurring upgrade failures. --yes skips Homebrew 6's prompt.
+if ! run_command "Homebrew cask upgrade (greedy-latest)" brew upgrade --cask --greedy-latest --yes; then
+    FAILED_COMMANDS+=("brew upgrade --cask --greedy-latest")
 fi
 
 # Clean broken completion symlinks before zinit update

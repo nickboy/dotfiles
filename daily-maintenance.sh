@@ -259,12 +259,28 @@ run_command() {
 FAILED_COMMANDS=()
 
 # Run your daily maintenance commands
-if ! run_command "Homebrew formula upgrade" brew upgrade; then
+if ! run_command "Homebrew formula upgrade" brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
-if ! run_command "Homebrew cask upgrade (greedy)" brew upgrade --cask --greedy; then
-    FAILED_COMMANDS+=("brew upgrade --cask --greedy")
+# Self-heal: remove leftover *.upgrading cask staging dirs from a previously
+# interrupted/failed upgrade, so they can't block this run with an
+# "already an App at ..." error.
+caskroom="$(brew --prefix)/Caskroom"
+if [ -d "$caskroom" ]; then
+    leftovers="$(find "$caskroom" -maxdepth 2 -name '*.upgrading' -type d 2>/dev/null)"
+    if [ -n "$leftovers" ]; then
+        echo "Removing stale cask .upgrading leftovers:"
+        echo "$leftovers"
+        find "$caskroom" -maxdepth 2 -name '*.upgrading' -type d -exec rm -rf {} + 2>/dev/null
+    fi
+fi
+
+# --greedy-latest (not --greedy): upgrade version-less casks but leave
+# self-updating apps (auto_updates, e.g. WhatsApp) to manage themselves,
+# which avoids recurring upgrade failures. --yes skips Homebrew 6's prompt.
+if ! run_command "Homebrew cask upgrade (greedy-latest)" brew upgrade --cask --greedy-latest --yes; then
+    FAILED_COMMANDS+=("brew upgrade --cask --greedy-latest")
 fi
 
 # Clean broken completion symlinks before zinit update

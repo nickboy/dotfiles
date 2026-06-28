@@ -84,8 +84,8 @@ bash ~/install-daily-maintenance.sh
 自動化每日系統維護任務，包括：
 
 - Homebrew formula 更新（`brew upgrade`）
-- Homebrew cask 更新（`brew upgrade --cask --greedy-latest --yes`，
-  略過會自更新的 app,避免重複失敗）
+- Homebrew cask 更新 — `brew upgrade --cask --greedy-latest --yes`:
+  非互動式,並涵蓋無版本號的 cask
 - Zinit 外掛更新（`zinit update --all --quiet`）
 - Oh-My-Zsh 更新
 - Bob 自我更新：從 git dev 分支重建（SHA 快取，僅在上游推進時才重新

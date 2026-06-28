@@ -276,11 +276,18 @@ if [ -d "$caskroom" ]; then
     fi
 fi
 
-# --greedy-latest (not --greedy): upgrade version-less casks but leave
-# self-updating apps (auto_updates, e.g. WhatsApp) to manage themselves,
-# which avoids recurring upgrade failures. --yes skips Homebrew 6's prompt.
+# Upgrade casks. --greedy-latest also covers version-less (:latest) casks that
+# plain "brew upgrade" skips; --yes skips Homebrew 6's confirmation prompt so
+# the run stays unattended. (An auto_updates app is still upgraded by brew when
+# a newer cask version exists -- that's expected, not a problem.)
 if ! run_command "Homebrew cask upgrade (greedy-latest)" brew upgrade --cask --greedy-latest --yes; then
     FAILED_COMMANDS+=("brew upgrade --cask --greedy-latest")
+    # Most common cause of a cask failure: its app in /Applications is owned by
+    # root (usually from a past "sudo brew"), so Homebrew needs sudo to replace
+    # it. Surface the one-line fix instead of a cryptic "already an App" error.
+    echo "Hint: a failed cask is often a root-owned /Applications app."
+    echo "      Check: ls -ld \"/Applications/<App>.app\""
+    echo "      Fix:   sudo chown -R \"$(whoami):staff\" \"/Applications/<App>.app\"  (never run 'sudo brew')"
 fi
 
 # Clean broken completion symlinks before zinit update

@@ -16,10 +16,10 @@ user-invocable: true
 Runs automatically at 9:00 AM via launchd (with catch-up if laptop was off):
 
 1. `brew upgrade --yes` — Homebrew formula updates
-2. `brew upgrade --cask --greedy-latest --yes` — Cask updates (skips
-   self-updating apps; `--yes` avoids Homebrew 6's confirmation prompt;
-   stale `*.upgrading` staging dirs are auto-cleaned first so a prior
-   failed upgrade can't block the run)
+2. `brew upgrade --cask --greedy-latest --yes` — Cask updates (`--yes`
+   avoids Homebrew 6's confirmation prompt; also covers version-less casks;
+   stale `*.upgrading` staging dirs are auto-cleaned first so a prior failed
+   upgrade can't block the run)
 3. `zinit update --all --quiet` — Zinit plugin updates
 4. Oh-My-Zsh updates
 5. `bob update` — Neovim version manager updates
@@ -92,7 +92,7 @@ fi
 
 ```bash
 brew upgrade --yes                         # Homebrew formulas
-brew upgrade --cask --greedy-latest --yes  # Cask apps (skip self-updating)
+brew upgrade --cask --greedy-latest --yes  # Cask apps
 zinit update --all                        # Zinit plugins
 bob update                                # Neovim versions
 nvim --headless '+Lazy! sync' +qa         # LazyVim plugins

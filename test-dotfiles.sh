@@ -180,6 +180,13 @@ run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
 if [ -f "$HOME/daily-maintenance.sh" ]; then
     run_test "Daily maintenance includes mise upgrade" \
         "grep -qE '^[[:space:]]*(run_command|mise upgrade|\"Mise runtime upgrade\")' $HOME/daily-maintenance.sh && grep -q 'mise upgrade' $HOME/daily-maintenance.sh"
+    # brew upgrades must stay non-interactive (Homebrew 6 prompts otherwise),
+    # or the unattended run stalls. Guard: every run_command brew upgrade has --yes.
+    run_test "Maintenance brew upgrades are non-interactive (--yes)" \
+        "! grep -E 'run_command .*brew upgrade' $HOME/daily-maintenance.sh | grep -qv -- '--yes'"
+    # Guard the self-heal that clears stale cask *.upgrading staging dirs.
+    run_test "Maintenance self-heals stale cask .upgrading dirs" \
+        "grep -qF '.upgrading' $HOME/daily-maintenance.sh"
 fi
 echo
 

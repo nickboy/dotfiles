@@ -1,5 +1,5 @@
 {
-  "model": "opus[1m]",
+  "model": "claude-fable-5[1m]",
   "hooks": {
     "Notification": [
       {
@@ -104,6 +104,5 @@
       }
     }
   },
-  "theme": "custom:my-theme",
-  "skipAutoPermissionPrompt": true
+  "theme": "custom:my-theme"
 }

@@ -150,7 +150,8 @@ echo
 echo -e "${YELLOW}8. Script Dry Run Tests${NC}"
 
 # Test daily-maintenance.sh functions
-cat > /tmp/test_maintenance.sh << 'EOF'
+TEST_MAINT_SCRIPT=$(mktemp "${TMPDIR:-/tmp}/test_maintenance.XXXXXX")
+cat > "$TEST_MAINT_SCRIPT" << 'EOF'
 #!/bin/bash
 # Source the script but override dangerous functions
 brew() { echo "MOCK: brew $@"; return 0; }
@@ -173,7 +174,7 @@ FAILED_COMMANDS=()
 echo "Script structure is valid"
 EOF
 
-run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
+run_test "Daily maintenance script structure" "bash '$TEST_MAINT_SCRIPT'"
 
 # Content checks: ensure key upgrade sections are present
 # (regression guards for accidental removal)
@@ -296,6 +297,36 @@ else
 fi
 echo
 
+# Test 14: ShellCheck on ALL tracked bash/sh scripts (shebang-detected)
+# Covers extensionless scripts (.local/bin tools, yadm hooks) that the
+# '*.sh' glob in Test 4 misses. The anchored regex deliberately excludes
+# zsh scripts — shellcheck does not support zsh.
+echo -e "${YELLOW}14. ShellCheck (tracked scripts by shebang)${NC}"
+if command -v shellcheck >/dev/null 2>&1; then
+    if command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
+        TRACKED_FILES=$(yadm ls-files)
+    elif git rev-parse --git-dir >/dev/null 2>&1; then
+        TRACKED_FILES=$(git ls-files)
+    else
+        TRACKED_FILES=""
+    fi
+    if [ -n "$TRACKED_FILES" ]; then
+        while IFS= read -r tracked; do
+            [ -f "$tracked" ] || continue
+            if head -1 "$tracked" 2>/dev/null | \
+               grep -qE '^#!/(usr/(local/)?)?bin/(env +)?(bash|sh)\b'; then
+                run_test "ShellCheck (shebang) $tracked" \
+                    "shellcheck -S warning '$tracked'"
+            fi
+        done <<< "$TRACKED_FILES"
+    else
+        echo -e "${YELLOW}  Not a yadm/git repo; skipping shebang shellcheck${NC}"
+    fi
+else
+    echo -e "${YELLOW}  ShellCheck not installed; skipping${NC}"
+fi
+echo
+
 # Summary
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Test Summary${NC}"
@@ -325,6 +356,6 @@ else
 fi
 
 # Cleanup
-rm -f /tmp/test_maintenance.sh
+rm -f "$TEST_MAINT_SCRIPT"
 
 exit 0

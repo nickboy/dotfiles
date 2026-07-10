@@ -6,6 +6,11 @@ if [ -z "${1:-}" ]; then
   exit 1
 fi
 
+if [ -e "$1" ]; then
+  echo "mkscript: refusing to overwrite existing file: $1" >&2
+  exit 1
+fi
+
 cat > "$1" << 'SCRIPT'
 #!/usr/bin/env bash
 set -euo pipefail

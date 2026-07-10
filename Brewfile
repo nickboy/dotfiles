@@ -35,8 +35,6 @@ brew "dust"
 brew "eza"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
-# Friendlier find
-brew "ffind"
 # Indent and beautify Fortran sources and generate dependency information
 brew "findent"
 # Command-line fuzzy finder written in Go
@@ -78,8 +76,6 @@ brew "openjdk"
 brew "perl"
 # Execute binaries from Python packages in isolated environments
 brew "pipx"
-# Theme for zsh
-brew "powerlevel10k"
 # Modern replacement for ps written in Rust
 brew "procs"
 # Static type checker for Python

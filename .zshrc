@@ -18,6 +18,10 @@ export LANG=en_US.UTF-8
 # PATH Configuration (Consolidated and deduplicated)
 # ============================================================================
 
+# Keep $path unique: repeated prepends (nested shells, tmux, re-source)
+# collapse to a single entry instead of accumulating duplicates
+typeset -U path PATH
+
 # Homebrew (Apple Silicon)
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
@@ -32,10 +36,11 @@ export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/Library/TeX/texbin:$PATH"
 
-# Initialize Homebrew environment (this also sets PATH, MANPATH, INFOPATH)
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# NOTE: brew shellenv runs once in ~/.zprofile (login shells); subshells
+# inherit the exported vars, and the explicit prepend above guarantees the
+# brew paths for any non-login edge case — no need to eval it again here.
 
-# Bob Neovim (MUST be absolutely last after brew shellenv to have highest priority)
+# Bob Neovim (MUST be last to have highest priority)
 export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
 # Compilation flags for macOS
@@ -474,8 +479,8 @@ if command -v hexyl &> /dev/null; then
 fi
 
 # Documentation
-alias help='tlrc'
-alias cheat='tlrc'
+alias help='tldr'
+alias cheat='tldr'
 
 # Markdown rendering
 if command -v glow &> /dev/null; then

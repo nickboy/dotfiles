@@ -1,5 +1,9 @@
 tap "jstkdng/programs"
 tap "charmbracelet/tap"
+tap "oven-sh/bun"
+tap "smudge/smudge"
+tap "tw93/tap"
+tap "yakitrak/yakitrak"
 # Code searching, linting, rewriting
 brew "ast-grep"
 # Network bandwidth utilization tool
@@ -10,9 +14,8 @@ brew "bash"
 brew "bat"
 # Resource monitor (modern top/htop replacement)
 brew "btop"
-# Python kept in brew for formula deps (thefuck, liblqr);
-# userland Python is managed by mise (see ~/.config/mise/config.toml)
-brew "python@3.13"
+# Fast JavaScript runtime, bundler, and package manager
+brew "oven-sh/bun/bun"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
 # Human-friendly cut alternative
@@ -73,6 +76,12 @@ brew "charmbracelet/tap/mods"
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
+# CLI for macOS Night Shift
+brew "smudge/smudge/nightlight"
+# CLI to open, search, and manage Obsidian/NotesMD vaults
+brew "yakitrak/yakitrak/notesmd-cli"
+# Mac disk cleanup CLI (tw93)
+brew "tw93/tap/mole"
 # Node kept in brew for formula deps (ccusage, pyright);
 # userland Node is managed by mise
 brew "node"
@@ -108,8 +117,8 @@ brew "rustup"
 brew "shellcheck"
 # Cross-platform prompt for any shell
 brew "starship"
-# Programmatically correct mistyped console commands
-brew "thefuck"
+# NOTE: command correction is pay-respects (cargo install pay-respects,
+# handled by bootstrap) — the old thefuck formula pulled in python@3.13
 # Official tldr client written in Rust
 brew "tlrc"
 # macOS notification banners from the command line

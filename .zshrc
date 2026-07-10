@@ -162,7 +162,6 @@ zinit wait lucid for \
 zinit wait lucid for \
     MichaelAquilina/zsh-you-should-use \
     fdellwing/zsh-bat \
-    OMZP::extract \
     OMZP::copypath \
     OMZP::copyfile \
     OMZP::jsontools \
@@ -285,12 +284,16 @@ zinit light zdharma-continuum/null
 
 # Zoxide - init moved to end of file (before starship) to satisfy zoxide doctor
 
-# The fuck (command correction) - lazy-loaded to save ~5ms on shell startup
-if command -v thefuck &> /dev/null; then
+# pay-respects (command correction; Rust successor to the unmaintained
+# thefuck, which dragged in a whole python@3.13 dependency chain).
+# Lazy-loaded: init cost is only paid on first use.
+if command -v pay-respects &> /dev/null; then
     fk() {
-        unfunction fk
-        eval "$(thefuck --alias fk)"
-        fk "$@"
+        unfunction fk 2>/dev/null
+        eval "$(pay-respects zsh --alias fk)"
+        # The init defines fk as an ALIAS, which can't take effect inside
+        # this already-parsed function — invoke its target directly.
+        __pr_main suggest
     }
 fi
 
@@ -307,6 +310,11 @@ fi
 # ============================================================================
 # Aliases
 # ============================================================================
+
+# Universal archive extraction via ouch (replaces the OMZ extract plugin;
+# note: multi-file archives are extracted into a subdirectory)
+alias extract='ouch decompress'
+alias x='ouch decompress'
 
 # Modern replacements (managed by z-shell/zsh-eza plugin)
 # Plugin provides: ls, l, ll, llm, la, lx, tree

@@ -41,6 +41,8 @@ brew "findent"
 brew "fzf"
 # Syntax-highlighting pager for git and diff output
 brew "git-delta"
+# Structural (syntax-aware) diff tool — complements delta ('git dft' alias)
+brew "difftastic"
 # Render markdown in the terminal
 brew "glow"
 # Open source programming language to build simple/reliable/efficient software
@@ -55,6 +57,10 @@ brew "jq"
 brew "julia"
 # Git-compatible version control system
 brew "jj"
+# TUI for jj (Jujutsu)
+brew "jjui"
+# Syntax-aware merge conflict resolver (wired as a git merge driver)
+brew "mergiraf"
 # Just a command runner
 brew "just"
 # Simple terminal UI for git commands
@@ -72,6 +78,10 @@ brew "neovim"
 brew "node"
 # Development kit for the Java programming language
 brew "openjdk"
+# Painless compression/decompression, auto-detects formats (extract/x aliases)
+brew "ouch"
+# Terminal HTTP client TUI (Postman-style; requests stored as plain YAML)
+brew "posting"
 # Highly capable, feature-rich programming language
 brew "perl"
 # Execute binaries from Python packages in isolated environments
@@ -108,6 +118,8 @@ brew "terminal-notifier"
 brew "television"
 # macOS file tagging CLI (used by yazi mactag plugin)
 brew "tag"
+# Zero-config log file highlighter/pager (binary: tspin)
+brew "tailspin"
 # Count lines of code quickly
 brew "tokei"
 # Terminal multiplexer

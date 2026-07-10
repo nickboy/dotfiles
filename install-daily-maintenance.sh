@@ -68,10 +68,14 @@ fi
 # Check for plist template or existing plist
 if [ -f "$PLIST_TEMPLATE" ]; then
     print_status 0 "LaunchAgent plist template found"
-    # Generate plist from template
+    # Generate plist from template — yadm's native template processor is
+    # authoritative (it also re-runs on every yadm clone/pull); the sed
+    # fallback covers machines where yadm isn't on PATH yet
     echo "Generating plist from template..."
-    if sed "s|{{HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$PLIST_FILE"; then
-        print_status 0 "Generated plist file"
+    if command_exists yadm && yadm alt >/dev/null 2>&1 && [ -f "$PLIST_FILE" ]; then
+        print_status 0 "Generated plist via 'yadm alt'"
+    elif sed "s|{{env.HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$PLIST_FILE"; then
+        print_status 0 "Generated plist file (sed fallback)"
     else
         print_status 1 "Failed to generate plist file" || true
         exit 1

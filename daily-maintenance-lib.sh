@@ -15,7 +15,9 @@ NC='\033[0m' # No Color
 
 # Shared paths
 LAUNCHAGENT_DIR="$HOME/Library/LaunchAgents"
-PLIST_TEMPLATE="$LAUNCHAGENT_DIR/com.daily-maintenance.plist.template"
+# yadm-native template ('yadm alt' regenerates the real plist from it on
+# every clone/pull; {{env.HOME}} expands to the actual home directory)
+PLIST_TEMPLATE="$LAUNCHAGENT_DIR/com.daily-maintenance.plist##template"
 PLIST_FILE="$LAUNCHAGENT_DIR/com.daily-maintenance.plist"
 MAINTENANCE_SCRIPT="$HOME/daily-maintenance.sh"
 CONTROL_SCRIPT="$HOME/daily-maintenance-control.sh"

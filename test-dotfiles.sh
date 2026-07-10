@@ -276,6 +276,26 @@ echo -e "${YELLOW}12. Version Control Checks${NC}"
 run_test "No uncommitted changes" "[ -z \"$(yadm status --porcelain 2>/dev/null)\" ] || yadm status --porcelain"
 echo
 
+# Test 13: Markdown Lint (mandatory — every commit MUST pass, no exceptions)
+# NOTE: never lint '**/*.md' from ~ — it scans the whole home dir and hangs.
+# -z/-0 keeps filenames with spaces intact and skips the run on empty input.
+echo -e "${YELLOW}13. Markdown Lint${NC}"
+if command -v npx >/dev/null 2>&1; then
+    # Locally the tracked files come from yadm; in CI checkouts from git.
+    if command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
+        run_test "markdownlint on tracked markdown files" \
+            "yadm ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
+    elif git rev-parse --git-dir >/dev/null 2>&1; then
+        run_test "markdownlint on tracked markdown files" \
+            "git ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
+    else
+        echo -e "${YELLOW}  Not a yadm/git repo; skipping markdown lint${NC}"
+    fi
+else
+    echo -e "${YELLOW}  npx not available; skipping markdown lint (CI will enforce it)${NC}"
+fi
+echo
+
 # Summary
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Test Summary${NC}"

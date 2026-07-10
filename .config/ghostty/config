@@ -33,11 +33,13 @@ macos-titlebar-style = tabs
 cursor-style = block
 cursor-style-blink = true
 
-# Cursor shaders - fancy cursor effects
+# Cursor shaders - fancy cursor effects (pick ONE; custom-shader is
+# additive, so enabling both stacks two competing GPU passes)
 # cursor_slash: diagonal trail effect on cursor movement
 # cursor_smear: smooth smearing trail effect on cursor movement
+# Swap by moving the comment and reloading with Cmd+Shift+,
 custom-shader-animation = true
-custom-shader = shaders/cursor_slash.glsl
+# custom-shader = shaders/cursor_slash.glsl
 custom-shader = shaders/cursor_smear.glsl
 
 # macOS: left Option key acts as Alt for terminal keybindings (Alt+B/F/D)

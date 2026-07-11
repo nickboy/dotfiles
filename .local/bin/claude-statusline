@@ -9,6 +9,10 @@
 # - Git branch cached per session_id in /tmp (5s TTL), yadm fallback for ~
 # - Add "refreshInterval": 5 to ~/.claude/settings.json statusLine for auto-refresh
 
+# File-wide: the Catppuccin palette below is deliberately complete even
+# though only a subset is used — future segments pick from it freely.
+# shellcheck disable=SC2034
+
 set -uo pipefail
 
 INPUT=$(cat)
@@ -56,6 +60,10 @@ done
 unset _settings_file
 
 : "${SESSION_ID:=nosession}"
+# SESSION_ID comes from untrusted stdin JSON and lands in a /tmp filename —
+# strip everything but [A-Za-z0-9_-] so it can't traverse paths
+SESSION_ID=${SESSION_ID//[^A-Za-z0-9_-]/}
+: "${SESSION_ID:=nosession}"
 : "${MODEL:=Claude}"
 : "${DIR:=.}"
 : "${PCT_RAW:=0}"
@@ -74,7 +82,6 @@ SEVEN_D_INT=${SEVEN_D%.*}
 # -----------------------------------------------------------------------------
 # Colors — Catppuccin Mocha palette (24-bit truecolor) to match starship/tmux
 # -----------------------------------------------------------------------------
-# shellcheck disable=SC2034  # palette kept complete for future segment styling
 C_BASE=$'\033[38;2;30;30;46m'        # base (#1e1e2e) — fg on light bg
 C_TEXT=$'\033[38;2;205;214;244m'     # text (#cdd6f4)
 C_SUBTEXT=$'\033[38;2;186;194;222m'  # subtext1 (#bac2de)

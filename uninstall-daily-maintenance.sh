@@ -3,16 +3,9 @@
 # Daily Maintenance Uninstallation Script
 # This script removes the automated daily maintenance system
 
-# Colors for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-BLUE='\033[0;34m'
-NC='\033[0m' # No Color
-
-# Configuration
-PLIST_FILE="$HOME/Library/LaunchAgents/com.daily-maintenance.plist"
-LOG_DIR="$HOME/Library/Logs"
+# Shared colors, paths, and helpers
+# shellcheck source=daily-maintenance-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/daily-maintenance-lib.sh"
 
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Daily Maintenance Automation Uninstaller${NC}"
@@ -22,20 +15,17 @@ echo
 echo -e "${YELLOW}This will disable the daily maintenance automation.${NC}"
 echo "The script files will remain in your dotfiles but won't run automatically."
 echo
-read -p "Do you want to continue? (y/n) " -n 1 -r
-echo
-echo
 
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+if ! prompt_yes_no "Do you want to continue?" n; then
     echo "Uninstallation cancelled."
     exit 0
 fi
+echo
 
 # Unload the LaunchAgent if it's running
-if launchctl list | grep -q "com.daily-maintenance"; then
+if dm_loaded; then
     echo -e "${YELLOW}Stopping automation...${NC}"
-    launchctl unload "$PLIST_FILE"
-    if [ $? -eq 0 ]; then
+    if dm_unload; then
         echo -e "${GREEN}✓${NC} Automation stopped"
     else
         echo -e "${RED}✗${NC} Failed to stop automation"
@@ -47,9 +37,7 @@ fi
 echo
 
 # Ask about log files
-read -p "Do you want to remove log files? (y/n) " -n 1 -r
-echo
-if [[ $REPLY =~ ^[Yy]$ ]]; then
+if prompt_yes_no "Do you want to remove log files?" n; then
     if [ -f "$LOG_DIR/daily-maintenance.log" ]; then
         rm "$LOG_DIR/daily-maintenance.log"
         echo -e "${GREEN}✓${NC} Removed daily-maintenance.log"

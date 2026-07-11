@@ -20,7 +20,8 @@
   lazygit 等（支援主題的工具皆使用 Catppuccin Mocha）
 - **版本管理**: mise（多語言開發工具版本管理器）
 - **自動補全**: Carapace（通用指令自動補全）
-- **SSH**: 模組化 `config.d/` 架構，支援連線多工、keepalive 與 agent forwarding
+- **SSH**: 模組化 `config.d/` 架構，支援連線多工、keepalive 與
+  強化安全預設（全域關閉 agent forwarding，信任主機逐一開啟）
 - **Claude Code**: 豐富單行狀態列（成本、燒錢速率、session 時長、
   model、effort level、資料夾、git branch、rate limit、context 進度條）、
   Catppuccin Mocha 自訂主題、透過 OSC 9/777 桌面通知（支援 Ghostty、
@@ -100,14 +101,19 @@ bash ~/install-daily-maintenance.sh
 
 - 每日上午 9:00 透過 launchd 自動執行
 - **補執行機制**：若錯過排程時間，登入時自動執行
-- 完整日誌記錄至 `~/Library/Logs/`
+- **並發鎖**：登入補執行不會與 9AM 排程互撞；殭屍鎖
+  （PID 已死或超過 6 小時）會自動清除
+- 完整日誌記錄至 `~/Library/Logs/`，超過 5 MB 自動輪替
+- 網路步驟均在 watchdog timeout 下執行（timeout 中止與
+  一般失敗在日誌中可區分）
 - 錯誤處理與狀態報告
 - 支援手動執行與便捷別名
 - 簡易啟用/停用控制
 - GitHub Actions CI/CD 流程
 - Pre-commit hook 驗證
 - 內建本機測試套件
-- 無硬編碼路徑 — 使用範本系統
+- 無硬編碼路徑 — 使用 yadm 原生 `##template`（每次 clone/pull
+  時由 `yadm alt` 自動重生）
 
 ### 安裝每日維護
 
@@ -125,13 +131,14 @@ bash ~/install-daily-maintenance.sh
 chmod +x ~/daily-maintenance.sh
 chmod +x ~/daily-maintenance-control.sh
 
-# 2. 從範本產生 plist（若需要）
-sed "s|{{HOME}}|$HOME|g" \
-  ~/Library/LaunchAgents/com.daily-maintenance.plist.template \
-  > ~/Library/LaunchAgents/com.daily-maintenance.plist
+# 2. 從 yadm 範本產生 plist（clone/pull 時 yadm alt 也會
+#    自動執行，通常已經完成）
+yadm alt
 
-# 3. 載入 LaunchAgent
-launchctl load ~/Library/LaunchAgents/com.daily-maintenance.plist
+# 3. 載入 LaunchAgent（現代 launchctl，回傳真實 exit code）
+launchctl enable "gui/$(id -u)/com.daily-maintenance"
+launchctl bootstrap "gui/$(id -u)" \
+  ~/Library/LaunchAgents/com.daily-maintenance.plist
 ```
 
 ### 使用方式
@@ -199,13 +206,6 @@ if ! run_command "描述" your-command --args; then
 fi
 ```
 
-#### Sudo 存取
-
-若有指令需要 sudo，設定免密碼執行：
-
-1. 編輯 sudoers：`sudo visudo -f /etc/sudoers.d/daily-maintenance`
-2. 新增：`yourusername ALL=(ALL) NOPASSWD: /path/to/command`
-
 ### 疑難排解
 
 #### 檢查自動化是否正在執行
@@ -245,7 +245,7 @@ bash ~/uninstall-daily-maintenance.sh
 
 ```bash
 # 停止並卸載自動化
-launchctl unload ~/Library/LaunchAgents/com.daily-maintenance.plist
+launchctl bootout "gui/$(id -u)/com.daily-maintenance"
 
 # 選擇性：移除日誌檔
 rm ~/Library/Logs/daily-maintenance*.log
@@ -260,6 +260,8 @@ rm ~/Library/Logs/daily-maintenance*.log
   讓 ANSI 背景色（如 diff 高亮）也跟著透明
 - **廣色域**: `window-colorspace = display-p3` 讓 Catppuccin Mocha
   的紫藍色在 M 系列 Mac 上渲染更飽和
+- **捲動緩衝區**: 25 MB scrollback buffer，容納 Claude Code
+  的長輸出
 - **Shell 整合**: 增強的 shell 整合，搭配 `sudo`、`title`、`path`
   功能（停用 `cursor` 以避免與自訂 GLSL 游標著色器衝突）
 - **智慧剪貼簿**: 受保護的貼上功能（bracketed paste mode）
@@ -267,17 +269,21 @@ rm ~/Library/Logs/daily-maintenance*.log
   單字移動（`Alt+B/F/D`）
 - **視窗狀態持久化**: 重新啟動時總是恢復視窗佈局
   （`window-save-state = always`）
-- **儲存格寬度微調**: `adjust-cell-width = 1%` 改善 Nerd Font
-  圖示對齊
+- **儲存格微調**: `adjust-cell-width = 1%` 改善 Nerd Font
+  圖示對齊，`adjust-cell-height = 2` 改善行距
 - **提示導航**: `Cmd+Up/Down` 在捲動緩衝區中跳轉 shell
   提示
 - **分割縮放**: `Cmd+Shift+Enter` 最大化/還原分割窗格
+  （在窗格間導航時保留縮放狀態）
 - **調整大小覆蓋層**: 調整視窗大小時顯示尺寸
 - **連結預覽**: 懸停 URL 即可預覽
 - **自動更新**: Ghostty 有新版本時發出通知
 - **鈴聲通知**: Dock 彈跳與標籤頁鈴聲表情，適用於權限請求提醒
 - **桌面通知**: 透過 `claude-notify` hook 的 OSC 9/777 橫幅通知
   （支援 Ghostty 直接執行、Neovim 終端機及 SSH 遠端工作階段）
+- **指令完成通知**: 執行超過 5 秒的指令在非聚焦分割窗格中
+  完成時，發出 macOS 橫幅通知（不只是鈴聲，透過
+  `notify-on-command-finish`）
 - **游標著色器**: 動畫游標效果（`cursor_slash.glsl`、
   `cursor_smear.glsl`）
 - **設定重載**: `Cmd+Shift+,` 無需重啟即可重載設定
@@ -289,7 +295,9 @@ rm ~/Library/Logs/daily-maintenance*.log
 - **游標點擊移動**: `Option+Click` 在長指令中直接移動游標位置
 - **純標籤列模式**: `macos-titlebar-style = tabs` 移除紅綠燈按鈕，
   保留標籤列
-- **主題**: Catppuccin Mocha 搭配 Hack Nerd Font
+- **字型**: Maple Mono NF CN，含程式連字（`!=`→`≠`、
+  `=>`→`⇒`）與 CJK 支援
+- **主題**: Catppuccin Mocha
 
 ### Ghostty 快捷鍵
 
@@ -360,8 +368,11 @@ SSH 設定使用 `Include config.d/*` 將共用預設值與機器特定設定
 - **連線多工**: `ControlMaster auto` 搭配 10 分鐘 socket
   持久化 — 第二次 SSH 到同一主機幾乎即時
 - **Keepalive**: 每 30 秒發送，容忍 3 次遺漏（90 秒偵測）
-- **Agent Forwarding**: `ForwardAgent yes` 讓遠端可用本地
-  SSH 金鑰執行 `git push`
+- **Agent Forwarding**: 全域設定 `ForwardAgent no`（被入侵的
+  伺服器可能盜用你的金鑰）— 信任主機以 `Host <name>` 區塊
+  設定 `ForwardAgent yes` 逐一開啟
+- **強化安全預設**: `IdentitiesOnly yes`、
+  `StrictHostKeyChecking ask`、`HashKnownHosts no`
 - **壓縮**: 所有連線啟用壓縮
 - **TERM 處理**: `SetEnv TERM=xterm-256color` 解決遠端機器
   缺少 `xterm-ghostty` terminfo 的問題
@@ -665,11 +676,88 @@ tmux 共用相同前綴（`Ctrl-a`）。按 **F12** 切換：
 - **awrit**: 基於 Chromium 的終端機瀏覽器
 - **presenterm**: 支援圖片的 Markdown 簡報
 
+## Zellij 設定
+
+[Zellij](https://zellij.dev/) 是現代終端機多工器（tmux 的
+替代方案），內建工作階段持久化、浮動/堆疊窗格與 WASM 外掛
+生態系。設定針對 Zellij 0.44+。
+
+### Zellij 功能特色
+
+- **主題**: Catppuccin Mocha（與 Ghostty/tmux/Kitty 一致）
+- **工作階段持久化**: 內建 session serialization，包含 viewport
+  與 scrollback（取代 tmux-resurrect + tmux-continuum）
+- **Vim 風格導航**: hjkl 快捷鍵處理窗格/分頁/調整大小/移動
+- **Tmux 相容模式**: `Ctrl-b` 前綴模式，提供熟悉的 tmux
+  快捷鍵（`"` 水平分割、`%` 垂直分割等）
+- **滑鼠功能（0.44）**: 拖曳窗格邊框調整大小、`Ctrl+scroll`
+  調整大小、`Alt+click` 以 `$EDITOR` 開啟檔案路徑
+- **焦點追隨滑鼠**: 與 Ghostty 的 `focus-follows-mouse` 一致
+- **無窗格外框**: 簡潔無邊框外觀（`Ctrl-p z` 切換）
+- **版面管理器**: `Ctrl-o l` 儲存/套用/收藏版面
+- **工作階段管理器**: `Ctrl-o w` 開啟內建工作階段切換器
+
+### Zellij vs tmux vs Ghostty 分割
+
+| 功能 | Ghostty 分割 | Zellij | tmux |
+| --- | --- | --- | --- |
+| 工作階段（detach/reattach） | 否 | 是 | 是 |
+| SSH 斷線後存活 | 否 | 是 | 是 |
+| 工作階段持久化 | 否 | 內建 | 外掛 |
+| 浮動/堆疊窗格 | 否 | 是 | 否 |
+| 外掛生態系 | 無 | WASM | Shell |
+| 圖片預覽（yazi） | 是 | 否（無 passthrough） | 是 |
+
+### Zellij 快捷鍵
+
+| 快捷鍵 | 動作 |
+| --- | --- |
+| `Alt+h/j/k/l` | 窗格/分頁導航 |
+| `Alt+n` | 新窗格 |
+| `Alt+f` | 切換浮動窗格 |
+| `Ctrl+p` | 窗格模式（接 h/j/k/l、n、d、r、x、z） |
+| `Ctrl+t` | 分頁模式（接 n、r、x、1-9） |
+| `Ctrl+n` | 調整大小模式（接 h/j/k/l） |
+| `Ctrl+s` | 捲動模式（接 j/k、u/d，s 搜尋） |
+| `Ctrl+o` | 工作階段模式（w=sessions、l=layouts、p=plugins） |
+| `Ctrl+b` | Tmux 模式（熟悉的 tmux 快捷鍵） |
+| `Ctrl+g` | 鎖定模式 |
+| `Ctrl+q` | 離開 |
+
+### Zellij Shell 別名
+
+```bash
+zj              # zellij
+zja             # zellij attach
+zjl             # zellij list-sessions
+zjk             # zellij kill-session
+zjd             # zellij delete-session
+```
+
+### 已知限制（0.44）
+
+- **無圖片 passthrough**: Yazi 圖片預覽在 Zellij 中無法運作
+  （尚未支援 Kitty graphics protocol 或 DCS passthrough）
+- **第三方 WASM 外掛**: Zellij 0.44 將 runtime 從 wasmtime
+  改為 wasmi；2026 年 3 月前編譯的外掛可能無法載入
+  （例如 zjstatus v0.22.0）
+
+### Zellij 設定檔
+
+```text
+~/.config/zellij/
+├── config.kdl                    # 主設定（快捷鍵、各項設定）
+├── themes/
+│   └── catppuccin-mocha.kdl      # Catppuccin Mocha 主題
+└── plugins/                      # WASM 外掛（已 gitignore）
+```
+
 ## Tmux 設定
 
 ### 初始設定
 
-TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
+TPM（Tmux Plugin Manager）由 bootstrap 腳本 git clone 至
+`~/.tmux/plugins/tpm`（並非 Homebrew 套件）。安裝 dotfiles 後：
 
 1. 啟動 tmux：`tmux new -s main`
 2. 安裝外掛：按 `Ctrl-a + I`（大寫 I）
@@ -703,8 +791,9 @@ TPM（Tmux Plugin Manager）透過 Homebrew 安裝。安裝 dotfiles 後：
   複製後透過 `open` 開啟 URL
 - **Claude Session Manager**: `Ctrl-a + y` 啟動/接上當前目錄的 Claude Code
   工作階段；`Ctrl-a + u` 開啟 live Claude session 的 fzf 選單，含
-  working/waiting/idle 狀態與即時預覽（`craftzdog/tmux-claude-session-manager`；
-  狀態由接進 `~/.claude/settings.json` 的 `state.sh` hook 提供）
+  working/waiting/idle 狀態與即時預覽（`craftzdog/tmux-claude-session-manager`
+  ≥ v1.0.1；狀態直接讀自 `claude agents`——需 Claude Code ≥ 2.1.139 與
+  `jq`，不再需要 Claude Code hooks）
 
 ### 按鍵綁定
 
@@ -845,7 +934,15 @@ sesh clone https://github.com/user/repo
 | - | **glow** | 終端機 Markdown 閱讀器 | `md` |
 | - | **mods** | 將 shell 輸出管線送進 LLM（Charm） | `mods` |
 | `git` | **jujutsu** | Git 相容版本控制系統 | `jj` |
+| - | **jjui** | jujutsu 的 TUI | `jjui` |
 | `nvm`/`pyenv` | **mise** | 多語言版本管理器 | `mise` |
+| `make` | **just** | 指令執行器（簡潔的 justfile） | `just` |
+| - | **tailspin** | 零設定 log 高亮/分頁器 | `tspin` |
+| `tar`/`unzip` | **ouch** | 萬用壓縮/解壓縮 | `extract`, `x` |
+| `diff` | **difftastic** | 語法樹層級的語義 diff | `git dft` |
+| - | **mergiraf** | 語法感知合併衝突解決器 | (git driver) |
+| - | **posting** | API 測試 TUI（請求存為 YAML） | `posting` |
+| `thefuck` | **pay-respects** | 指令修正（Rust，cargo 安裝） | `fk` |
 
 ### Shell 增強功能
 
@@ -860,10 +957,14 @@ sesh clone https://github.com/user/repo
   - `colored-man-pages` — 語法高亮的 man 頁面
   - `web-search` — 從終端機搜尋（google、github、stackoverflow）
   - `sudo` — 按 ESC ESC 為上一個指令加上 sudo
-  - `extract` — 通用壓縮檔解壓縮
   - `copypath` / `copyfile` — 快速剪貼簿操作
   - `jsontools` — JSON 格式化與驗證
   - `encode64` — Base64 編碼/解碼
+- **壓縮檔解壓縮**: `extract` / `x` 別名執行 `ouch decompress`
+  （取代 OMZ extract 外掛；多檔壓縮包會解進以壓縮檔命名的
+  子目錄）
+- **指令修正**: `fk` 執行 `pay-respects`（thefuck 的 Rust
+  後繼者，由 bootstrap 腳本透過 cargo 安裝）
 
 ### 目錄導航
 
@@ -1066,10 +1167,10 @@ y
 ├── init.lua       # 狀態列、git、圓角邊框設定
 ├── package.toml   # 套件清單（ya pkg install/upgrade）
 ├── plugins/
-│   ├── glow.yazi/ # Markdown 預覽（手動安裝）
-│   └── (其他)     # 由 ya pkg 管理：git、smart-enter、
-│                  # smart-filter、jump-to-char、toggle-pane、
-│                  # chmod、lazygit、compress、full-border
+│   └── (全部)     # 由 ya pkg 管理：git、smart-enter、
+│                  # smart-filter、smart-paste、jump-to-char、
+│                  # toggle-pane、chmod、diff、mactag、piper、
+│                  # full-border、lazygit、compress
 └── flavors/
     └── catppuccin-mocha.yazi/  # 主題風格
 ```
@@ -1148,37 +1249,52 @@ nvim --headless '+Lazy! sync' +qa
 │   ├── nvim/          # Neovim 設定 (LazyVim)
 │   ├── zed/           # Zed 編輯器設定
 │   ├── ghostty/       # Ghostty 終端機設定
+│   ├── zellij/        # Zellij 多工器（設定、主題）
 │   ├── yazi/          # Yazi 檔案管理器（主題、外掛、快捷鍵）
 │   ├── kitty/         # Kitty 終端機設定
+│   ├── git/config     # 共享 git 設定（yadm 追蹤；~/.gitconfig
+│   │                  #   為本機專屬且已 gitignore）
+│   ├── atuin/         # Atuin shell 歷史記錄
+│   ├── mise/          # Mise 版本管理器
+│   ├── sesh/          # Sesh 工作階段管理器
+│   ├── lazygit/       # Lazygit TUI
+│   ├── btop/          # Btop 資源監控器
+│   ├── starship.toml  # Starship 提示列
 │   ├── bat/           # Bat 主題
-│   └── ripgrep/       # Ripgrep 設定
+│   ├── ripgrep/       # Ripgrep 設定
+│   └── yadm/
+│       ├── bootstrap  # Clone 後設定腳本
+│       └── hooks/
+│           └── pre_commit  # Pre-commit 驗證（yadm 3.x 路徑）
+├── .claude/           # Claude Code 共享設定、skills、主題
 ├── .ssh/
 │   ├── config              # 模組化 SSH 設定的 Include 指令
 │   └── config.d/
 │       └── 00-defaults.conf  # 共用 SSH 預設值
 ├── .local/
 │   └── bin/           # 使用者腳本
-│       └── battery-status
+│       ├── battery-status        # 電池監控
+│       ├── claude-name-session   # 自動命名 Claude Code 工作階段
+│       ├── claude-notify         # OSC 9/777 桌面通知
+│       ├── claude-statusline     # Claude Code 豐富狀態列
+│       └── mkscript              # 新腳本鷹架
 ├── Library/
 │   └── LaunchAgents/  # macOS 啟動代理
-│       ├── com.daily-maintenance.plist.template  # 範本檔案
-│       └── com.daily-maintenance.plist           # 產生的檔案（已 gitignore）
-├── .gitconfig         # Git 設定
+│       ├── com.daily-maintenance.plist##template  # yadm 範本
+│       └── com.daily-maintenance.plist            # 產生的檔案（已 gitignore）
 ├── .tmux.conf         # Tmux 設定
 ├── .zshrc             # Zsh 設定
 ├── Brewfile           # Homebrew 套件清單
 ├── daily-maintenance.sh           # 主要維護腳本
+├── daily-maintenance-lib.sh       # 共用輔助函式（路徑、launchctl）
 ├── daily-maintenance-control.sh   # 控制腳本
-├── daily-maintenance-sudoers      # Sudoers 範本
 ├── install-daily-maintenance.sh   # 安裝腳本
 ├── uninstall-daily-maintenance.sh # 解除安裝腳本
 ├── test-dotfiles.sh                # 本機測試套件
+├── test-bootstrap.sh               # Bootstrap 測試套件
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                  # CI/CD 流程
-├── .yadm/
-│   └── hooks/
-│       └── pre-commit              # Pre-commit 驗證
 ├── README.md                       # 英文文件
 ├── README.zh-TW.md                 # 繁體中文文件（本檔案）
 └── CONTRIBUTING.md                 # 開發指南
@@ -1239,4 +1355,4 @@ shellcheck *.sh  # 若已透過 brew 安裝
 
 ---
 
-最後更新：2026 年 3 月
+最後更新：2026 年 7 月

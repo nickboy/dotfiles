@@ -88,6 +88,20 @@ else
     echo "     Run 'cargo install --locked tree-sitter-cli' manually after installing Rust"
 fi
 
+# Install pay-respects (command correction, the "fk" alias in .zshrc).
+# cargo-only: not packaged in Homebrew, so brew bundle can't cover it.
+if command -v cargo &> /dev/null; then
+    if ! command -v pay-respects &> /dev/null; then
+        echo "🙏 Installing pay-respects via cargo..."
+        cargo install --locked pay-respects || echo "  ⚠️  Failed to install pay-respects"
+    else
+        echo "🙏 pay-respects already installed"
+    fi
+else
+    echo "  ⚠️  cargo not found, skipping pay-respects installation"
+    echo "     Run 'cargo install --locked pay-respects' manually (powers the fk alias)"
+fi
+
 # Install bob (Neovim version manager) from git dev branch.
 # We intentionally track upstream dev instead of Homebrew or crates.io:
 # the dev branch contains the nvim proxy permission fix (issue #241) that

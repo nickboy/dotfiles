@@ -1,4 +1,7 @@
 {
+  "git_panel": {
+    "dock": "left"
+  },
   "icon_theme": "Material Icon Theme",
   "base_keymap": "VSCode",
   "theme": "Catppuccin Mocha",
@@ -15,7 +18,7 @@
   },
   "current_line_highlight": "all",
   "vim_mode": true,
-  "relative_line_numbers": true,
+  "relative_line_numbers": "enabled",
   "vim": {
     "use_system_clipboard": "always",
     "use_smartcase_find": true,
@@ -52,17 +55,18 @@
   "remove_trailing_whitespace_on_save": true,
   "ensure_final_newline_on_save": true,
   "edit_predictions": {
+    "provider": "supermaven",
     "disabled_globs": ["**/.env*", "**/*.pem", "**/*.key", "**/*.cert", "**/*.crt", "**/.dev.vars", "**/secrets.yml"]
   },
-  "features": {
-    "edit_prediction_provider": "supermaven"
-  },
   "agent": {
-    "always_allow_tool_actions": true,
+    "tool_permissions": {
+      "default": "allow"
+    },
+    "dock": "right",
     "default_profile": "write",
     "default_model": {
       "provider": "zed.dev",
-      "model": "claude-3-5-sonnet"
+      "model": "claude-sonnet-5"
     }
   },
   "file_scan_exclusions": [
@@ -90,7 +94,7 @@
       "program": "zsh"
     },
     "font_size": 14,
-    "font_family": "JetBrains Mono",
+    "font_family": "Maple Mono NF CN",
     "working_directory": "current_project_directory",
     "blinking": "terminal_controlled",
     "copy_on_select": true,

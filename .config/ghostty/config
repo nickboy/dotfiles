@@ -33,7 +33,10 @@ macos-titlebar-style = tabs
 cursor-style = block
 cursor-style-blink = true
 
-# Cursor shaders - fancy cursor effects
+# Cursor shaders - fancy cursor effects. BOTH are enabled on purpose:
+# the stacked slash+smear look is the intended aesthetic (2026-07 audit
+# flagged the double GPU pass; owner confirmed the layered effect is
+# deliberate — do not "fix" this to a single shader).
 # cursor_slash: diagonal trail effect on cursor movement
 # cursor_smear: smooth smearing trail effect on cursor movement
 custom-shader-animation = true

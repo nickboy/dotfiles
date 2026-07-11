@@ -1,5 +1,9 @@
 tap "jstkdng/programs"
 tap "charmbracelet/tap"
+tap "oven-sh/bun"
+tap "smudge/smudge"
+tap "tw93/tap"
+tap "yakitrak/yakitrak"
 # Code searching, linting, rewriting
 brew "ast-grep"
 # Network bandwidth utilization tool
@@ -10,9 +14,8 @@ brew "bash"
 brew "bat"
 # Resource monitor (modern top/htop replacement)
 brew "btop"
-# Python kept in brew for formula deps (thefuck, liblqr);
-# userland Python is managed by mise (see ~/.config/mise/config.toml)
-brew "python@3.13"
+# Fast JavaScript runtime, bundler, and package manager
+brew "oven-sh/bun/bun"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
 # Human-friendly cut alternative
@@ -35,14 +38,14 @@ brew "dust"
 brew "eza"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
-# Friendlier find
-brew "ffind"
 # Indent and beautify Fortran sources and generate dependency information
 brew "findent"
 # Command-line fuzzy finder written in Go
 brew "fzf"
 # Syntax-highlighting pager for git and diff output
 brew "git-delta"
+# Structural (syntax-aware) diff tool — complements delta ('git dft' alias)
+brew "difftastic"
 # Render markdown in the terminal
 brew "glow"
 # Open source programming language to build simple/reliable/efficient software
@@ -57,6 +60,10 @@ brew "jq"
 brew "julia"
 # Git-compatible version control system
 brew "jj"
+# TUI for jj (Jujutsu)
+brew "jjui"
+# Syntax-aware merge conflict resolver (wired as a git merge driver)
+brew "mergiraf"
 # Just a command runner
 brew "just"
 # Simple terminal UI for git commands
@@ -69,17 +76,25 @@ brew "charmbracelet/tap/mods"
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
 brew "neovim"
+# CLI for macOS Night Shift
+brew "smudge/smudge/nightlight"
+# CLI to open, search, and manage Obsidian/NotesMD vaults
+brew "yakitrak/yakitrak/notesmd-cli"
+# Mac disk cleanup CLI (tw93)
+brew "tw93/tap/mole"
 # Node kept in brew for formula deps (ccusage, pyright);
 # userland Node is managed by mise
 brew "node"
 # Development kit for the Java programming language
 brew "openjdk"
+# Painless compression/decompression, auto-detects formats (extract/x aliases)
+brew "ouch"
+# Terminal HTTP client TUI (Postman-style; requests stored as plain YAML)
+brew "posting"
 # Highly capable, feature-rich programming language
 brew "perl"
 # Execute binaries from Python packages in isolated environments
 brew "pipx"
-# Theme for zsh
-brew "powerlevel10k"
 # Modern replacement for ps written in Rust
 brew "procs"
 # Static type checker for Python
@@ -102,8 +117,8 @@ brew "rustup"
 brew "shellcheck"
 # Cross-platform prompt for any shell
 brew "starship"
-# Programmatically correct mistyped console commands
-brew "thefuck"
+# NOTE: command correction is pay-respects (cargo install pay-respects,
+# handled by bootstrap) — the old thefuck formula pulled in python@3.13
 # Official tldr client written in Rust
 brew "tlrc"
 # macOS notification banners from the command line
@@ -112,6 +127,8 @@ brew "terminal-notifier"
 brew "television"
 # macOS file tagging CLI (used by yazi mactag plugin)
 brew "tag"
+# Zero-config log file highlighter/pager (binary: tspin)
+brew "tailspin"
 # Count lines of code quickly
 brew "tokei"
 # Terminal multiplexer
@@ -157,8 +174,11 @@ cask "arc"
 cask "betterdisplay"
 cask "font-hack-nerd-font"
 cask "font-maple-mono-nf-cn"
-# Terminal emulator that uses platform-native UI and GPU acceleration
-cask "ghostty"
+# Terminal emulator that uses platform-native UI and GPU acceleration.
+# @tip channel on purpose: matches auto-update-channel=tip in the Ghostty
+# config — the stable cask would fight the in-app updater (downgrade on
+# every stable release, Sparkle re-upgrades) and must not be re-added.
+cask "ghostty@tip"
 # Cross-platform Git credential storage for multiple hosting providers
 cask "git-credential-manager"
 # Free and open-source media player

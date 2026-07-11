@@ -174,8 +174,11 @@ cask "arc"
 cask "betterdisplay"
 cask "font-hack-nerd-font"
 cask "font-maple-mono-nf-cn"
-# Terminal emulator that uses platform-native UI and GPU acceleration
-cask "ghostty"
+# Terminal emulator that uses platform-native UI and GPU acceleration.
+# @tip channel on purpose: matches auto-update-channel=tip in the Ghostty
+# config — the stable cask would fight the in-app updater (downgrade on
+# every stable release, Sparkle re-upgrades) and must not be re-added.
+cask "ghostty@tip"
 # Cross-platform Git credential storage for multiple hosting providers
 cask "git-credential-manager"
 # Free and open-source media player

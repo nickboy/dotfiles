@@ -116,6 +116,15 @@ setopt hist_ignore_all_dups
 setopt hist_save_no_dups
 setopt hist_find_no_dups
 
+# Per-pane history timeline. OMZ's history lib enables share_history, which
+# makes "fc -ln -1" return the newest command from ANY pane — pay-respects'
+# fk would then re-run e.g. a TUI another pane just launched and hit its
+# safety timeout. inc_append still writes every command to the history file
+# immediately; cross-pane interactive search is Atuin's job (Ctrl+R, up-arrow)
+# and is unaffected.
+setopt inc_append_history
+setopt no_share_history
+
 # Initialize completion system (required by OMZ plugins that use compdef)
 autoload -Uz compinit
 compinit -C

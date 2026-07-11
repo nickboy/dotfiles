@@ -41,7 +41,11 @@ macOS (Apple Silicon) development environment:
    any commit. Fix ALL lint errors, no exceptions. Never use
    `'**/*.md'` from `~` — it scans the entire home directory and hangs.
 
-5. **Run tests before committing** — `bash ~/test-dotfiles.sh`
+5. **Run tests before committing** — `bash ~/test-dotfiles.sh`.
+   Enforcement is two layers: the yadm hook at
+   `~/.config/yadm/hooks/pre_commit` runs the suite on `yadm commit`
+   (bypassable via `--no-verify` or raw `GIT_DIR=… git commit`), and
+   CI blocks on the same checks — treat CI as the authoritative gate.
 
 6. **No AI tags in commits** — Do NOT include Claude co-author or
    AI-generated tags in commit messages.
@@ -54,7 +58,9 @@ macOS (Apple Silicon) development environment:
    Homebrew. Run `:TSUpdate` after updating nvim-treesitter.
 
 9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
-   Git credentials managed by Git Credential Manager.
+   Git credentials use the macOS `osxkeychain` helper by default
+   (see `~/.config/git/config`); Git Credential Manager is only a
+   per-machine override in the untracked `~/.gitconfig`.
 
 ## Skills
 

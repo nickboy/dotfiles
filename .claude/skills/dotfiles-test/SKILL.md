@@ -68,16 +68,23 @@ brew install shellcheck
 
 GitHub Actions workflow at `.github/workflows/ci.yml` runs on every PR:
 
-1. **Shell Validation** — ShellCheck and syntax checking
-2. **macOS Integration** — Tests on multiple macOS versions
-3. **Security Scanning** — Trivy and Trufflehog for secrets/vulnerabilities
-4. **Documentation** — Validates README and markdown files
-5. **Compatibility Matrix** — Tests on Ubuntu and macOS 12/13/14
+1. **Comprehensive Lint** (ubuntu) — shebang-detected shellcheck +
+   bash -n over all tracked scripts, yamllint, **blocking** markdownlint,
+   JSON/TOML/Lua/plist/Brewfile validation
+2. **macOS Integration + Test Suite** — zsh/beautysh checks, Zellij KDL
+   validation, plutil on the plist template, `test-bootstrap.sh`, and
+   the full `test-dotfiles.sh` run
+3. **Security Scanning** (ubuntu) — Trivy and Trufflehog
+4. **Documentation Links** (ubuntu) — README link check
 
 ## Pre-commit Hook
 
-Located at `~/.yadm/hooks/pre-commit`. Runs validation automatically before
-each `yadm commit`. To bypass in emergencies:
+Located at `~/.config/yadm/hooks/pre_commit` (yadm 3.x reads
+`$YADM_DIR/hooks/pre_<command>`; the legacy `~/.yadm/hooks/pre-commit`
+path is never executed). Runs the full test suite before each
+`yadm commit`. Note: the hook only intercepts `yadm commit` — direct
+`GIT_DIR=… git commit` bypasses it; CI is the blocking second layer.
+To bypass in emergencies:
 
 ```bash
 yadm commit --no-verify -m "Emergency fix"

@@ -19,6 +19,64 @@ if [[ "$1" == "--auto" ]]; then
     fi
 fi
 
+# --- Concurrency lock -------------------------------------------------------
+# RunAtLoad (login catch-up) and the 9AM StartCalendarInterval can fire close
+# together; without a lock both runs proceed and contend on zinit/bob/nvim
+# state. mkdir is atomic; the PID + age check clears stale locks left behind
+# by a crash or power loss (otherwise maintenance silently never runs again).
+LOCK_DIR="$HOME/.cache/dotfiles/daily-maintenance.lock"
+LOCK_MAX_AGE_SECONDS=21600  # 6 hours
+
+acquire_lock() {
+    mkdir -p "$(dirname "$LOCK_DIR")"
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        echo $$ > "$LOCK_DIR/pid"
+        trap 'rm -rf "$LOCK_DIR"' EXIT
+        return 0
+    fi
+
+    local pid lock_mtime now age
+    pid=$(cat "$LOCK_DIR/pid" 2>/dev/null)
+    lock_mtime=$(stat -f %m "$LOCK_DIR" 2>/dev/null || echo 0)
+    now=$(date +%s)
+    age=$((now - lock_mtime))
+
+    if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null && [ "$age" -lt "$LOCK_MAX_AGE_SECONDS" ]; then
+        echo "Daily maintenance already running (pid $pid, lock age ${age}s); exiting."
+        exit 0
+    fi
+
+    echo "Clearing stale lock (pid ${pid:-unknown} not alive or age ${age}s > ${LOCK_MAX_AGE_SECONDS}s)"
+    rm -rf "$LOCK_DIR"
+    if mkdir "$LOCK_DIR" 2>/dev/null; then
+        echo $$ > "$LOCK_DIR/pid"
+        trap 'rm -rf "$LOCK_DIR"' EXIT
+        return 0
+    fi
+    echo "Could not acquire lock after clearing stale one; exiting."
+    exit 1
+}
+acquire_lock
+
+# --- Log rotation ------------------------------------------------------------
+# launchd appends to StandardOutPath/StandardErrorPath forever. Rotate with
+# copy+truncate (not rename) because THIS process is writing to the same fd:
+# truncating keeps the O_APPEND fd valid, a rename would send the whole run
+# into the .1 file.
+rotate_log() {
+    local log_file="$1"
+    local max_bytes=$((5 * 1024 * 1024))  # 5 MB
+    local size
+    [ -f "$log_file" ] || return 0
+    size=$(stat -f %z "$log_file" 2>/dev/null || echo 0)
+    if [ "$size" -gt "$max_bytes" ]; then
+        cp "$log_file" "$log_file.1" 2>/dev/null && : > "$log_file"
+        echo "Rotated $(basename "$log_file") (${size} bytes -> ${log_file##*/}.1)"
+    fi
+}
+rotate_log "$HOME/Library/Logs/daily-maintenance.log"
+rotate_log "$HOME/Library/Logs/daily-maintenance-error.log"
+
 echo "========================================="
 echo "Starting daily maintenance: $(date)"
 echo "========================================="
@@ -236,21 +294,27 @@ update_bob_nightly() {
 run_command() {
     local description="$1"
     shift
-    local command="$*"
-    
+
     echo ""
     echo "----------------------------------------"
     echo "Task: $description"
-    echo "Command: $command"
+    echo "Command: $*"
     echo -n "Status: "
-    
-    # Run the command
-    if $command; then
+
+    # Execute the args directly ("$@" keeps quoting intact; the old
+    # 'local command="$*"; $command' re-split every argument)
+    if "$@"; then
         echo "✓ SUCCESS"
         return 0
     else
         local exit_code=$?
-        echo "✗ FAILED (exit code: $exit_code)"
+        if [ "$exit_code" -eq 124 ]; then
+            # exit 124 = killed by run_with_timeout's watchdog, not a
+            # failure of the command itself — keep the two distinguishable
+            echo "✗ TIMED OUT (killed by watchdog after the time limit, exit 124)"
+        else
+            echo "✗ FAILED (exit code: $exit_code)"
+        fi
         return $exit_code
     fi
 }
@@ -259,7 +323,9 @@ run_command() {
 FAILED_COMMANDS=()
 
 # Run your daily maintenance commands
-if ! run_command "Homebrew formula upgrade" brew upgrade --yes; then
+# 900s timeout: a stalled network otherwise hangs the whole run (the other
+# network steps are already wrapped; brew was the only unguarded one)
+if ! run_command "Homebrew formula upgrade" run_with_timeout 900 brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
@@ -280,7 +346,7 @@ fi
 # plain "brew upgrade" skips; --yes skips Homebrew 6's confirmation prompt so
 # the run stays unattended. (An auto_updates app is still upgraded by brew when
 # a newer cask version exists -- that's expected, not a problem.)
-if ! run_command "Homebrew cask upgrade (greedy-latest)" brew upgrade --cask --greedy-latest --yes; then
+if ! run_command "Homebrew cask upgrade (greedy-latest)" run_with_timeout 900 brew upgrade --cask --greedy-latest --yes; then
     FAILED_COMMANDS+=("brew upgrade --cask --greedy-latest")
     # Most common cause of a cask failure: its app in /Applications is owned by
     # root (usually from a past "sudo brew"), so Homebrew needs sudo to replace

@@ -31,6 +31,13 @@
 [merge]
 	conflictstyle = zdiff3
 
+# Syntax-aware auto-resolution of merge conflicts (mergiraf.org).
+# Registered globally but inert until a repo opts in via .gitattributes,
+# e.g.:  *.py merge=mergiraf
+[merge "mergiraf"]
+	name = mergiraf
+	driver = mergiraf merge --git %O %A %B -s %S -x %X -y %Y -p %P -l %L
+
 [push]
 	default = current
 	autoSetupRemote = true
@@ -66,3 +73,8 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+
+[alias]
+	# Semantic diff via difftastic (syntax trees, not lines); the regular
+	# 'git diff' keeps delta as its pager — the two complement each other
+	dft = !git -c diff.external=difft diff

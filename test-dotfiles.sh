@@ -56,13 +56,13 @@ for script in daily-maintenance*.sh install-daily-maintenance.sh uninstall-daily
 done
 echo
 
-# Test 3: Validate plist template
+# Test 3: Validate plist template (yadm ##template with {{env.HOME}})
 echo -e "${YELLOW}3. LaunchAgent Plist Template Validation${NC}"
-PLIST_TEMPLATE="Library/LaunchAgents/com.daily-maintenance.plist.template"
+PLIST_TEMPLATE="Library/LaunchAgents/com.daily-maintenance.plist##template"
 if [ -f "$PLIST_TEMPLATE" ]; then
     # Create temp file with substituted values for validation
     TEMP_PLIST="/tmp/test-plist-$$"
-    sed "s|{{HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$TEMP_PLIST"
+    sed "s|{{env.HOME}}|$HOME|g" "$PLIST_TEMPLATE" > "$TEMP_PLIST"
     if command -v plutil >/dev/null 2>&1; then
         run_test "Plist template validation" "plutil -lint '$TEMP_PLIST'"
     else
@@ -150,7 +150,8 @@ echo
 echo -e "${YELLOW}8. Script Dry Run Tests${NC}"
 
 # Test daily-maintenance.sh functions
-cat > /tmp/test_maintenance.sh << 'EOF'
+TEST_MAINT_SCRIPT=$(mktemp "${TMPDIR:-/tmp}/test_maintenance.XXXXXX")
+cat > "$TEST_MAINT_SCRIPT" << 'EOF'
 #!/bin/bash
 # Source the script but override dangerous functions
 brew() { echo "MOCK: brew $@"; return 0; }
@@ -173,7 +174,7 @@ FAILED_COMMANDS=()
 echo "Script structure is valid"
 EOF
 
-run_test "Daily maintenance script structure" "bash /tmp/test_maintenance.sh"
+run_test "Daily maintenance script structure" "bash '$TEST_MAINT_SCRIPT'"
 
 # Content checks: ensure key upgrade sections are present
 # (regression guards for accidental removal)
@@ -276,6 +277,56 @@ echo -e "${YELLOW}12. Version Control Checks${NC}"
 run_test "No uncommitted changes" "[ -z \"$(yadm status --porcelain 2>/dev/null)\" ] || yadm status --porcelain"
 echo
 
+# Test 13: Markdown Lint (mandatory — every commit MUST pass, no exceptions)
+# NOTE: never lint '**/*.md' from ~ — it scans the whole home dir and hangs.
+# -z/-0 keeps filenames with spaces intact and skips the run on empty input.
+echo -e "${YELLOW}13. Markdown Lint${NC}"
+if command -v npx >/dev/null 2>&1; then
+    # Locally the tracked files come from yadm; in CI checkouts from git.
+    if command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
+        run_test "markdownlint on tracked markdown files" \
+            "yadm ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
+    elif git rev-parse --git-dir >/dev/null 2>&1; then
+        run_test "markdownlint on tracked markdown files" \
+            "git ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
+    else
+        echo -e "${YELLOW}  Not a yadm/git repo; skipping markdown lint${NC}"
+    fi
+else
+    echo -e "${YELLOW}  npx not available; skipping markdown lint (CI will enforce it)${NC}"
+fi
+echo
+
+# Test 14: ShellCheck on ALL tracked bash/sh scripts (shebang-detected)
+# Covers extensionless scripts (.local/bin tools, yadm hooks) that the
+# '*.sh' glob in Test 4 misses. The anchored regex deliberately excludes
+# zsh scripts — shellcheck does not support zsh.
+echo -e "${YELLOW}14. ShellCheck (tracked scripts by shebang)${NC}"
+if command -v shellcheck >/dev/null 2>&1; then
+    if command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
+        TRACKED_FILES=$(yadm ls-files)
+    elif git rev-parse --git-dir >/dev/null 2>&1; then
+        TRACKED_FILES=$(git ls-files)
+    else
+        TRACKED_FILES=""
+    fi
+    if [ -n "$TRACKED_FILES" ]; then
+        while IFS= read -r tracked; do
+            [ -f "$tracked" ] || continue
+            if head -1 "$tracked" 2>/dev/null | \
+               grep -qE '^#!/(usr/(local/)?)?bin/(env +)?(bash|sh)\b'; then
+                run_test "ShellCheck (shebang) $tracked" \
+                    "shellcheck -S warning '$tracked'"
+            fi
+        done <<< "$TRACKED_FILES"
+    else
+        echo -e "${YELLOW}  Not a yadm/git repo; skipping shebang shellcheck${NC}"
+    fi
+else
+    echo -e "${YELLOW}  ShellCheck not installed; skipping${NC}"
+fi
+echo
+
 # Summary
 echo -e "${BLUE}========================================${NC}"
 echo -e "${BLUE}Test Summary${NC}"
@@ -305,6 +356,6 @@ else
 fi
 
 # Cleanup
-rm -f /tmp/test_maintenance.sh
+rm -f "$TEST_MAINT_SCRIPT"
 
 exit 0

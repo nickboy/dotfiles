@@ -51,10 +51,27 @@ ml    # View maintenance logs
 
 - Main log: `~/Library/Logs/daily-maintenance.log`
 - Error log: `~/Library/Logs/daily-maintenance-error.log`
+- Both self-rotate to `.1` when they exceed 5 MB (copy+truncate at the
+  start of each run)
+
+## Concurrency & Robustness
+
+- A lock at `~/.cache/dotfiles/daily-maintenance.lock` prevents the
+  login catch-up racing the 9AM schedule; stale locks (dead PID or
+  older than 6h) self-clear
+- `brew upgrade` steps run under a 900s watchdog; exit 124 is logged
+  as `TIMED OUT`, distinct from a real failure
+- Shared helpers live in `~/daily-maintenance-lib.sh` (sourced by the
+  install/uninstall/control scripts)
+- launchctl uses `enable` + `bootstrap`/`bootout` (real exit codes) —
+  the deprecated `load`/`unload` exit 0 even on failure, which once
+  masked a disabled agent for a week
 
 ## LaunchAgent
 
-- Template: `~/Library/LaunchAgents/com.daily-maintenance.plist.template`
+- Template: `~/Library/LaunchAgents/com.daily-maintenance.plist##template`
+  (yadm-native; `yadm alt` regenerates the real plist on every
+  clone/pull, expanding `{{env.HOME}}`)
 - Generated: `~/Library/LaunchAgents/com.daily-maintenance.plist` (gitignored)
 
 ### Changing the Schedule

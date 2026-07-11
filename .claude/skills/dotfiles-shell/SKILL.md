@@ -29,8 +29,10 @@ user-invocable: true
 - **Oh-My-Zsh** provides the framework — loaded before Zinit
 - Oh-My-Zsh libraries loaded via Zinit: `directories`, `history`, `misc`
 - Oh-My-Zsh plugins loaded via Zinit: `common-aliases`, `colored-man-pages`,
-  `web-search`, `sudo`, `extract`, `copypath`, `copyfile`, `jsontools`,
-  `encode64`
+  `web-search`, `sudo`, `copypath`, `copyfile`, `jsontools`, `encode64`
+- Archive extraction is `ouch` via the `extract`/`x` aliases (the OMZ
+  `extract` plugin was retired); command correction (`fk`) is
+  `pay-respects` (cargo), not thefuck
 
 ### PATH Priority
 

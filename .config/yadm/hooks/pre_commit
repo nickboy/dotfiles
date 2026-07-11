@@ -1,32 +1,31 @@
 #!/bin/bash
 
-# Pre-commit hook for dotfiles
-# Runs tests before allowing commit
+# yadm pre-commit hook (yadm 3.x reads $YADM_DIR/hooks/pre_<command>,
+# i.e. this file must live at ~/.config/yadm/hooks/pre_commit).
+# Runs the full test suite (which includes markdownlint) before
+# allowing a commit. Bypass in emergencies: yadm commit --no-verify
 
 echo "Running pre-commit tests..."
 
 # Run the test suite if it exists
 if [ -f "$HOME/test-dotfiles.sh" ]; then
-    bash "$HOME/test-dotfiles.sh"
-    if [ $? -ne 0 ]; then
+    if ! bash "$HOME/test-dotfiles.sh"; then
         echo "❌ Pre-commit tests failed. Please fix issues before committing."
         exit 1
     fi
 else
     # Fallback to basic checks
     echo "Running basic syntax checks..."
-    
-    # Check bash syntax for staged .sh files
-    for file in $(yadm diff --cached --name-only | grep '\.sh$'); do
+
+    while IFS= read -r file; do
         if [ -f "$HOME/$file" ]; then
-            bash -n "$HOME/$file"
-            if [ $? -ne 0 ]; then
+            if ! bash -n "$HOME/$file"; then
                 echo "❌ Syntax error in $file"
                 exit 1
             fi
         fi
-    done
-    
+    done < <(yadm diff --cached --name-only | grep '\.sh$')
+
     echo "✅ Basic checks passed"
 fi
 

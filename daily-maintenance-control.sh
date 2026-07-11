@@ -3,44 +3,49 @@
 # Daily Maintenance Control Script
 # Use this to manage your automated daily maintenance
 
-PLIST_PATH="$HOME/Library/LaunchAgents/com.daily-maintenance.plist"
-SCRIPT_PATH="$HOME/daily-maintenance.sh"
-LOG_PATH="$HOME/Library/Logs/daily-maintenance.log"
-ERROR_LOG_PATH="$HOME/Library/Logs/daily-maintenance-error.log"
+# Shared colors, paths, and helpers
+# shellcheck source=daily-maintenance-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/daily-maintenance-lib.sh"
 
 case "$1" in
     status)
         echo "Checking daily maintenance status..."
-        if launchctl list | grep -q "com.daily-maintenance"; then
+        if dm_loaded; then
             echo "✓ Daily maintenance is ACTIVE"
             launchctl list | grep "com.daily-maintenance"
         else
             echo "✗ Daily maintenance is NOT ACTIVE"
         fi
         ;;
-    
+
     start|enable)
         echo "Starting daily maintenance..."
-        launchctl load "$PLIST_PATH" 2>/dev/null || launchctl load -w "$PLIST_PATH"
-        echo "✓ Daily maintenance started"
+        if dm_loaded; then
+            echo "✓ Daily maintenance already running"
+        elif dm_load; then
+            echo "✓ Daily maintenance started"
+        else
+            echo "✗ Failed to start daily maintenance"
+            exit 1
+        fi
         ;;
-    
+
     stop|disable)
         echo "Stopping daily maintenance..."
-        launchctl unload "$PLIST_PATH"
+        dm_unload
         echo "✓ Daily maintenance stopped"
         ;;
-    
+
     restart)
         echo "Restarting daily maintenance..."
-        launchctl unload "$PLIST_PATH" 2>/dev/null
-        launchctl load "$PLIST_PATH"
+        dm_unload 2>/dev/null
+        dm_load
         echo "✓ Daily maintenance restarted"
         ;;
-    
+
     run)
         echo "Running maintenance manually..."
-        bash "$SCRIPT_PATH"
+        bash "$MAINTENANCE_SCRIPT"
         ;;
     
     logs)
@@ -58,7 +63,7 @@ case "$1" in
         ;;
     
     edit)
-        ${EDITOR:-nano} "$SCRIPT_PATH"
+        ${EDITOR:-nano} "$MAINTENANCE_SCRIPT"
         ;;
     
     *)
@@ -76,6 +81,6 @@ case "$1" in
         echo "  edit     - Edit the maintenance script"
         echo ""
         echo "Schedule: Daily at 9:00 AM"
-        echo "Script: $SCRIPT_PATH"
+        echo "Script: $MAINTENANCE_SCRIPT"
         ;;
 esac

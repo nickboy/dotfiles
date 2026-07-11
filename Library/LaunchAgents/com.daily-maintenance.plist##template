@@ -4,13 +4,13 @@
 <dict>
     <key>Label</key>
     <string>com.daily-maintenance</string>
-    
+
     <key>ProgramArguments</key>
     <array>
-        <string>{{HOME}}/daily-maintenance.sh</string>
+        <string>{{env.HOME}}/daily-maintenance.sh</string>
         <string>--auto</string>
     </array>
-    
+
     <!-- Run daily at 9:00 AM -->
     <key>StartCalendarInterval</key>
     <dict>
@@ -19,21 +19,21 @@
         <key>Minute</key>
         <integer>0</integer>
     </dict>
-    
+
     <!-- Log output -->
     <key>StandardOutPath</key>
-    <string>{{HOME}}/Library/Logs/daily-maintenance.log</string>
+    <string>{{env.HOME}}/Library/Logs/daily-maintenance.log</string>
     <key>StandardErrorPath</key>
-    <string>{{HOME}}/Library/Logs/daily-maintenance-error.log</string>
-    
+    <string>{{env.HOME}}/Library/Logs/daily-maintenance-error.log</string>
+
     <!-- Run at login to catch up missed maintenance -->
     <key>RunAtLoad</key>
     <true/>
-    
+
     <!-- Set working directory -->
     <key>WorkingDirectory</key>
-    <string>{{HOME}}</string>
-    
+    <string>{{env.HOME}}</string>
+
     <!-- Environment variables -->
     <key>EnvironmentVariables</key>
     <dict>

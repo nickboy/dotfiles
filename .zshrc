@@ -18,6 +18,10 @@ export LANG=en_US.UTF-8
 # PATH Configuration (Consolidated and deduplicated)
 # ============================================================================
 
+# Keep $path unique: repeated prepends (nested shells, tmux, re-source)
+# collapse to a single entry instead of accumulating duplicates
+typeset -U path PATH
+
 # Homebrew (Apple Silicon)
 export PATH="/opt/homebrew/bin:/opt/homebrew/sbin:$PATH"
 
@@ -32,10 +36,11 @@ export PATH="/usr/local/bin:/usr/local/sbin:$PATH"
 export PATH="/opt/homebrew/opt/openjdk/bin:$PATH"
 export PATH="/Library/TeX/texbin:$PATH"
 
-# Initialize Homebrew environment (this also sets PATH, MANPATH, INFOPATH)
-eval "$(/opt/homebrew/bin/brew shellenv)"
+# NOTE: brew shellenv runs once in ~/.zprofile (login shells); subshells
+# inherit the exported vars, and the explicit prepend above guarantees the
+# brew paths for any non-login edge case — no need to eval it again here.
 
-# Bob Neovim (MUST be absolutely last after brew shellenv to have highest priority)
+# Bob Neovim (MUST be last to have highest priority)
 export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
 
 # Compilation flags for macOS
@@ -45,7 +50,6 @@ export PKG_CONFIG_PATH="/opt/homebrew/lib/pkgconfig"
 
 # Homebrew settings
 export HOMEBREW_NO_ANALYTICS=1
-export HOMEBREW_RUBY3=true
 
 # ============================================================================
 # Oh-My-Zsh Path and Settings (for Zinit OMZ:: snippets)
@@ -54,13 +58,9 @@ export HOMEBREW_RUBY3=true
 export ZSH=$HOME/.oh-my-zsh
 HIST_STAMPS="yyyy-mm-dd"
 
-# Tmux settings
-# Only autostart tmux for local terminal sessions, not SSH
-if [[ -z "$SSH_CONNECTION" ]]; then
-    ZSH_TMUX_AUTOSTART='true'
-else
-    ZSH_TMUX_AUTOSTART='false'
-fi
+# NOTE: tmux autostart is intentionally absent — sessions are managed via
+# sesh (Ctrl-a T / the "s" command); the old ZSH_TMUX_AUTOSTART vars were
+# dead config because their only consumer (OMZ tmux plugin) is never loaded.
 
 # NOTE: We do NOT source oh-my-zsh.sh here.
 # All OMZ libs and plugins are loaded via Zinit for better control and no conflicts.
@@ -116,6 +116,15 @@ setopt hist_ignore_all_dups
 setopt hist_save_no_dups
 setopt hist_find_no_dups
 
+# Per-pane history timeline. OMZ's history lib enables share_history, which
+# makes "fc -ln -1" return the newest command from ANY pane — pay-respects'
+# fk would then re-run e.g. a TUI another pane just launched and hit its
+# safety timeout. inc_append still writes every command to the history file
+# immediately; cross-pane interactive search is Atuin's job (Ctrl+R, up-arrow)
+# and is unaffected.
+setopt inc_append_history
+setopt no_share_history
+
 # Initialize completion system (required by OMZ plugins that use compdef)
 autoload -Uz compinit
 compinit -C
@@ -141,16 +150,19 @@ export _EZA_PARAMS=(
 )
 zinit light z-shell/zsh-eza
 
-# Fast syntax highlighting (load early for immediate effect)
-zinit light zdharma-continuum/fast-syntax-highlighting
-
 # ============================================================================
 # Deferred Plugins (Load after prompt for faster startup)
 # ============================================================================
 
-# Autosuggestions and completions
+# Canonical zinit turbo trio: syntax highlighting, completions,
+# autosuggestions. COMPINIT_OPTS=-C makes the deferred zicompinit skip the
+# compaudit security scan (already done implicitly by the early
+# 'compinit -C' above) — compinit previously ran twice, once with the
+# full audit, on every shell start.
 zinit wait lucid for \
-    blockf atinit"zicompinit; zicdreplay" \
+    atinit"ZINIT[COMPINIT_OPTS]=-C; zicompinit; zicdreplay" \
+    zdharma-continuum/fast-syntax-highlighting \
+    blockf \
     zsh-users/zsh-completions \
     atload"_zsh_autosuggest_start" \
     zsh-users/zsh-autosuggestions
@@ -159,7 +171,6 @@ zinit wait lucid for \
 zinit wait lucid for \
     MichaelAquilina/zsh-you-should-use \
     fdellwing/zsh-bat \
-    OMZP::extract \
     OMZP::copypath \
     OMZP::copyfile \
     OMZP::jsontools \
@@ -246,8 +257,10 @@ if command -v fzf &> /dev/null; then
         esac
     }
 
-    # FZF-git integration
-    [[ -f ~/fzf-git.sh/fzf-git.sh ]] && source ~/fzf-git.sh/fzf-git.sh
+    # FZF-git integration (Ctrl-G key bindings) — zinit-managed so
+    # 'zinit update' keeps it fresh (was a manual clone in $HOME)
+    zinit ice wait lucid pick"fzf-git.sh"
+    zinit light junegunn/fzf-git.sh
 fi
 
 # Load fzf-tab AFTER fzf is initialized
@@ -269,25 +282,27 @@ zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --i
 zstyle ':completion:*' group-name ''
 zstyle ':completion:*:descriptions' format '[%d]'
 
-# Sesh completion
-if command -v sesh &> /dev/null; then
-    eval "$(sesh completion zsh)"
-fi
-
-# Carapace - universal command completions
-if command -v carapace &> /dev/null; then
-    export CARAPACE_BRIDGES='zsh,fish,bash'  # Bridge completions from other shells
-    source <(carapace _carapace)
-fi
+# Sesh + Carapace completions — deferred via zinit's null plugin. Both only
+# register compdefs and together cost ~30-50ms of subprocess spawns; the
+# turbo queue runs them after the prompt is already up, and declaration
+# order guarantees zicompinit (in the trio block above) has run first.
+export CARAPACE_BRIDGES='zsh,fish,bash'  # Bridge completions from other shells
+zinit ice wait"1" lucid nocd id-as"deferred-completions" as"null" \
+    atload'command -v sesh &>/dev/null && eval "$(sesh completion zsh)"; command -v carapace &>/dev/null && source <(carapace _carapace)'
+zinit light zdharma-continuum/null
 
 # Zoxide - init moved to end of file (before starship) to satisfy zoxide doctor
 
-# The fuck (command correction) - lazy-loaded to save ~5ms on shell startup
-if command -v thefuck &> /dev/null; then
+# pay-respects (command correction; Rust successor to the unmaintained
+# thefuck, which dragged in a whole python@3.13 dependency chain).
+# Lazy-loaded: init cost is only paid on first use.
+if command -v pay-respects &> /dev/null; then
     fk() {
-        unfunction fk
-        eval "$(thefuck --alias fk)"
-        fk "$@"
+        unfunction fk 2>/dev/null
+        eval "$(pay-respects zsh --alias fk)"
+        # The init defines fk as an ALIAS, which can't take effect inside
+        # this already-parsed function — invoke its target directly.
+        __pr_main suggest
     }
 fi
 
@@ -304,6 +319,11 @@ fi
 # ============================================================================
 # Aliases
 # ============================================================================
+
+# Universal archive extraction via ouch (replaces the OMZ extract plugin;
+# note: multi-file archives are extracted into a subdirectory)
+alias extract='ouch decompress'
+alias x='ouch decompress'
 
 # Modern replacements (managed by z-shell/zsh-eza plugin)
 # Plugin provides: ls, l, ll, llm, la, lx, tree
@@ -474,8 +494,8 @@ if command -v hexyl &> /dev/null; then
 fi
 
 # Documentation
-alias help='tlrc'
-alias cheat='tlrc'
+alias help='tldr'
+alias cheat='tldr'
 
 # Markdown rendering
 if command -v glow &> /dev/null; then

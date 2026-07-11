@@ -815,8 +815,9 @@ bootstrap script (it is not a Homebrew package). After installing dotfiles:
 - **Claude Session Manager**: `Ctrl-a + y` launches/attaches a Claude Code
   session for the current directory; `Ctrl-a + u` opens an fzf picker of
   live Claude sessions with working/waiting/idle status and a live preview
-  (`craftzdog/tmux-claude-session-manager`; status fed by `state.sh` hooks
-  wired in `~/.claude/settings.json`)
+  (`craftzdog/tmux-claude-session-manager` ≥ v1.0.1; status is read live
+  from `claude agents` — requires Claude Code ≥ 2.1.139 and `jq`, no
+  Claude Code hooks needed)
 
 ### Key Bindings
 

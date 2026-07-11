@@ -791,8 +791,9 @@ TPM（Tmux Plugin Manager）由 bootstrap 腳本 git clone 至
   複製後透過 `open` 開啟 URL
 - **Claude Session Manager**: `Ctrl-a + y` 啟動/接上當前目錄的 Claude Code
   工作階段；`Ctrl-a + u` 開啟 live Claude session 的 fzf 選單，含
-  working/waiting/idle 狀態與即時預覽（`craftzdog/tmux-claude-session-manager`；
-  狀態由接進 `~/.claude/settings.json` 的 `state.sh` hook 提供）
+  working/waiting/idle 狀態與即時預覽（`craftzdog/tmux-claude-session-manager`
+  ≥ v1.0.1；狀態直接讀自 `claude agents`——需 Claude Code ≥ 2.1.139 與
+  `jq`，不再需要 Claude Code hooks）
 
 ### 按鍵綁定
 

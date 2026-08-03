@@ -344,8 +344,10 @@ fi
 
 # Upgrade casks. --greedy-latest also covers version-less (:latest) casks that
 # plain "brew upgrade" skips; --yes skips Homebrew 6's confirmation prompt so
-# the run stays unattended. (An auto_updates app is still upgraded by brew when
-# a newer cask version exists -- that's expected, not a problem.)
+# the run stays unattended. Verified via --dry-run: auto_updates apps
+# (VS Code) are NOT touched at this level -- that needs --greedy or
+# --greedy-auto-updates, which must never be added here (a self-updated
+# app can drift past the cask checksum; test-dotfiles.sh asserts this).
 if ! run_command "Homebrew cask upgrade (greedy-latest)" run_with_timeout 900 brew upgrade --cask --greedy-latest --yes; then
     FAILED_COMMANDS+=("brew upgrade --cask --greedy-latest")
     # Most common cause of a cask failure: its app in /Applications is owned by

@@ -1,0 +1,36 @@
+# Sessionizer (herdr plugin) — sesh successor for the herdr trial.
+# Pickers fuzzy over these roots; the [tabs] layout below is applied
+# only when a NEW workspace is created (existing ones are just focused).
+
+[projects]
+# ~ covers the repos that live flat in $HOME (dotfiles, plum, ...);
+# git_only keeps the listing to real repos.
+roots = ["~/src", "~/Workspace", "~"]
+git_only = true
+depth = 1
+
+[ui]
+placement = "popup"
+width = "90%"
+height = "90%"
+
+[layout]
+focus = "agent"
+
+# One tab: editor left, Claude Code right (the point of the trial).
+[tabs.main]
+label = "main"
+
+[[tabs.main.panes]]
+id = "editor"
+title = "nvim"
+command = "nvim ."
+
+[[tabs.main.panes]]
+id = "agent"
+from = "editor"
+split = "right"
+ratio = 0.45
+title = "claude"
+command = "claude"
+accept_command_override = true

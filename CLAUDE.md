@@ -58,11 +58,31 @@ macOS (Apple Silicon) development environment:
    Homebrew. Run `:TSUpdate` after updating nvim-treesitter.
 
 9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
-   Git credentials use the macOS `osxkeychain` helper by default
-   (see `~/.config/git/config`). Commits are SSH-signed via the
-   1Password agent (`op-ssh-sign`, configured in the untracked
+   The invariant on EVERY machine: credentials and identity live in
+   untracked files (`~/.gitconfig`, machine ssh config), never in
+   tracked ones. The specifics below describe the PERSONAL machines;
+   on work machines (enterprise hosting, no 1Password) follow that
+   machine's own `~/.gitconfig` instead — see
+   `docs/work-machine-checklist.md`.
+
+   Personal machines: GitHub auth goes over **SSH through the
+   1Password agent** — the key lives in 1Password with no private key
+   on disk, routed by `~/.ssh/config.d/10-github-1password.conf`, so
+   remotes must use `git@github.com:` and not `https://`. The same
+   key signs commits (`op-ssh-sign`, configured in the untracked
    `~/.gitconfig`; public keys in tracked `~/.ssh/allowed_signers`).
-   Git Credential Manager was removed 2026-08.
+
+   Two gotchas. A 1Password key must be added to GitHub as an
+   **authentication** key, not only a signing key; GitHub keeps those
+   lists separate, and a signing-only key still fails `git push`.
+   And `00-defaults.conf` sets `IdentitiesOnly yes` globally, which
+   makes ssh ignore agent keys, so any host using 1Password needs
+   `IdentitiesOnly no`.
+
+   Git Credential Manager was removed 2026-08. HTTPS remotes fail with
+   "Invalid username or token" (the `osxkeychain`-cached credential is
+   stale) — switch the remote to SSH rather than trying to repair the
+   credential.
 
 ## Skills
 

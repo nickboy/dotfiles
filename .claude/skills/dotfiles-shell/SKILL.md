@@ -4,8 +4,8 @@ description: |
   Use when user mentions "zshrc", "shell config", "zinit", "oh-my-zsh",
   "tmux", "alias", "fzf", "zoxide", "sesh", "ghostty", "kitty",
   "terminal", "atuin", "starship", "carapace", "yazi", "mise",
-  "television", "glow", "serpl", "jj", "jujutsu", or discusses
-  shell, terminal, or multiplexer configuration.
+  "television", "glow", "scooter", "herdr", "jj", "jujutsu", or
+  discusses shell, terminal, or multiplexer configuration.
 version: 1.0.0
 tools: Read, Glob, Grep, Bash, Edit
 user-invocable: true
@@ -59,7 +59,7 @@ user-invocable: true
 - `ms` — Maintenance status
 - `ml` — Maintenance logs
 - `cat` → `bat`, `vim` → `nvim`, `cd` → `z`
-- `y` → yazi (file manager, cd on exit), `sr` → serpl, `md` → glow
+- `y` → yazi (file manager, cd on exit), `sr` → scooter, `md` → glow
 - Modern CLI replacements: `ls`→eza, `du`→dust, `df`→duf, `top`→btop,
   `grep`→rg, `find`→fd, `dig`→doggo, `ps`→procs
 
@@ -95,8 +95,9 @@ user-invocable: true
 - **tmux-continuum** — Auto-save sessions
 - **Catppuccin theme** — Mocha variant
 - **tmux-claude-session-manager** — `prefix+y` launch/attach Claude for the
-  cwd; `prefix+u` fzf picker of live Claude sessions (working/waiting/idle
-  status via `scripts/state.sh` hooks + live preview)
+  cwd; `prefix+u` fzf picker of live Claude sessions (v1.1.0+: status read
+  live from `claude agents` — the old `state.sh` settings.json hooks were
+  removed and must never be re-added)
 
 ### Session Management (sesh)
 
@@ -134,7 +135,9 @@ Tab/Shift-Tab to navigate, Ctrl-x for zoxide dirs, Ctrl-d to kill session.
 
 - Pager: **delta** with syntax highlighting
 - Merge conflict style: **zdiff3**
-- Credential helper: Git Credential Manager
+- GitHub auth: **SSH via the 1Password agent** (`git@github.com:` remotes;
+  see `~/.ssh/config.d/10-github-1password.conf`). Git Credential Manager
+  was removed 2026-08 and HTTPS remotes now fail.
 - User: Nick Liu (`nickboy@users.noreply.github.com`)
 
 ## Terminal Emulators

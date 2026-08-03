@@ -784,6 +784,9 @@ herdr integration install claude   # 重新生成 agent-state hook
 寫死（`bat`/`ls`，非 eza）；jj 插件的 *remove* 是銷毀性操作
 （forget + `rm -rf`，故意不綁鍵）。
 
+完整雙機建置指南（工作筆電／遠端 Linux、remote attach、通知、
+升級紀律）：[docs/herdr-setup.md](docs/herdr-setup.md)（英文）
+
 ## Tmux 設定
 
 ### 初始設定

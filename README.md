@@ -808,6 +808,10 @@ Known limits vs the tmux stack: sessionizer has no blacklist and its
 picker preview is hard-coded (`bat`/`ls`, not eza); the jj plugin's
 *remove* action is destructive (forget + `rm -rf`, left unbound).
 
+Full dual-machine setup (work laptop / remote Linux server, remote
+attach, notifications, upgrade discipline):
+[docs/herdr-setup.md](docs/herdr-setup.md)
+
 ## 🖥️ Tmux Configuration
 
 ### Setup

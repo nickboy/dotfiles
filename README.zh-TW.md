@@ -755,6 +755,22 @@ zjd             # zellij delete-session
     └── catppuccin-mocha.kdl      # Catppuccin Mocha 主題
 ```
 
+## herdr（試驗中）
+
+[herdr](https://herdr.dev/) 是感知 AI agent 狀態的多工器，目前進行
+兩週試驗——只承載 Claude Code session，tmux 仍是主力。formula 已
+`brew pin`（其協定在任何版本不匹配時拒絕 attach）。設定在
+`~/.config/herdr/config.toml`（ctrl+a prefix、對映 tmux 鍵位、
+Catppuccin）。插件屬機器本地產物、由 herdr 以 commit 釘版；新機器：
+
+```bash
+herdr plugin install --yes paulbkim-dev/vim-herdr-navigation
+herdr plugin install --yes andrewchng/herdr-sessionizer
+herdr plugin install --yes iurysza/termscope
+herdr plugin install --yes NathanFlurry/herdr-plugin-jj-workspace
+herdr integration install claude   # 重新生成 agent-state hook
+```
+
 ## Tmux 設定
 
 ### 初始設定

@@ -776,6 +776,23 @@ zjd             # zellij delete-session
     └── catppuccin-mocha.kdl      # Catppuccin Mocha theme
 ```
 
+## 🤖 herdr (trial)
+
+[herdr](https://herdr.dev/) is an AI-agent-aware multiplexer under a
+two-week trial for Claude Code sessions only — tmux stays primary.
+Formula is `brew pin`ned (its wire protocol refuses attach across any
+version mismatch). Config: `~/.config/herdr/config.toml` (ctrl+a
+prefix, tmux-mirrored keys, Catppuccin). Plugins are machine-local,
+commit-pinned by herdr; on a new machine:
+
+```bash
+herdr plugin install --yes paulbkim-dev/vim-herdr-navigation
+herdr plugin install --yes andrewchng/herdr-sessionizer
+herdr plugin install --yes iurysza/termscope
+herdr plugin install --yes NathanFlurry/herdr-plugin-jj-workspace
+herdr integration install claude   # regenerates the agent-state hook
+```
+
 ## 🖥️ Tmux Configuration
 
 ### Setup

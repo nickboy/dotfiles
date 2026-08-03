@@ -64,6 +64,11 @@ yadm clone https://github.com/nickboy/dotfiles.git
 yadm remote set-url origin git@github.com:nickboy/dotfiles.git
 ```
 
+Deploying onto a machine with existing config (work laptop)? Follow
+[docs/work-machine-checklist.md](docs/work-machine-checklist.md)
+first — it covers backing up `~/.claude`, settings precedence, and
+what must stay machine-local on a public repo.
+
 The bootstrap script will automatically run after cloning to:
 
 - Set up configuration symlinks (e.g., Ghostty)

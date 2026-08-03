@@ -58,6 +58,11 @@ yadm clone https://github.com/nickboy/dotfiles.git
 yadm remote set-url origin git@github.com:nickboy/dotfiles.git
 ```
 
+要部署到已有自訂設定的機器（如工作筆電）？先照
+[docs/work-machine-checklist.md](docs/work-machine-checklist.md)
+走——涵蓋 `~/.claude` 備份、設定優先序、以及公開 repo 上
+哪些東西必須留在機器本地。
+
 Bootstrap 腳本會在複製後自動執行：
 
 - 設定設定檔 symlink（例如 Ghostty）

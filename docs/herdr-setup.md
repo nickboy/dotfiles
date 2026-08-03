@@ -64,9 +64,13 @@ Nothing to write on a new machine — it ships with the dotfiles:
 - `~/.config/herdr/config.toml##template` (tracked): `yadm alt`
   generates `config.toml` on clone/pull. Only the `[experimental]`
   block branches per OS (kitty graphics + CJK IME are Darwin-only).
-- Toast delivery is `system` (**verified**): toasts are posted by the
-  CLIENT side, so with `--remote` even remote agents' notifications
-  land in the local Mac's notification center.
+- Toast delivery is `terminal` (**verified the hard way**): the client
+  asks its outer terminal (Ghostty) to post the banner. `system` looks
+  right on paper but macOS only has Ghostty registered in Notification
+  Center — herdr's system path (terminal-notifier/osascript) gets
+  silently dropped. `terminal` covers every topology: local, --remote
+  (client is local Ghostty), and ssh+herdr (OSC rides SSH back).
+  Banners appear only while Ghostty is unfocused (Ghostty's policy).
 - Reload after changes: `herdr server reload-config` (edit the
   template, run `yadm alt`, then reload).
 
@@ -130,8 +134,12 @@ not track; rerun the integration command to regenerate.
 
 | Path | Behavior |
 | --- | --- |
-| herdr pane (local or remote) | herdr agent engine → system toast |
+| herdr pane (local or remote) | herdr agent engine → Ghostty banner |
 | Ghostty direct / tmux / SSH+tmux | claude-notify (OSC 9/777) as before |
+
+Toasts fire on agent transitions to done/blocked; the ACTIVE tab is
+suppressed by design — staring at a finishing agent never banners.
+Sounds for background state changes are on by default (`[ui.sound]`).
 
 **Verified**: herdr consumes pane OSC 9/777 rather than forwarding
 them (the OSC 9 payload even pollutes the agent-progress display), so

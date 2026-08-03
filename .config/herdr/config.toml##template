@@ -122,12 +122,17 @@ command = "nathanflurry.jj-workspace.new-tab"
 description = "new jj workspace (tab)"
 
 # ── Notifications ──────────────────────────────────────────────────
-# "system" = OS notification center, delivered by the CLIENT side:
-# local agents notify here, and with --remote the client is still this
-# Mac — remote agents' notifications land locally too. claude-notify
-# stands down inside herdr panes (herdr eats OSC 9/777), so no doubles.
+# "terminal" = the CLIENT asks its outer terminal (Ghostty) to post
+# the banner. Chosen over "system" on purpose: macOS only has GHOSTTY
+# registered in Notification Center (com.apple.ncprefs) — herdr's
+# system path (terminal-notifier/osascript) gets silently dropped.
+# Works for every topology: local, --remote (client is local Ghostty),
+# and ssh+herdr (OSC rides the SSH channel back to Ghostty).
+# Banner shows only while Ghostty is unfocused — Ghostty's policy,
+# same behavior as the old claude-notify chain. claude-notify itself
+# stands down inside herdr panes (herdr eats pane OSC 9/777).
 [ui.toast]
-delivery = "system"
+delivery = "terminal"
 delay_seconds = 1
 
 [ui.toast.herdr]

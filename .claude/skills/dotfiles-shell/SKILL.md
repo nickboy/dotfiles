@@ -134,7 +134,9 @@ Tab/Shift-Tab to navigate, Ctrl-x for zoxide dirs, Ctrl-d to kill session.
 
 - Pager: **delta** with syntax highlighting
 - Merge conflict style: **zdiff3**
-- Credential helper: Git Credential Manager
+- GitHub auth: **SSH via the 1Password agent** (`git@github.com:` remotes;
+  see `~/.ssh/config.d/10-github-1password.conf`). Git Credential Manager
+  was removed 2026-08 and HTTPS remotes now fail.
 - User: Nick Liu (`nickboy@users.noreply.github.com`)
 
 ## Terminal Emulators

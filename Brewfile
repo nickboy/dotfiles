@@ -1,4 +1,3 @@
-tap "jstkdng/programs"
 tap "charmbracelet/tap"
 tap "oven-sh/bun"
 tap "smudge/smudge"
@@ -14,6 +13,8 @@ brew "bash"
 brew "bat"
 # Resource monitor (modern top/htop replacement)
 brew "btop"
+# Apple Silicon power/thermal monitor, no sudo (CPU/GPU/ANE)
+brew "macmon"
 # Fast JavaScript runtime, bundler, and package manager
 brew "oven-sh/bun/bun"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
@@ -38,8 +39,6 @@ brew "dust"
 brew "eza"
 # Simple, fast and user-friendly alternative to find
 brew "fd"
-# Indent and beautify Fortran sources and generate dependency information
-brew "findent"
 # Command-line fuzzy finder written in Go
 brew "fzf"
 # Syntax-highlighting pager for git and diff output
@@ -56,6 +55,8 @@ brew "hexyl"
 brew "hyperfine"
 # Lightweight JSON processor (used by tmux-which-key)
 brew "jq"
+# CSV/TSV pager: aligned columns, sticky header, search ("less for CSV")
+brew "csvlens"
 # Fast, Dynamic Programming Language
 brew "julia"
 # Git-compatible version control system
@@ -103,8 +104,8 @@ brew "pyright"
 brew "ripgrep"
 # Intuitive find & replace CLI (sed alternative)
 brew "sd"
-# TUI for search and replace, ala VS Code
-brew "serpl"
+# Interactive find-and-replace TUI (serpl successor)
+brew "scooter"
 # Tool to find ROP sequences in PE/Elf/Mach-O x86/x64 binaries
 brew "rp"
 # Extremely fast Python linter, written in Rust
@@ -115,6 +116,12 @@ brew "rust"
 brew "rustup"
 # Static analysis and linting for Bash/Shell scripts
 brew "shellcheck"
+# Secret scanner; staged-diff scan runs in the yadm pre_commit hook
+brew "gitleaks"
+# Security audit for GitHub Actions workflows (also runs in CI)
+brew "zizmor"
+# Semantic linter for GitHub Actions workflows (also runs in CI)
+brew "actionlint"
 # Cross-platform prompt for any shell
 brew "starship"
 # NOTE: command correction is pay-respects (cargo install pay-respects,
@@ -137,8 +144,6 @@ brew "tmux"
 brew "sesh"
 # Universal command argument completion
 brew "carapace"
-# Simple terminal image viewer written in Rust
-brew "viu"
 # Internet file retriever
 brew "wget"
 # HTTPie-like HTTP client written in Rust
@@ -160,8 +165,6 @@ brew "gh"
 # Neovim version manager (bob) is installed from git dev branch via cargo
 # in the yadm bootstrap script. Homebrew's bob lags upstream and lacks the
 # nvim proxy permission fix for nightly upgrades. See daily-maintenance.sh.
-# Drop in replacement for ueberzug written in C++
-brew "jstkdng/programs/ueberzugpp"
 # Password manager that keeps all passwords secure behind one password
 cask "1password"
 # Command-line interface for 1Password

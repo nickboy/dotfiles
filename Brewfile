@@ -182,8 +182,6 @@ cask "font-maple-mono-nf-cn"
 # config — the stable cask would fight the in-app updater (downgrade on
 # every stable release, Sparkle re-upgrades) and must not be re-added.
 cask "ghostty@tip"
-# Cross-platform Git credential storage for multiple hosting providers
-cask "git-credential-manager"
 # Free and open-source media player
 cask "iina"
 # Control your tools with a few keystrokes

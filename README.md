@@ -55,7 +55,13 @@ configurations for macOS development environment.
 1. **Clone the dotfiles repository:**
 
 ```bash
+# HTTPS works anonymously for the initial clone (fresh machine has no
+# SSH agent yet):
 yadm clone https://github.com/nickboy/dotfiles.git
+
+# After the 1Password SSH agent is set up, switch the remote — pushes
+# only work over SSH on this setup:
+yadm remote set-url origin git@github.com:nickboy/dotfiles.git
 ```
 
 The bootstrap script will automatically run after cloning to:

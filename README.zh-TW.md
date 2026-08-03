@@ -51,7 +51,11 @@
 1. **複製 dotfiles 倉庫：**
 
 ```bash
+# 初次 clone 用 HTTPS（新機器還沒有 SSH agent，匿名讀取可用）：
 yadm clone https://github.com/nickboy/dotfiles.git
+
+# 1Password SSH agent 設定完成後切換 remote——此環境只有 SSH 能 push：
+yadm remote set-url origin git@github.com:nickboy/dotfiles.git
 ```
 
 Bootstrap 腳本會在複製後自動執行：

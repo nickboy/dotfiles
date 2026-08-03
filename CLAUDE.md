@@ -72,10 +72,10 @@ macOS (Apple Silicon) development environment:
    makes ssh ignore agent keys, so any host using 1Password needs
    `IdentitiesOnly no`.
 
-   Git Credential Manager was removed 2026-08. The stale `osxkeychain`
-   entry it left behind is why an HTTPS remote fails with
-   "Invalid username or token" — switch the remote to SSH rather than
-   trying to repair the credential.
+   Git Credential Manager was removed 2026-08. HTTPS remotes fail with
+   "Invalid username or token" (the `osxkeychain`-cached credential is
+   stale) — switch the remote to SSH rather than trying to repair the
+   credential.
 
 ## Skills
 

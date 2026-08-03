@@ -283,6 +283,9 @@ web_client {
 // Catppuccin Mocha theme
 theme "catppuccin-mocha"
 
+// zjstatus statusbar lives in the default layout (layouts/default.kdl)
+default_layout "default"
+
 // No pane frames for a cleaner look
 pane_frames false
 

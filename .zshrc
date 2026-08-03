@@ -345,7 +345,14 @@ alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 
 # Shortcuts
 alias c='clear'
-# Use zoxide for cd (skip in Claude Code to avoid interference)
+# Use zoxide for cd (skip in Claude Code to avoid interference).
+# herdr carve-out: if the herdr server was ever started from a Claude
+# Code shell, every pane inherits CLAUDECODE=1 — but a real Claude Code
+# subshell never sources .zshrc interactively, so inside a herdr pane
+# the flag is always stale noise. Clear it so user panes get zoxide.
+if [[ -n "$HERDR_PANE_ID" && -n "$CLAUDECODE" ]]; then
+    unset CLAUDECODE
+fi
 if [[ -z "$CLAUDECODE" ]]; then
     alias cd='z'
 fi

@@ -10,6 +10,15 @@ set -euo pipefail
 #    Ghostty shows banner only when window/surface unfocused)
 # 3. terminal-notifier/notify-send → fallback for non-Ghostty
 
+# 0. herdr pane: herdr consumes OSC 9/777 instead of forwarding them
+#    (the OSC 9 payload even pollutes the agent-progress display), so
+#    banners can never escape the pane. Notifications there come from
+#    herdr's agent engine + system toasts (ui.toast delivery="system").
+#    Stand down. (if-form on purpose: `[ ] && exit` trips set -e.)
+if [ -n "${HERDR_PANE_ID:-}" ]; then
+  exit 0
+fi
+
 target_tty="/dev/tty"
 my_tty=$(command -p ps -o tty= -p $$ 2>/dev/null | tr -d ' ')
 pid=$$

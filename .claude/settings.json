@@ -1,46 +1,16 @@
 {
-  "model": "claude-fable-5[1m]",
-  "hooks": {
-    "Notification": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.local/bin/claude-notify"
-          }
-        ]
-      }
-    ],
-    "SessionStart": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "~/.local/bin/claude-name-session"
-          }
-        ]
-      }
-    ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "~/.local/bin/claude-statusline",
-    "refreshInterval": 5
-  },
   "enabledPlugins": {
-    "lua-lsp@claude-plugins-official": true,
-    "frontend-design@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "code-review@claude-plugins-official": true,
-    "github@claude-plugins-official": true,
-    "superpowers@claude-plugins-official": true,
     "apify-actor-development@apify-agent-skills": true,
     "apify-ultimate-scraper@apify-agent-skills": true,
+    "code-review@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "frontend-design@claude-plugins-official": true,
     "ghostty-config@ghostty-config-dev": true,
+    "github@claude-plugins-official": true,
+    "lua-lsp@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true,
     "pyright-lsp@claude-plugins-official": true,
-    "obsidian@obsidian-skills": true
+    "superpowers@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "apify-agent-skills": {
@@ -51,17 +21,57 @@
     },
     "ghostty-config-dev": {
       "source": {
-        "source": "github",
-        "repo": "shyuan/ghostty-config-plugin"
+        "repo": "shyuan/ghostty-config-plugin",
+        "source": "github"
       }
     },
     "obsidian-skills": {
       "source": {
-        "source": "github",
-        "repo": "kepano/obsidian-skills"
+        "repo": "kepano/obsidian-skills",
+        "source": "github"
       }
     }
   },
-  "tui": "fullscreen",
-  "theme": "custom:my-theme"
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "command": "~/.local/bin/claude-notify",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "command": "~/.local/bin/claude-name-session",
+            "type": "command"
+          }
+        ],
+        "matcher": ""
+      },
+      {
+        "hooks": [
+          {
+            "command": "bash \"$HOME/.claude/hooks/herdr-agent-state.sh\" session",
+            "timeout": 10,
+            "type": "command"
+          }
+        ],
+        "matcher": "*"
+      }
+    ]
+  },
+  "model": "claude-fable-5[1m]",
+  "statusLine": {
+    "command": "~/.local/bin/claude-statusline",
+    "refreshInterval": 5,
+    "type": "command"
+  },
+  "theme": "custom:my-theme",
+  "tui": "fullscreen"
 }

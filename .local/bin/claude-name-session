@@ -42,9 +42,26 @@ emit() {  # $1 = title
     fi
 }
 
+# Inside a herdr pane, mirror the title onto the herdr TAB — the
+# equivalent of the tmux window rename that set-titles forwards.
+# Best-effort and stdout-silent: hook output must stay pure JSON.
+herdr_tab_name() {  # $1 = title
+    [ -n "${HERDR_TAB_ID:-}" ] || return 0
+    have herdr || return 0
+    herdr tab rename "$HERDR_TAB_ID" "$1" >/dev/null 2>&1 || true
+}
+
 case "$(jget source)" in
     startup) ;;
-    resume) [ -n "$(jget session_title)" ] && exit 0 ;;
+    resume)
+        t="$(jget session_title)"
+        if [ -n "$t" ]; then
+            # Title exists (set by /rename or a past run): never overwrite
+            # the session title, but do mirror it onto a fresh herdr tab.
+            herdr_tab_name "$t"
+            exit 0
+        fi
+        ;;
     *) exit 0 ;;
 esac
 
@@ -75,4 +92,5 @@ if [ -n "${SSH_CONNECTION:-}" ]; then
     label="${host%%.*}:$label"
 fi
 
+herdr_tab_name "$label"
 emit "$label"

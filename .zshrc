@@ -345,7 +345,14 @@ alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 
 # Shortcuts
 alias c='clear'
-# Use zoxide for cd (skip in Claude Code to avoid interference)
+# Use zoxide for cd (skip in Claude Code to avoid interference).
+# herdr carve-out: if the herdr server was ever started from a Claude
+# Code shell, every pane inherits CLAUDECODE=1 — but a real Claude Code
+# subshell never sources .zshrc interactively, so inside a herdr pane
+# the flag is always stale noise. Clear it so user panes get zoxide.
+if [[ -n "$HERDR_PANE_ID" && -n "$CLAUDECODE" ]]; then
+    unset CLAUDECODE
+fi
 if [[ -z "$CLAUDECODE" ]]; then
     alias cd='z'
 fi
@@ -505,6 +512,12 @@ fi
 # Search and replace TUI (scooter replaced serpl)
 if command -v scooter &> /dev/null; then
     alias sr='scooter'
+fi
+
+# herdr trial: let TUIs that use C-hjkl themselves (lazygit) receive the
+# chord instead of vim-herdr-navigation moving pane focus
+if command -v herdr &> /dev/null; then
+    export HERDR_NAV_PASSTHROUGH_RE='^lazygit$'
 fi
 
 # File management (yazi with cd-on-exit wrapper)

@@ -141,6 +141,24 @@ Toasts fire on agent transitions to done/blocked; the ACTIVE tab is
 suppressed by design — staring at a finishing agent never banners.
 Sounds for background state changes are on by default (`[ui.sound]`).
 
+Troubleshooting no-banner (learned live):
+
+1. **The client reads toast config at attach** — `server
+   reload-config` is not enough. After changing `[ui.toast]`, detach
+   and reattach every client.
+2. Client-side breadcrumb: `herdr-client.log` logs "received terminal
+   toast notification from server". Line present but no banner →
+   emission side (TERM detection / terminal permission). Line absent →
+   the server never sent it (delivery off, wrong config, or the
+   active-tab / focused suppressions).
+3. Terminal delivery silently no-ops when the client's TERM /
+   TERM_PROGRAM is not a recognized terminal — on ssh+herdr check
+   `echo $TERM` is still `xterm-ghostty` (a profile that rewrites it
+   to xterm-256color kills banners with no error).
+4. macOS: only apps registered in Notification Center can post —
+   check `defaults read com.apple.ncprefs apps`. On this Mac only
+   Ghostty is registered, which is why delivery is `terminal`.
+
 **Verified**: herdr consumes pane OSC 9/777 rather than forwarding
 them (the OSC 9 payload even pollutes the agent-progress display), so
 `claude-notify` stands down inside herdr panes (guard at the top of

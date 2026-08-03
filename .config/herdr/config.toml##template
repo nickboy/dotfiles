@@ -1,6 +1,9 @@
-# herdr config — 2-week trial (Claude Code sessions only; tmux stays primary)
+# herdr config — yadm template: `yadm alt` generates config.toml from
+# this file (edit the template, never the generated file). One config
+# for every machine; only the experimental block branches per OS.
 # Migrated from .tmux.conf muscle memory; keys validated against
 # `herdr --default-config` (0.7.5). Reload: herdr server reload-config
+# Full setup guide (Mac + remote Linux): ~/docs/herdr-setup.md
 
 onboarding = false
 
@@ -118,11 +121,13 @@ type = "plugin_action"
 command = "nathanflurry.jj-workspace.new-tab"
 description = "new jj workspace (tab)"
 
-# ── Notifications: split duties with the claude-notify hook ────────
-# In-app toasts only; desktop banners stay with claude-notify (OSC 777)
-# to avoid double notifications.
+# ── Notifications ──────────────────────────────────────────────────
+# "system" = OS notification center, delivered by the CLIENT side:
+# local agents notify here, and with --remote the client is still this
+# Mac — remote agents' notifications land locally too. claude-notify
+# stands down inside herdr panes (herdr eats OSC 9/777), so no doubles.
 [ui.toast]
-delivery = "herdr"
+delivery = "system"
 delay_seconds = 1
 
 [ui.toast.herdr]
@@ -137,10 +142,15 @@ directory = "~/.herdr/worktrees"
 
 # ── Experimental ───────────────────────────────────────────────────
 [experimental]
+{% if yadm.os == "Darwin" %}
 # yazi/image previews; turn off if unstable
 kitty_graphics = true
 # macOS CJK IME candidate window follows the Claude Code cursor
 reveal_hidden_cursor_for_cjk_ime = true
 cjk_ime_agents = ["claude"]
+{% else %}
+# Linux/remote servers: experimental graphics on top of SSH — keep off
+kitty_graphics = false
+{% endif %}
 # Keep OFF: would persist pane output (possibly secrets) to disk
 pane_history = false

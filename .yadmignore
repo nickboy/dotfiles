@@ -28,7 +28,9 @@ Library/LaunchAgents/com.daily-maintenance.plist
 __pycache__/
 node_modules/
 
-# herdr runtime artifacts (config.toml and plugins/config/ ARE tracked)
+# herdr: config.toml is GENERATED from config.toml##template by yadm alt
+.config/herdr/config.toml
+# herdr runtime artifacts (the ##template and plugins/config/ ARE tracked)
 .config/herdr/plugins/github/
 .config/herdr/plugins.json
 .config/herdr/.plugins.lock

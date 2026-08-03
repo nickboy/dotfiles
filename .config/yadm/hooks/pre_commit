@@ -7,6 +7,21 @@
 
 echo "Running pre-commit tests..."
 
+# Staged-diff secret scan (GitHub push protection is the server-side
+# backstop; this stops leaks before they enter history at all).
+# NOTE: AWS's documentation example keys are allowlisted by gitleaks'
+# default config — verified detection with realistic-looking canaries.
+if command -v gitleaks >/dev/null 2>&1; then
+    if ! GIT_DIR="$(yadm introspect repo)" GIT_WORK_TREE="$HOME" \
+         gitleaks git --pre-commit --staged --no-banner --redact "$HOME"; then
+        echo "❌ gitleaks found potential secrets in the staged changes."
+        echo "   Values are redacted above. Bypass: yadm commit --no-verify"
+        exit 1
+    fi
+else
+    echo "⚠️  gitleaks not installed — skipping staged secret scan"
+fi
+
 # Run the test suite if it exists
 if [ -f "$HOME/test-dotfiles.sh" ]; then
     if ! bash "$HOME/test-dotfiles.sh"; then

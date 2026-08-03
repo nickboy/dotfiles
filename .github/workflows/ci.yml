@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
@@ -28,7 +30,7 @@ jobs:
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck libxml2-utils
           pip install yamllint
-          npm install -g markdownlint-cli
+          npm install -g markdownlint-cli@0.49.1
 
       - name: Lint shell scripts (shebang-detected, includes extensionless)
         run: |
@@ -48,6 +50,18 @@ jobs:
         run: |
           echo "=== YAML Lint ==="
           yamllint -d relaxed -f colored .
+
+      # Both pinned: go install verifies via the Go checksum DB, pip via PyPI.
+      # actionlint = semantic lint (incl. shellcheck on run: scripts),
+      # zizmor = security audit (needs GH_TOKEN for online audits).
+      - name: Lint GitHub Actions workflows (actionlint + zizmor)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          pip install zizmor==1.29.0
+          "$(go env GOPATH)/bin/actionlint" .github/workflows/*.yml
+          zizmor --no-progress .github/workflows/
 
       - name: Lint Markdown files (blocking)
         run: |
@@ -132,11 +146,11 @@ jobs:
         run: |
           echo "=== File Permissions Check ==="
           # Check that shell scripts are executable
-          for script in $(find . -name "*.sh" -type f); do
+          while IFS= read -r script; do
             if [ ! -x "$script" ]; then
               echo "Warning: $script is not executable"
             fi
-          done
+          done < <(find . -name "*.sh" -type f)
 
   documentation:
     name: Documentation Links
@@ -144,6 +158,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Check README exists
         run: |
@@ -165,6 +181,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       # Trivy stays advisory: filesystem CVE scanning is noisy for a
       # dotfiles repo. Pinned to a release SHA (was @master — a mutable
@@ -195,6 +213,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Cache uv tools
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0

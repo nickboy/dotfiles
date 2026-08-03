@@ -1,0 +1,42 @@
+// Default layout: zjstatus statusbar (Catppuccin Mocha)
+// Plugin is pinned to a release URL — Zellij downloads and caches it,
+// so new machines need no manual wasm install (zjstatus >= 0.23 is
+// required for Zellij 0.44's runtime changes).
+layout {
+    default_tab_template {
+        children
+        pane size=1 borderless=true {
+            plugin location="https://github.com/dj95/zjstatus/releases/download/v0.24.0/zjstatus.wasm" {
+                format_left   "{mode}#[fg=#89b4fa,bg=#181825,bold] {session} "
+                format_center "{tabs}"
+                format_right  "#[fg=#6c7086,bg=#181825]{datetime}"
+                format_space  "#[bg=#181825]"
+
+                border_enabled  "false"
+                hide_frame_for_single_pane "false"
+
+                mode_normal        "#[bg=#89b4fa,fg=#11111b,bold] NORMAL "
+                mode_locked        "#[bg=#6c7086,fg=#11111b,bold] LOCKED "
+                mode_resize        "#[bg=#f9e2af,fg=#11111b,bold] RESIZE "
+                mode_pane          "#[bg=#a6e3a1,fg=#11111b,bold] PANE "
+                mode_tab           "#[bg=#cba6f7,fg=#11111b,bold] TAB "
+                mode_scroll        "#[bg=#94e2d5,fg=#11111b,bold] SCROLL "
+                mode_enter_search  "#[bg=#f38ba8,fg=#11111b,bold] SEARCH "
+                mode_search        "#[bg=#f38ba8,fg=#11111b,bold] SEARCH "
+                mode_rename_tab    "#[bg=#cba6f7,fg=#11111b,bold] RENAME "
+                mode_rename_pane   "#[bg=#a6e3a1,fg=#11111b,bold] RENAME "
+                mode_session       "#[bg=#fab387,fg=#11111b,bold] SESSION "
+                mode_move          "#[bg=#f5c2e7,fg=#11111b,bold] MOVE "
+                mode_prompt        "#[bg=#94e2d5,fg=#11111b,bold] PROMPT "
+                mode_tmux          "#[bg=#fab387,fg=#11111b,bold] TMUX "
+
+                tab_normal   "#[fg=#6c7086,bg=#181825] {index} {name} "
+                tab_active   "#[fg=#11111b,bg=#cba6f7,bold] {index} {name} "
+
+                datetime          "#[fg=#6c7086,bg=#181825] {format} "
+                datetime_format   "%a %d %b %H:%M"
+                datetime_timezone "America/Los_Angeles"
+            }
+        }
+    }
+}

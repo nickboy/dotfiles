@@ -760,17 +760,20 @@ zjd             # zellij delete-session
 - **No image passthrough**: Yazi image preview doesn't work in Zellij
   (no Kitty graphics protocol or DCS passthrough support yet)
 - **Third-party WASM plugins**: Zellij 0.44 switched runtime from
-  wasmtime to wasmi; plugins compiled before March 2026 may not load
-  (e.g., zjstatus v0.22.0)
+  wasmtime to wasmi; plugins compiled before March 2026 may not load.
+  zjstatus >= v0.23.0 is compatible again — the statusbar uses v0.24.0,
+  pinned by release URL in `layouts/default.kdl` (Zellij downloads and
+  caches it; on a fresh machine grant the plugin permission once)
 
 ### Configuration Files
 
 ```text
 ~/.config/zellij/
 ├── config.kdl                    # Main config (keybindings, settings)
-├── themes/
-│   └── catppuccin-mocha.kdl      # Catppuccin Mocha theme
-└── plugins/                      # WASM plugins (gitignored)
+├── layouts/
+│   └── default.kdl               # zjstatus statusbar (pinned URL)
+└── themes/
+    └── catppuccin-mocha.kdl      # Catppuccin Mocha theme
 ```
 
 ## 🖥️ Tmux Configuration
@@ -944,6 +947,7 @@ Modern Rust-based replacements for traditional Unix tools:
 | `du` | **dust** | Intuitive disk usage with tree view | `du` |
 | `df` | **duf** | Pretty disk usage with colors | `df` |
 | `top`/`htop` | **btop** | Beautiful resource monitor | `top`, `htop` |
+| - | **macmon** | Apple Silicon power/thermal monitor (no sudo) | `macmon` |
 | `dig` | **doggo** | User-friendly DNS client | `dog` |
 | `sed` | **sd** | Simpler find & replace | `replace` |
 | `ps` | **procs** | Modern process viewer | `ps` |
@@ -954,7 +958,8 @@ Modern Rust-based replacements for traditional Unix tools:
 | - | **tokei** | Code statistics tool | `count` |
 | `man` | **tlrc** | Quick command examples | `help`, `cheat` |
 | - | **yazi** | Blazing fast file manager | `y` |
-| - | **serpl** | TUI search & replace | `sr` |
+| - | **scooter** | Interactive find & replace TUI | `sr` |
+| - | **csvlens** | CSV/TSV pager ("less for CSV") | `csvlens` |
 | - | **television** | Fuzzy finder with previews | `tv` |
 | - | **glow** | Terminal markdown renderer | `md` |
 | - | **mods** | Pipe shell output to LLMs (Charm) | `mods` |
@@ -968,6 +973,9 @@ Modern Rust-based replacements for traditional Unix tools:
 | - | **mergiraf** | Syntax-aware merge conflict resolver | (git driver) |
 | - | **posting** | API-testing TUI, requests as YAML | `posting` |
 | `thefuck` | **pay-respects** | Command correction (Rust, cargo) | `fk` |
+| - | **gitleaks** | Secret scan in the pre-commit hook | `gitleaks` |
+| - | **zizmor** | GitHub Actions security audit (CI) | `zizmor` |
+| - | **actionlint** | GitHub Actions workflow linter (CI) | `actionlint` |
 
 ### Shell Enhancements
 
@@ -1119,8 +1127,8 @@ y ~/Downloads   # Open yazi in specific directory
 # Markdown rendering
 md README.md    # Render markdown in terminal
 
-# Search and replace (serpl)
-sr              # Open TUI search & replace
+# Search and replace (scooter)
+sr              # Open interactive find & replace TUI
 
 # Fuzzy finder with previews (television)
 tv              # Open television fuzzy finder

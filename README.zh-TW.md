@@ -739,17 +739,20 @@ zjd             # zellij delete-session
 - **無圖片 passthrough**: Yazi 圖片預覽在 Zellij 中無法運作
   （尚未支援 Kitty graphics protocol 或 DCS passthrough）
 - **第三方 WASM 外掛**: Zellij 0.44 將 runtime 從 wasmtime
-  改為 wasmi；2026 年 3 月前編譯的外掛可能無法載入
-  （例如 zjstatus v0.22.0）
+  改為 wasmi；2026 年 3 月前編譯的外掛可能無法載入。
+  zjstatus 自 v0.23.0 起恢復相容——狀態列使用 v0.24.0，
+  在 `layouts/default.kdl` 以 release URL 釘版（Zellij 自動
+  下載並快取；新機器首次啟動需授權外掛一次）
 
 ### Zellij 設定檔
 
 ```text
 ~/.config/zellij/
 ├── config.kdl                    # 主設定（快捷鍵、各項設定）
-├── themes/
-│   └── catppuccin-mocha.kdl      # Catppuccin Mocha 主題
-└── plugins/                      # WASM 外掛（已 gitignore）
+├── layouts/
+│   └── default.kdl               # zjstatus 狀態列（URL 釘版）
+└── themes/
+    └── catppuccin-mocha.kdl      # Catppuccin Mocha 主題
 ```
 
 ## Tmux 設定
@@ -919,6 +922,7 @@ sesh clone https://github.com/user/repo
 | `du` | **dust** | 直觀的磁碟使用量樹狀圖 | `du` |
 | `df` | **duf** | 美觀的磁碟空間報告 | `df` |
 | `top`/`htop` | **btop** | 精美的系統資源監控器 | `top`, `htop` |
+| - | **macmon** | Apple Silicon 功耗/溫度監控（免 sudo） | `macmon` |
 | `dig` | **doggo** | 友善的 DNS 查詢工具 | `dog` |
 | `sed` | **sd** | 更簡潔的搜尋取代 | `replace` |
 | `ps` | **procs** | 現代程序檢視器 | `ps` |
@@ -929,7 +933,8 @@ sesh clone https://github.com/user/repo
 | - | **tokei** | 程式碼統計工具 | `count` |
 | `man` | **tlrc** | 快速指令範例 | `help`, `cheat` |
 | - | **yazi** | 極速檔案管理器 | `y` |
-| - | **serpl** | TUI 搜尋取代 | `sr` |
+| - | **scooter** | 互動式搜尋取代 TUI | `sr` |
+| - | **csvlens** | CSV/TSV 檢視器（CSV 版 less） | `csvlens` |
 | - | **television** | 帶預覽的模糊搜尋器 | `tv` |
 | - | **glow** | 終端機 Markdown 閱讀器 | `md` |
 | - | **mods** | 將 shell 輸出管線送進 LLM（Charm） | `mods` |
@@ -943,6 +948,9 @@ sesh clone https://github.com/user/repo
 | - | **mergiraf** | 語法感知合併衝突解決器 | (git driver) |
 | - | **posting** | API 測試 TUI（請求存為 YAML） | `posting` |
 | `thefuck` | **pay-respects** | 指令修正（Rust，cargo 安裝） | `fk` |
+| - | **gitleaks** | 秘密掃描（yadm pre-commit hook 內執行） | `gitleaks` |
+| - | **zizmor** | GitHub Actions 安全稽核（CI 亦執行） | `zizmor` |
+| - | **actionlint** | GitHub Actions workflow linter（CI 亦執行） | `actionlint` |
 
 ### Shell 增強功能
 
@@ -1093,7 +1101,7 @@ y ~/Downloads   # 在指定目錄開啟 yazi
 # Markdown 閱讀
 md README.md    # 在終端機渲染 Markdown
 
-# 搜尋取代 (serpl)
+# 搜尋取代 (scooter)
 sr              # 開啟 TUI 搜尋取代
 
 # 帶預覽的模糊搜尋 (television)

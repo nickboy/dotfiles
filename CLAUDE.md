@@ -59,8 +59,10 @@ macOS (Apple Silicon) development environment:
 
 9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
    Git credentials use the macOS `osxkeychain` helper by default
-   (see `~/.config/git/config`); Git Credential Manager is only a
-   per-machine override in the untracked `~/.gitconfig`.
+   (see `~/.config/git/config`). Commits are SSH-signed via the
+   1Password agent (`op-ssh-sign`, configured in the untracked
+   `~/.gitconfig`; public keys in tracked `~/.ssh/allowed_signers`).
+   Git Credential Manager was removed 2026-08.
 
 ## Skills
 

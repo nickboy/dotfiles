@@ -188,6 +188,12 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # Guard the self-heal that clears stale cask *.upgrading staging dirs.
     run_test "Maintenance self-heals stale cask .upgrading dirs" \
         "grep -qF '.upgrading' $HOME/daily-maintenance.sh"
+    # Self-updating apps (VS Code) must never be cask-upgraded by the
+    # unattended run: --greedy-latest is the ceiling. Plain --greedy or
+    # --greedy-auto-updates would replace apps that update themselves
+    # (a July 2026 incident deleted VS Code that way).
+    run_test "Maintenance cask upgrade never uses greedy/auto-updates" \
+        "! grep -E 'brew upgrade' $HOME/daily-maintenance.sh | grep -qE -- '--greedy(-auto-updates)?([[:space:]]|\$)'"
 fi
 echo
 
@@ -242,6 +248,11 @@ fi
 # Validate sesh config (TOML syntax)
 if [ -f "$HOME/.config/sesh/sesh.toml" ]; then
     run_test "Sesh config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/sesh/sesh.toml').read_text())\""
+    # zjstatus must stay pinned to an exact release (never 'latest'):
+    # Zellij caches the wasm by URL, so a mutable URL = unpinned supply
+    # chain AND stale-cache confusion.
+    run_test "Zellij zjstatus plugin URL is version-pinned" \
+        "grep -qE 'zjstatus/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/zjstatus\.wasm' $HOME/.config/zellij/layouts/default.kdl"
 fi
 echo
 

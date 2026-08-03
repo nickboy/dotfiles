@@ -50,6 +50,9 @@ yadm push             # Push to GitHub
 
 ## Signing & Push Transport
 
+Scope: personal machines. Work machines follow their own untracked
+`~/.gitconfig` (see `docs/work-machine-checklist.md`).
+
 - Commits are SSH-signed via the 1Password agent (`op-ssh-sign`,
   machine-local `~/.gitconfig`). If a commit fails with a signing
   error, 1Password is probably locked — unlock it and retry; never

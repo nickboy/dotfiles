@@ -58,12 +58,19 @@ macOS (Apple Silicon) development environment:
    Homebrew. Run `:TSUpdate` after updating nvim-treesitter.
 
 9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
-   GitHub auth goes over **SSH through the 1Password agent**: the key
-   lives in 1Password with no private key on disk, routed by
-   `~/.ssh/config.d/10-github-1password.conf`, so remotes must use
-   `git@github.com:` and not `https://`. The same key signs commits
-   (`op-ssh-sign`, configured in the untracked `~/.gitconfig`; public
-   keys in tracked `~/.ssh/allowed_signers`).
+   The invariant on EVERY machine: credentials and identity live in
+   untracked files (`~/.gitconfig`, machine ssh config), never in
+   tracked ones. The specifics below describe the PERSONAL machines;
+   on work machines (enterprise hosting, no 1Password) follow that
+   machine's own `~/.gitconfig` instead — see
+   `docs/work-machine-checklist.md`.
+
+   Personal machines: GitHub auth goes over **SSH through the
+   1Password agent** — the key lives in 1Password with no private key
+   on disk, routed by `~/.ssh/config.d/10-github-1password.conf`, so
+   remotes must use `git@github.com:` and not `https://`. The same
+   key signs commits (`op-ssh-sign`, configured in the untracked
+   `~/.gitconfig`; public keys in tracked `~/.ssh/allowed_signers`).
 
    Two gotchas. A 1Password key must be added to GitHub as an
    **authentication** key, not only a signing key; GitHub keeps those

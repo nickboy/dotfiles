@@ -502,9 +502,9 @@ if command -v glow &> /dev/null; then
     alias md='glow'
 fi
 
-# Search and replace TUI
-if command -v serpl &> /dev/null; then
-    alias sr='serpl'
+# Search and replace TUI (scooter replaced serpl)
+if command -v scooter &> /dev/null; then
+    alias sr='scooter'
 fi
 
 # File management (yazi with cd-on-exit wrapper)

@@ -1,0 +1,6 @@
+rules:
+  # Runner tools are version-pinned inline (npm/pip/go install with exact
+  # versions); a lockfile for three CI-only tools is overhead without gain.
+  adhoc-packages:
+    ignore:
+      - ci.yml

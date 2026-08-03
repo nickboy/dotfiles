@@ -27,10 +27,10 @@ prepend_previewers = [
 	{ url = "*.markdown", run = 'piper -- CLICOLOR_FORCE=1 glow -w=$w -s=dark "$1"' },
 ]
 prepend_fetchers = [
-	{ id = "git", url = "*", run = "git" },
-	{ id = "git", url = "*/", run = "git" },
-	{ id = "mactag", url = "*", run = "mactag" },
-	{ id = "mactag", url = "*/", run = "mactag" },
+	{ group = "git", url = "*", run = "git" },
+	{ group = "git", url = "*/", run = "git" },
+	{ group = "mactag", url = "*", run = "mactag" },
+	{ group = "mactag", url = "*/", run = "mactag" },
 ]
 
 [opener]

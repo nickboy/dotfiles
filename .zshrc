@@ -507,6 +507,12 @@ if command -v scooter &> /dev/null; then
     alias sr='scooter'
 fi
 
+# herdr trial: let TUIs that use C-hjkl themselves (lazygit) receive the
+# chord instead of vim-herdr-navigation moving pane focus
+if command -v herdr &> /dev/null; then
+    export HERDR_NAV_PASSTHROUGH_RE='^lazygit$'
+fi
+
 # File management (yazi with cd-on-exit wrapper)
 if command -v yazi &> /dev/null; then
     function y() {

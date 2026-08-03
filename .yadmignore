@@ -27,3 +27,9 @@ Library/LaunchAgents/com.daily-maintenance.plist
 *.pyc
 __pycache__/
 node_modules/
+
+# herdr runtime artifacts (config.toml and plugins/config/ ARE tracked)
+.config/herdr/plugins/github/
+.config/herdr/plugins.json
+.config/herdr/.plugins.lock
+.config/herdr/*.sock

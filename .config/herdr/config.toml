@@ -89,6 +89,35 @@ type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "open worktree workspace"
 
+# termscope: pick files/links visible on screen (tmux-thumbs successor).
+# Prefix-based on purpose — bare ctrl+e/a would steal readline keys.
+[[keys.command]]
+key = "prefix+u"
+type = "plugin_action"
+command = "termscope.open-links"
+description = "open visible link picker"
+
+[[keys.command]]
+key = "prefix+shift+u"
+type = "plugin_action"
+command = "termscope.open"
+description = "open visible file picker"
+
+# jj workspaces. The plugin's 'remove' action is deliberately UNBOUND:
+# it is destructive (jj workspace forget + rm -rf of the directory,
+# untracked files included) — invoke it from the action menu when meant.
+[[keys.command]]
+key = "prefix+shift+j"
+type = "plugin_action"
+command = "nathanflurry.jj-workspace.new"
+description = "new jj workspace"
+
+[[keys.command]]
+key = "prefix+alt+j"
+type = "plugin_action"
+command = "nathanflurry.jj-workspace.new-tab"
+description = "new jj workspace (tab)"
+
 # ── Notifications: split duties with the claude-notify hook ────────
 # In-app toasts only; desktop banners stay with claude-notify (OSC 777)
 # to avoid double notifications.

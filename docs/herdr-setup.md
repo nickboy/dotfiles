@@ -24,7 +24,10 @@ Rules learned the hard way:
   leaks `CLAUDECODE=1` into every pane and kills zoxide/`cd` (the
   .zshrc guard fires for user shells). `.zshrc` now clears a stale
   flag inside herdr panes, but the server should still be started by
-  a human running plain `herdr`. (**verified** — it happened.)
+  a human running plain `herdr` from a login shell, or auto-started
+  by the first attach. CLAUDECODE was merely the leaked variable that
+  got CAUGHT — a tool-shell server keeps handing every future pane
+  its whole polluted environment. (**verified** — it happened.)
 - **No nesting**: herdr inside a herdr pane is blocked by design
   (`HERDR_ENV=1`). Run remote attach in its own Ghostty tab.
 - **Version discipline**: the wire protocol refuses attach on ANY
@@ -214,6 +217,12 @@ herdr --version && ssh <host> 'herdr --version'   # must match
 Then restart each server at a convenient moment
 (`herdr server stop`; next attach restores the layout and
 `claude --resume`s the agent panes — `resume_agents_on_restore`).
+
+**Before any server stop**: it kills every pane, not just agents.
+Agent panes come back with their conversations; NON-agent panes
+(dev servers, `tail -f`, running downloads) restore as a fresh shell
+in the right directory only. Scan the sidebar and wind those down
+first.
 
 ## Day-1 verification checklist
 

@@ -533,6 +533,24 @@ if command -v brew >/dev/null 2>&1; then
     fi
 fi
 
+# --- Machine-local extras ---------------------------------------------------
+# Deliberately the LAST step. Anything here is specific to one machine — a work
+# laptop needs steps touching remote hosts and corp tooling that must never land
+# in this public repo — so it runs after everything shared has already
+# succeeded, and a failure costs nothing but a line in the summary.
+#
+# Skipped under --auto: a launchd run has nobody present to answer an
+# interactive prompt (2FA, sudo), and a blocked prompt would hang the timer.
+LOCAL_EXTRAS="$HOME/.daily-maintenance.local"
+if [ -f "$LOCAL_EXTRAS" ]; then
+    if [[ "${1:-}" == "--auto" ]]; then
+        echo ""
+        echo "Skipping machine-local extras (--auto: nobody to answer prompts)"
+    elif ! run_command "Machine-local extras" source "$LOCAL_EXTRAS"; then
+        FAILED_COMMANDS+=("machine-local extras")
+    fi
+fi
+
 echo ""
 echo "========================================="
 if [ ${#FAILED_COMMANDS[@]} -eq 0 ]; then

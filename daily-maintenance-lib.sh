@@ -82,3 +82,13 @@ dm_load() {
 dm_unload() {
     launchctl bootout "$DM_DOMAIN/$DM_LABEL"
 }
+
+# Pure predicate: did a herdr version bump land while a server is live?
+# $1 = version before upgrade, $2 = after, $3 = socket path override
+# (defaults to the real socket). No side effects — the caller decides
+# how to notify. Unit-tested in test-dotfiles.sh.
+dm_herdr_strand_detected() {
+    local before="$1" after="$2"
+    local sock="${3:-$HOME/.config/herdr/herdr.sock}"
+    [ -n "$before" ] && [ "$before" != "$after" ] && [ -S "$sock" ]
+}

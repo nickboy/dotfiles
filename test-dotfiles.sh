@@ -136,6 +136,14 @@ echo -e "${YELLOW}7. Common Issues Check${NC}"
 
 # Check for hardcoded paths that might not exist
 run_test "No hardcoded /Users/specific paths" "! grep -r '/Users/[^/]*/' *.sh | grep -v '\$HOME' | grep -v nickboy"
+# uv's installer drops a PATH snippet at ~/.local/bin/env meant to be
+# SOURCED; if it ever becomes executable it shadows /usr/bin/env (PATH
+# puts ~/.local/bin second) and silently swallows every 'env ... cmd'
+# invocation with exit 0. That exact trap cost a debugging session.
+run_test "env resolves to /usr/bin/env (no executable shim)" \
+    "[ \"\$(command -v env)\" = /usr/bin/env ]"
+run_test "No ~/.local/bin executables shadow system binaries" \
+    "! (for f in \$HOME/.local/bin/*; do b=\$(basename \"\$f\"); [ -x \"\$f\" ] && { [ -e \"/usr/bin/\$b\" ] || [ -e \"/bin/\$b\" ]; } && echo \"\$b\"; done | grep -q .)"
 
 # Check for proper shebang
 for script in *.sh; do
@@ -194,6 +202,16 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # (a July 2026 incident deleted VS Code that way).
     run_test "Maintenance cask upgrade never uses greedy/auto-updates" \
         "! grep -E 'brew upgrade' $HOME/daily-maintenance.sh | grep -qE -- '--greedy(-auto-updates)?([[:space:]]|\$)'"
+    # Tripwire: the maintenance run must never call the herdr CLI beyond
+    # --version — any other subcommand can auto-start a server that
+    # inherits the launchd environment (the CLAUDECODE-leak bug class).
+    # Allowed matches: --version calls, echo/notifier message strings,
+    # the socket path. Anything else fails.
+    run_test "Maintenance calls herdr CLI only with --version" \
+        "! grep -E '^[^#]*\\bherdr\\b' $HOME/daily-maintenance.sh | grep -v -e '--version' -e echo -e terminal-notifier -e '\\-message' -e '\\.sock' | grep -q ."
+    # The strand guard depends on the shared lib being sourced.
+    run_test "Maintenance sources daily-maintenance-lib.sh" \
+        "grep -qE '^source .*daily-maintenance-lib.sh' $HOME/daily-maintenance.sh && grep -q 'dm_herdr_strand_detected' $HOME/daily-maintenance.sh"
 fi
 echo
 
@@ -253,6 +271,23 @@ if [ -f "$HOME/.config/sesh/sesh.toml" ]; then
     # chain AND stale-cache confusion.
     run_test "Zellij zjstatus plugin URL is version-pinned" \
         "grep -qE 'zjstatus/releases/download/v[0-9]+\.[0-9]+\.[0-9]+/zjstatus\.wasm' $HOME/.config/zellij/layouts/default.kdl"
+    if command -v zellij >/dev/null 2>&1; then
+        run_test "Zellij config + layouts parse (setup --check)" \
+            "zellij setup --check >/dev/null 2>&1"
+    fi
+    # Yazi 26 broke silently on a stale fetchers schema (id -> group):
+    # --version fails when the config no longer parses, so this catches
+    # the next schema break instead of yazi quietly using preset config.
+    if command -v yazi >/dev/null 2>&1; then
+        run_test "Yazi config parses (yazi --version)" \
+            "yazi --version >/dev/null 2>&1"
+    fi
+    if [ -f "$HOME/.config/herdr/config.toml" ]; then
+        run_test "herdr config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/herdr/config.toml').read_text())\""
+    fi
+    if [ -f "$HOME/.config/herdr/plugins/config/sessionizer/config.toml" ]; then
+        run_test "herdr sessionizer config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/herdr/plugins/config/sessionizer/config.toml').read_text())\""
+    fi
 fi
 echo
 
@@ -280,6 +315,17 @@ echo -e "${YELLOW}11. Security Checks${NC}"
 # No secrets in yadm-tracked files
 if command -v yadm >/dev/null 2>&1; then
     run_test "No secrets in tracked files" "[ -z \"\$(yadm list -a 2>/dev/null | xargs grep -lE '(APIKEY|SECRET_KEY|API_TOKEN|PRIVATE_KEY|TOKEN|PASSWORD|CREDENTIAL|AWS_SECRET)\s*=' 2>/dev/null | grep -v 'HOMEBREW_NO_ANALYTICS' | grep -v 'test-dotfiles.sh')\" ]"
+fi
+# Commit signing depends on allowed_signers carrying a public key
+if [ -f "$HOME/.ssh/allowed_signers" ]; then
+    run_test "allowed_signers contains an SSH public key" \
+        "grep -qE 'ssh-(rsa|ed25519) ' $HOME/.ssh/allowed_signers"
+fi
+# Every checkout in CI must set persist-credentials: false (zizmor
+# artipacked); count parity catches a new checkout step added without it.
+if [ -f "$HOME/.github/workflows/ci.yml" ]; then
+    run_test "CI checkouts all set persist-credentials false" \
+        "[ \"\$(grep -c 'uses: actions/checkout@' $HOME/.github/workflows/ci.yml)\" -eq \"\$(grep -c 'persist-credentials: false' $HOME/.github/workflows/ci.yml)\" ]"
 fi
 echo
 
@@ -335,6 +381,59 @@ if command -v shellcheck >/dev/null 2>&1; then
     fi
 else
     echo -e "${YELLOW}  ShellCheck not installed; skipping${NC}"
+fi
+echo
+
+# Test 15: Unit tests (lib functions + fixture-based checks)
+echo -e "${YELLOW}15. Unit Tests${NC}"
+
+# dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
+# A real unix socket is required for the -S branch; python3 binds one in
+# a temp dir so all four polarities are exercised.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    HERDR_UT_DIR=$(mktemp -d)
+    python3 -c "import socket; socket.socket(socket.AF_UNIX).bind('$HERDR_UT_DIR/live.sock')" 2>/dev/null
+    UT_SRC="source '$HOME/daily-maintenance-lib.sh' >/dev/null 2>&1;"
+    # macOS caps unix socket paths at ~104 bytes; if the bind failed
+    # (long CI temp dir), skip the two socket-positive cases instead of
+    # reporting a false failure.
+    if [ -S "$HERDR_UT_DIR/live.sock" ]; then
+        run_test "herdr strand: mismatch + live socket -> detected" \
+            "bash -c \"$UT_SRC dm_herdr_strand_detected 'herdr 1.0' 'herdr 2.0' '$HERDR_UT_DIR/live.sock'\""
+        run_test "herdr strand: same version -> silent" \
+            "bash -c \"$UT_SRC ! dm_herdr_strand_detected 'herdr 1.0' 'herdr 1.0' '$HERDR_UT_DIR/live.sock'\""
+    else
+        echo -e "  ${YELLOW}ℹ️  unix socket bind unavailable; skipping socket-positive cases${NC}"
+    fi
+    run_test "herdr strand: no socket -> silent" \
+        "bash -c \"$UT_SRC ! dm_herdr_strand_detected 'herdr 1.0' 'herdr 2.0' '$HERDR_UT_DIR/missing.sock'\""
+    run_test "herdr strand: herdr absent (empty before) -> silent" \
+        "bash -c \"$UT_SRC ! dm_herdr_strand_detected '' 'herdr 2.0' '$HERDR_UT_DIR/live.sock'\""
+    rm -rf "$HERDR_UT_DIR"
+fi
+
+# gitleaks pre-commit engine: same invocation the yadm hook uses, against
+# a throwaway fixture repo (plain git on purpose — the yadm-only rule is
+# for the dotfiles repo, not isolated fixtures). The canary is assembled
+# at runtime so no secret-shaped literal exists in this file (a literal
+# would trip GitHub push protection and the hook's own scan).
+# CRITICAL: every call strips GIT_DIR/GIT_WORK_TREE — the yadm pre_commit
+# hook exports them, and an ambient GIT_DIR silently redirects fixture
+# git commands at the REAL yadm repo (this once flipped its core.bare).
+if command -v gitleaks >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
+    GL_TMP=$(mktemp -d)
+    GL_GIT="env -u GIT_DIR -u GIT_WORK_TREE git"
+    $GL_GIT -C "$GL_TMP" init -q &&
+        $GL_GIT -C "$GL_TMP" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+    printf 'aws_key = "%s%s"\n' "AKIA" "ZZZQK9X2M4P7L3TQ" > "$GL_TMP/leak.txt"
+    $GL_GIT -C "$GL_TMP" add leak.txt
+    run_test "gitleaks flags a staged canary secret" \
+        "! (cd '$GL_TMP' && env -u GIT_DIR -u GIT_WORK_TREE gitleaks git --pre-commit --staged --no-banner --redact . >/dev/null 2>&1)"
+    printf 'greeting = "hello"\n' > "$GL_TMP/leak.txt"
+    $GL_GIT -C "$GL_TMP" add leak.txt
+    run_test "gitleaks passes a clean staged file" \
+        "(cd '$GL_TMP' && env -u GIT_DIR -u GIT_WORK_TREE gitleaks git --pre-commit --staged --no-banner --redact . >/dev/null 2>&1)"
+    rm -rf "$GL_TMP"
 fi
 echo
 

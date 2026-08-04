@@ -47,6 +47,12 @@ this repo — most common) or **fresh clone**. Update path first.
 - [ ] Push transport for THIS machine: keep HTTPS +
   `gh auth login`, or a work SSH key — set in the machine's untracked
   `~/.gitconfig`. Do not copy the personal 1Password setup.
+- [ ] Machine-only maintenance steps go in `~/.daily-maintenance.local`
+  (untracked). `daily-maintenance.sh` sources it as its LAST step, so
+  a failure there costs nothing but a line in the summary, and skips
+  it entirely under `--auto` because the launchd run has nobody
+  present to answer a 2FA prompt. Put anything touching remote hosts
+  or corp tooling there rather than in the tracked script.
 
 ## Fresh-clone path
 
@@ -99,6 +105,37 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
 - [ ] Do NOT copy the personal machine's signing setup; sign with a
   work key or not at all. Tracked `~/.ssh/allowed_signers` holds
   public keys only — harmless.
+- [ ] **Set the repo identity explicitly, or a commit publishes your
+  work email.** A corp-managed `~/.gitconfig` sets a company address,
+  and yadm inherits it — so a commit to this PUBLIC repo carries that
+  address forever. Pin the repo-local identity instead:
+
+  ```bash
+  yadm gitconfig user.name  "Your Name"
+  yadm gitconfig user.email "you@users.noreply.github.com"
+  yadm gitconfig --get user.email        # verify before the first commit
+  ```
+
+  Note `yadm gitconfig`, **not** `yadm config`: the latter writes
+  yadm's own settings namespace and silently has no effect on commit
+  authorship. `yadm config user.email` returning empty while commits
+  still carry an address is the tell.
+
+- [ ] **Verify push actually works before you need it.** A crashing
+  credential helper fails in a confusing way:
+
+  ```text
+  error: ...git-credential-manager get died of signal 11
+  fatal: could not read Username for 'https://github.com'
+  ```
+
+  Fix with the GitHub CLI rather than debugging the helper, and check
+  with a dry run:
+
+  ```bash
+  gh auth status && gh auth setup-git
+  yadm push --dry-run
+  ```
 
 ## Homebrew
 
@@ -119,6 +156,55 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
 - [ ] herdr (if used): follow [herdr-setup.md](herdr-setup.md) —
   version lockstep with any remote, server started from a clean
   login shell, clients re-attach after toast-config changes.
+- [ ] **`~/.ssh/config.d/*` is first-match-wins, and `00-defaults.conf`
+  has a `Host *` block.** ssh takes the FIRST value it sees for each
+  keyword and reads the directory in glob order, so a per-host block
+  in a later file is silently ignored for anything `Host *` already
+  set — `ControlPersist`, `ControlPath`, `ServerAlive*`. A host block
+  that needs to override those must sort BEFORE `00-`, e.g.
+  `0-myhost.conf`. Always confirm with the resolver, never by reading
+  the files:
+
+  ```bash
+  ssh -G myhost | grep -E 'controlpersist|serveralive'
+  ```
+
+- [ ] **A "clean" tree that still refuses to merge is a racy index.**
+  If `yadm pull` aborts with *"Your local changes … would be
+  overwritten"* while `yadm status` shows nothing, some tool rewrote
+  a tracked file with identical content but a fresh mtime.
+  `status` compares content; merge trusts the timestamp. Backdate the
+  file and refresh rather than hunting for a change that is not there:
+
+  ```bash
+  touch -t 202401010000 ~/.claude/settings.json
+  yadm gitconfig --local --unset-all core.trustctime 2>/dev/null || true
+  git --git-dir="$(yadm introspect repo)" --work-tree="$HOME" \
+      update-index -q --refresh
+  yadm pull --ff-only
+  ```
+
+  `.claude/settings.json` is the usual culprit: Claude Code rewrites
+  it on its own (plugin and permission state), so on a machine with
+  work-only plugins expect it to be permanently modified. Discard it
+  before each pull rather than trying to keep it clean.
+
+- [ ] **Claude Code effort: `settings.json` cannot express `max`.**
+  The schema is
+  `enum(["low","medium","high","xhigh"]).optional().catch(void 0)`,
+  and that `.catch()` means an out-of-range value is swallowed in
+  silence — no error, the level just falls back to the default. So
+  `"effortLevel": "max"` looks applied and is not. `max` exists only
+  as `--effort max` at launch or `/effort max` in-session, and
+  `CLAUDE_EFFORT` is write-only (exported for hooks, never read back).
+  A machine that wants `max` by default needs a `PATH` shim in front
+  of `claude`; see [herdr-setup.md](herdr-setup.md).
+
+- [ ] **Anything a herdr-resumed pane must inherit belongs in
+  `~/.zshenv`.** A restore runs a bare `claude --resume <id>` from a
+  NON-interactive shell, which reads `.zshenv` and nothing else —
+  `.zshrc` never runs there, so env set in the `.zshrc` chain
+  disappears across a server restart.
 
 ## Verify
 

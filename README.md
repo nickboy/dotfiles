@@ -791,8 +791,12 @@ zjd             # zellij delete-session
 
 [herdr](https://herdr.dev/) is an AI-agent-aware multiplexer under a
 two-week trial for Claude Code sessions only — tmux stays primary.
-Formula is `brew pin`ned (its wire protocol refuses attach across any
-version mismatch). Config: `~/.config/herdr/config.toml` (ctrl+a
+The formula is unpinned on purpose — every release is picked up by the
+daily maintenance. Its wire protocol refuses attach across versions,
+so the maintenance run detects an upgrade landing on a live server and
+sends a notification instead of killing it: restart when convenient
+(`herdr server stop`, then `herdr`; agent panes resume natively).
+Config: `~/.config/herdr/config.toml` (ctrl+a
 prefix, tmux-mirrored keys, Catppuccin). Plugins are machine-local;
 on a new machine install them SHA-pinned (small third-party repos —
 the `--ref` pin is the supply-chain guard):

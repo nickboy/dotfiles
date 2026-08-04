@@ -767,8 +767,11 @@ zjd             # zellij delete-session
 ## herdr（試驗中）
 
 [herdr](https://herdr.dev/) 是感知 AI agent 狀態的多工器，目前進行
-兩週試驗——只承載 Claude Code session，tmux 仍是主力。formula 已
-`brew pin`（其協定在任何版本不匹配時拒絕 attach）。設定在
+兩週試驗——只承載 Claude Code session，tmux 仍是主力。formula
+刻意**不釘版**——每日維護會跟上每個 release。其協定在版本不匹配時
+拒絕 attach，因此維護腳本偵測到「升級落在活著的 server 上」時會發
+桌面通知而非殺掉它：方便時再重啟（`herdr server stop` 後 `herdr`，
+agent pane 會原生 resume）。設定在
 `~/.config/herdr/config.toml`（ctrl+a prefix、對映 tmux 鍵位、
 Catppuccin）。插件屬機器本地產物；新機器以 SHA 釘版安裝
 （皆為小型第三方 repo，`--ref` 是供應鏈防護）：

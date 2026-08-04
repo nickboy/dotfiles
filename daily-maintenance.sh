@@ -84,6 +84,11 @@ echo "========================================="
 # Set up PATH to include homebrew
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Shared helpers (dm_herdr_strand_detected lives here so it can be
+# unit-tested by test-dotfiles.sh)
+# shellcheck source=daily-maintenance-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/daily-maintenance-lib.sh"
+
 # Set up timeout command (macOS uses gtimeout from coreutils)
 if command -v gtimeout >/dev/null 2>&1; then
     TIMEOUT_CMD="gtimeout"
@@ -325,8 +330,28 @@ FAILED_COMMANDS=()
 # Run your daily maintenance commands
 # 900s timeout: a stalled network otherwise hangs the whole run (the other
 # network steps are already wrapped; brew was the only unguarded one)
+# herdr is deliberately UNPINNED (owner wants every release): capture its
+# version before the upgrade so a bump can be detected afterwards.
+# 'herdr --version' reads the binary only — it never auto-starts a server.
+HERDR_VERSION_BEFORE="$(herdr --version 2>/dev/null || true)"
 if ! run_command "Homebrew formula upgrade" run_with_timeout 900 brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
+fi
+
+# herdr's wire protocol refuses attach on ANY version mismatch, so a bump
+# strands a still-running server. NEVER kill it here — the owner may be in
+# a live session, and no herdr CLI may be called (it could auto-start a
+# server that inherits this launchd environment). Detect via the socket
+# and notify; agent panes resume natively after the owner restarts.
+HERDR_VERSION_AFTER="$(herdr --version 2>/dev/null || true)"
+if dm_herdr_strand_detected "$HERDR_VERSION_BEFORE" "$HERDR_VERSION_AFTER"; then
+    echo "herdr upgraded ($HERDR_VERSION_BEFORE -> $HERDR_VERSION_AFTER) with a live server."
+    echo "Attach will be refused until the server restarts (herdr server stop; herdr)."
+    if command -v terminal-notifier >/dev/null 2>&1; then
+        terminal-notifier -title "herdr upgraded" \
+            -message "Server still on $HERDR_VERSION_BEFORE. When convenient: herdr server stop, then herdr (agents auto-resume)." \
+            >/dev/null 2>&1 || true
+    fi
 fi
 
 # Self-heal: remove leftover *.upgrading cask staging dirs from a previously

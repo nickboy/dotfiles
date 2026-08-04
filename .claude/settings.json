@@ -73,5 +73,6 @@
     "type": "command"
   },
   "theme": "custom:my-theme",
-  "tui": "fullscreen"
+  "tui": "fullscreen",
+  "effortLevel": "xhigh"
 }

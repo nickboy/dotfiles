@@ -346,12 +346,31 @@ alias hh='atuin history list --cmd-only | bat -l bash --style=plain'
 # Shortcuts
 alias c='clear'
 # Use zoxide for cd (skip in Claude Code to avoid interference).
-# herdr carve-out: if the herdr server was ever started from a Claude
-# Code shell, every pane inherits CLAUDECODE=1 — but a real Claude Code
-# subshell never sources .zshrc interactively, so inside a herdr pane
-# the flag is always stale noise. Clear it so user panes get zoxide.
+# herdr carve-out: inside a herdr pane CLAUDECODE=1 is ambiguous. Either this
+# shell really serves Claude Code, or the herdr server was started from a
+# Claude Code shell and every pane inherited a stale flag. Interactivity does
+# NOT separate the two: claude's Bash tool replays a snapshot captured once
+# from an interactive shell, so whatever that shell decides binds every later
+# agent command. Ancestry does separate them — walk up and stop at the pane's
+# herdr server: a genuine agent shell has a claude ancestor below the server,
+# a plain pane shell does not. Stopping at the server keeps the answer right even
+# when the server was (against the rules) started from a Claude Code shell,
+# where the naive "any claude ancestor" test would find the leaking claude and
+# wrongly keep the flag. macOS has no /proc, hence ps.
 if [[ -n "$HERDR_PANE_ID" && -n "$CLAUDECODE" ]]; then
-    unset CLAUDECODE
+    () {
+        local pid=$PPID comm
+        while [[ -n "$pid" && "$pid" != 0 && "$pid" != 1 ]]; do
+            comm=$(command ps -o comm= -p "$pid" 2>/dev/null) || break
+            [[ -n "$comm" ]] || break
+            case ${comm:t} in
+                claude*) return ;;   # real agent shell — keep the guard armed
+                herdr*)  break  ;;   # reached the server first — flag is stale
+            esac
+            pid=$(command ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+        done
+        unset CLAUDECODE             # stale leak — let zoxide live in this pane
+    }
 fi
 if [[ -z "$CLAUDECODE" ]]; then
     alias cd='z'

@@ -84,6 +84,11 @@ echo "========================================="
 # Set up PATH to include homebrew
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
+# Shared helpers (dm_herdr_strand_detected lives here so it can be
+# unit-tested by test-dotfiles.sh)
+# shellcheck source=daily-maintenance-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/daily-maintenance-lib.sh"
+
 # Set up timeout command (macOS uses gtimeout from coreutils)
 if command -v gtimeout >/dev/null 2>&1; then
     TIMEOUT_CMD="gtimeout"
@@ -339,9 +344,7 @@ fi
 # server that inherits this launchd environment). Detect via the socket
 # and notify; agent panes resume natively after the owner restarts.
 HERDR_VERSION_AFTER="$(herdr --version 2>/dev/null || true)"
-if [ -n "$HERDR_VERSION_BEFORE" ] \
-    && [ "$HERDR_VERSION_BEFORE" != "$HERDR_VERSION_AFTER" ] \
-    && [ -S "$HOME/.config/herdr/herdr.sock" ]; then
+if dm_herdr_strand_detected "$HERDR_VERSION_BEFORE" "$HERDR_VERSION_AFTER"; then
     echo "herdr upgraded ($HERDR_VERSION_BEFORE -> $HERDR_VERSION_AFTER) with a live server."
     echo "Attach will be refused until the server restarts (herdr server stop; herdr)."
     if command -v terminal-notifier >/dev/null 2>&1; then

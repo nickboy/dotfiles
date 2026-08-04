@@ -66,16 +66,21 @@ Scope: personal machines. Work machines follow their own untracked
 Verify before first commit in a session:
 
 ```bash
-yadm config user.name   # Should be: Tzu-Hua(Nick) Liu
-yadm config user.email  # Should be: nickboy@users.noreply.github.com
+yadm gitconfig --get user.name   # Should be: Tzu-Hua(Nick) Liu
+yadm gitconfig --get user.email  # Should be: nickboy@users.noreply.github.com
 ```
 
 Set if missing:
 
 ```bash
-yadm config user.name "Tzu-Hua(Nick) Liu"
-yadm config user.email "nickboy@users.noreply.github.com"
+yadm gitconfig user.name "Tzu-Hua(Nick) Liu"
+yadm gitconfig user.email "nickboy@users.noreply.github.com"
 ```
+
+`yadm gitconfig`, **not** `yadm config` — the latter writes yadm's own
+settings namespace and has no effect on commit authorship. This matters
+most on a work machine, where a corp-managed `~/.gitconfig` supplies a
+company address that would otherwise be published to this public repo.
 
 ## Conventional Commit Format
 

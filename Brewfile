@@ -157,8 +157,10 @@ brew "yazi"
 # Terminal multiplexer (modern tmux alternative)
 brew "zellij"
 # AI-agent-aware multiplexer — 2-week trial for Claude Code sessions.
-# brew-pinned during the trial: protocol-version mismatch refuses attach,
-# so upgrades must be deliberate (unpin or `herdr update` when chosen).
+# UNPINNED on purpose (owner tracks every release; fast-moving upstream).
+# Its wire protocol refuses attach across versions, so daily-maintenance
+# detects a bump landing on a live server and notifies instead of killing
+# it — restart when convenient; agent panes resume natively.
 brew "herdr"
 # Shell extension to navigate your filesystem faster
 brew "zoxide"

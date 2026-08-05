@@ -212,6 +212,11 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # (a July 2026 incident deleted VS Code that way).
     run_test "Maintenance cask upgrade never uses greedy/auto-updates" \
         "! grep -E 'brew upgrade' $HOME/daily-maintenance.sh | grep -qE -- '--greedy(-auto-updates)?([[:space:]]|\$)'"
+    # Post-upgrade schema drift is invisible without these: a tool whose
+    # config stopped parsing falls back to its defaults silently (yazi did
+    # exactly that for weeks after the fetchers id -> group rename).
+    run_test "Maintenance runs config schema checks" \
+        "grep -q 'zellij setup --check' $HOME/daily-maintenance.sh && grep -q 'atuin doctor' $HOME/daily-maintenance.sh"
     # Tripwire: the maintenance run must never call the herdr CLI beyond
     # --version — any other subcommand can auto-start a server that
     # inherits the launchd environment (the CLAUDECODE-leak bug class).
@@ -296,6 +301,14 @@ fi
 # Validate Atuin config (TOML syntax)
 if [ -f "$HOME/.config/atuin/config.toml" ]; then
     run_test "Atuin config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/atuin/config.toml').read_text())\""
+    # Daemon mode is per-machine state the tracked config cannot carry: the
+    # config can say enabled = true on a machine where
+    # `brew services start atuin` was never run, and history then goes
+    # nowhere. Only assert when the config actually asks for the daemon.
+    if grep -A6 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
+        run_test "atuin daemon socket live when enabled" \
+            "[ -S \"$HOME/.local/share/atuin/atuin.sock\" ]"
+    fi
 fi
 
 # Validate sesh config (TOML syntax)

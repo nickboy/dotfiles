@@ -533,6 +533,59 @@ if command -v brew >/dev/null 2>&1; then
     fi
 fi
 
+# --- Config schema checks ---------------------------------------------------
+# Daily auto-upgrades can silently break a tool's config schema: a past yazi
+# upgrade renamed a config field and yazi fell back to preset settings for
+# weeks without saying a word. Each check below asks the tool itself to parse
+# its tracked config, so a schema break surfaces the day the upgrade lands
+# instead of months later.
+echo ""
+echo "----------------------------------------"
+echo "Task: Config schema checks"
+
+if command -v yazi >/dev/null 2>&1; then
+    echo -n "Status: yazi (yazi --version) "
+    if yazi --version >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: yazi")
+    fi
+fi
+
+if command -v zellij >/dev/null 2>&1; then
+    echo -n "Status: zellij (zellij setup --check) "
+    if zellij setup --check >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: zellij")
+    fi
+fi
+
+if command -v atuin >/dev/null 2>&1; then
+    echo -n "Status: atuin (atuin doctor) "
+    if atuin doctor >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: atuin")
+    fi
+fi
+
+# Parse .tmux.conf on a throwaway server socket so a live session is never
+# touched; the server is killed again immediately.
+if command -v tmux >/dev/null 2>&1; then
+    echo -n "Status: tmux (throwaway-server parse) "
+    if tmux -L schemacheck -f "$HOME/.tmux.conf" new-session -d 2>/dev/null \
+        && tmux -L schemacheck kill-server 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: tmux")
+    fi
+fi
+
 # --- Machine-local extras ---------------------------------------------------
 # Deliberately the LAST step. Anything here is specific to one machine — a work
 # laptop needs steps touching remote hosts and corp tooling that must never land

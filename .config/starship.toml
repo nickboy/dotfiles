@@ -193,3 +193,13 @@ surface0 = "#313244"
 base = "#1e1e2e"
 mantle = "#181825"
 crust = "#11111b"
+
+# jj status (no native module yet — starship PR #7224 still open).
+# Zero-install variant: shows the working-copy change id in jj repos.
+# Cost: one jj invocation per prompt, only inside jj repos.
+[custom.jj]
+when = "jj root --ignore-working-copy"
+command = 'jj log -r@ -n1 --no-graph --ignore-working-copy -T "change_id.shortest(4)"'
+symbol = "🥋 "
+format = '[$symbol$output]($style) '
+style = "bold purple"

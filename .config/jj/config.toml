@@ -1,0 +1,20 @@
+# jj (Jujutsu) user configuration — yadm tracked.
+# NOTE: mergiraf needs NO setup here — jj ships a builtin
+# [merge-tools.mergiraf] (verified via `jj config list
+# --include-defaults`); `jj resolve --tool mergiraf` just works.
+
+[user]
+# Personal default. Corp repos on the work machine override per-repo:
+#   jj config set --repo user.email <work-email>
+name = "Tzu-Hua(Nick) Liu"
+email = "nickboy@users.noreply.github.com"
+
+[ui]
+pager = "delta"
+diff-formatter = ":git"
+
+[revset-aliases]
+# my own work
+'mine' = 'author("nickboy")'
+# my working stack below @, excluding mainline history
+'stack' = 'ancestors(@, 10) ~ ::trunk()'

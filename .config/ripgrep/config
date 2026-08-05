@@ -62,18 +62,13 @@
 
 # Output Format
 # =============
+# Deliberately EMPTY: this config shapes what gets searched, never how
+# results print. Output flags (--pretty/--column/--context) would leak
+# into piped and scripted rg calls the moment the config is active.
 
-# Show line numbers
---line-number
-
-# Show column numbers
---column
-
-# Pretty print with colors
---pretty
-
-# Show context around matches (2 lines before and after)
---context=2
+# Guard against minified/single-line monsters blowing up the terminal
+--max-columns=200
+--max-columns-preview
 
 # File Type Associations
 # ======================

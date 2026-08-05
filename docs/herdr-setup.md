@@ -41,11 +41,16 @@ Rules learned the hard way:
 
 ## Install
 
-Mac:
+Mac — self-updater managed, NOT Homebrew (owner call 2026-08-05:
+upstream disables `herdr update` for brew installs, and only the
+self-updater supports live handoff; same class as ghostty@tip/bob):
 
 ```bash
-brew install herdr && brew pin herdr   # pinned: upgrades are manual
+curl -fsSL https://herdr.dev/install.sh | sh   # -> ~/.local/bin/herdr
 ```
+
+`~/.local/bin` precedes `/opt/homebrew/bin` in PATH, so never install
+the brew formula alongside — it would shadow-race this binary.
 
 Linux (**⚠ verify** the official installer URL on setup day):
 
@@ -76,6 +81,32 @@ Nothing to write on a new machine — it ships with the dotfiles:
   Banners appear only while Ghostty is unfocused (Ghostty's policy).
 - Reload after changes: `herdr server reload-config` (edit the
   template, run `yadm alt`, then reload).
+
+## Who reads which config (--remote)
+
+Config reading SPLITS between client and server under `herdr
+--remote` (source-verified against 0.7.5):
+
+| Side | What it reads |
+| --- | --- |
+| Client (Mac) | `[keys]`, `[ui.toast]`, `[ui.sound]`, `[remote]` |
+| Server (remote) | theme/terminal/session/worktrees/experimental + plugins |
+
+Practical consequences:
+
+- **Editing keybinds on the remote does nothing under `--remote`.**
+  `--remote-keybindings` defaults to `local`: the client's `[keys]`
+  always wins. Override with `--remote-keybindings=server` to use
+  the remote's `[keys]` instead.
+- **A locally-bound plugin key goes silent if the remote lacks the
+  plugin.** Plugin actions execute server-side (e.g. `prefix+e` →
+  reviewr), so every plugin must be installed on BOTH ends, pinned
+  to the SAME `--ref` SHAs — mirror the block in Plugins below onto
+  the remote machine.
+- **Toast delivery changes need a client re-attach, not a reload.**
+  `[ui.toast]` is read once at attach; `server reload-config` can't
+  push it to an already-attached client. `[ui.sound]` is the only
+  UI class that hot-reloads.
 
 ## Plugins (each machine, SHA-pinned)
 
@@ -193,7 +224,9 @@ Mid-session `/rename` syncs on the next resume (no hook event exists).
 ```bash
 hbox() {
   while true; do
-    herdr --remote user@box "$@" && break
+    # --handoff: if the attach replaces the remote server (version
+    # sync), live panes are handed over instead of killed
+    herdr --remote user@box --handoff "$@" && break
     print "connection lost — retrying in 2s (Ctrl-C to stop)"
     sleep 2
   done
@@ -203,13 +236,42 @@ hbox() {
 - Fallback from anywhere: `ssh <host>` then plain `herdr` — same
   binary, same version, always attaches.
 
-## Upgrades (both ends together, always manual)
+## Upgrades (Mac automatic, remote self-syncs)
 
-Daily maintenance never touches herdr (`brew pin`, enforced by a
-test-suite assertion). To upgrade, do both machines in one sitting:
+The formula is unpinned by owner decision: the Mac side is upgraded
+by the daily maintenance run, which detects a bump landing on a live
+server and sends a notification (restart when convenient — the wire
+protocol refuses attach across versions).
+
+The REMOTE side follows AUTOMATICALLY (source-verified): every
+`herdr --remote <host>` attach checks the remote binary's version
+string against the local one and installs/replaces it on mismatch.
+`--handoff` decides what happens to live remote panes during that
+replacement:
+
+- without it (default): old server stops → panes killed → snapshot
+  restore + `claude --resume` rebuilds layout and conversations, but
+  running processes (builds, tests, tails) start over
+- with it: the old server hands live PTYs/processes to the new one —
+  panes keep running (experimental; in-flight API requests and
+  subscription streams may still drop and need a retry)
+
+So the whole flow is: Mac auto-upgrades daily; next remote attach
+syncs the box. Always attach with `--handoff` (the hbox wrapper
+below bakes it in).
+
+Mac upgrades (self-updater managed since 2026-08-05): run
+`herdr update --handoff` when the in-app version check nags — live
+handoff replaces the local server WITHOUT killing panes (in-flight
+API requests may need a retry). Daily maintenance no longer touches
+herdr at all (it left the Brewfile); its strand-detection guard stays
+as a harmless no-op. Never run `herdr --remote` OR `herdr update`
+from non-interactive automation: replacing a running server requires
+an interactive confirmation and errors otherwise.
+
+Manual fallback (or first install):
 
 ```bash
-brew unpin herdr && brew upgrade herdr && brew pin herdr
 ssh <host> 'curl -fsSL https://herdr.dev/install.sh | sh'
 herdr --version && ssh <host> 'herdr --version'   # must match
 ```

@@ -1,0 +1,6 @@
+# bat configuration
+# Theme file is fetched by bootstrap into ~/.config/bat/themes/ and
+# registered with `bat cache --build` (bootstrap runs it; rerun after
+# adding themes). Every bat consumer (CLI, fzf-tab previews) inherits
+# this — do not hardcode --theme at call sites.
+--theme="Catppuccin Mocha"

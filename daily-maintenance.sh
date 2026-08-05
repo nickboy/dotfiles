@@ -626,9 +626,15 @@ else
     # log dutifully recorded it every day. Surface failures where the
     # owner actually looks.
     if command -v terminal-notifier >/dev/null 2>&1; then
+        # Banner text truncates on long lists: lead with the 'ml' hint
+        # (the part that must survive), cap the list at three tasks.
+        FAIL_PREVIEW=$(printf '%s; ' "${FAILED_COMMANDS[@]:0:3}")
+        if [ ${#FAILED_COMMANDS[@]} -gt 3 ]; then
+            FAIL_PREVIEW="${FAIL_PREVIEW}+$(( ${#FAILED_COMMANDS[@]} - 3 )) more"
+        fi
         terminal-notifier \
             -title "Daily maintenance: ${#FAILED_COMMANDS[@]} task(s) failed" \
-            -message "$(printf '%s; ' "${FAILED_COMMANDS[@]}")(details: ml)" \
+            -message "details: ml — ${FAIL_PREVIEW}" \
             >/dev/null 2>&1 || true
     fi
     # Still record the run even with errors

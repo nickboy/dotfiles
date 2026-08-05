@@ -249,6 +249,10 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # was recorded daily for a month and surfaced never)
     run_test "Maintenance notifies on failed tasks" \
         "grep -q 'Daily maintenance: \${#FAILED_COMMANDS\[@\]} task(s) failed' $HOME/daily-maintenance.sh"
+    # Bootstrap must keep the machine-service wiring (new machines and
+    # the pull-then-bootstrap flow depend on these being automated)
+    run_test "Bootstrap wires atuin service, ya pkg, and suite run" \
+        "grep -q 'brew services start atuin' $HOME/.config/yadm/bootstrap && grep -q 'ya pkg install' $HOME/.config/yadm/bootstrap && grep -q 'test-dotfiles.sh' $HOME/.config/yadm/bootstrap"
 fi
 echo
 

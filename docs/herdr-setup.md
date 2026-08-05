@@ -77,6 +77,32 @@ Nothing to write on a new machine — it ships with the dotfiles:
 - Reload after changes: `herdr server reload-config` (edit the
   template, run `yadm alt`, then reload).
 
+## Who reads which config (--remote)
+
+Config reading SPLITS between client and server under `herdr
+--remote` (source-verified against 0.7.5):
+
+| Side | What it reads |
+| --- | --- |
+| Client (Mac) | `[keys]`, `[ui.toast]`, `[ui.sound]`, `[remote]` |
+| Server (remote) | theme/terminal/session/worktrees/experimental + plugins |
+
+Practical consequences:
+
+- **Editing keybinds on the remote does nothing under `--remote`.**
+  `--remote-keybindings` defaults to `local`: the client's `[keys]`
+  always wins. Override with `--remote-keybindings=server` to use
+  the remote's `[keys]` instead.
+- **A locally-bound plugin key goes silent if the remote lacks the
+  plugin.** Plugin actions execute server-side (e.g. `prefix+e` →
+  reviewr), so every plugin must be installed on BOTH ends, pinned
+  to the SAME `--ref` SHAs — mirror the block in Plugins below onto
+  the remote machine.
+- **Toast delivery changes need a client re-attach, not a reload.**
+  `[ui.toast]` is read once at attach; `server reload-config` can't
+  push it to an already-attached client. `[ui.sound]` is the only
+  UI class that hot-reloads.
+
 ## Plugins (each machine, SHA-pinned)
 
 ```bash

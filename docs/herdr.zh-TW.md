@@ -19,6 +19,10 @@ herdr plugin install --yes iurysza/termscope \
   --ref cbc6da8103c263343b7082e27e804cc91312f944   # build 可能經 brew 升級 television
 herdr plugin install --yes NathanFlurry/herdr-plugin-jj-workspace \
   --ref a9f1d3bcdaa2354e336a5173da85cbe4970c0f2e
+herdr plugin install --yes persiyanov/herdr-reviewr \
+  --ref 42ccaaa72176937181c82a91484f97466fb5ed59 # 審閱 agent diff，prefix+e
+herdr plugin install --yes iurysza/herdr-tab-smart-rename \
+  --ref a580a9ef248357ea9d85cf0f2131acb2e3fae240 # 依主題自動命名分頁
 herdr integration install claude   # 重新生成 agent-state hook
 ```
 

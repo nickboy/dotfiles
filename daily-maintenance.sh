@@ -621,6 +621,16 @@ else
     for cmd in "${FAILED_COMMANDS[@]}"; do
         echo "  - $cmd failed"
     done
+    # A failure that only lands in the log can stay silent for weeks —
+    # the bob-nightly wedge lived in this branch for a month while the
+    # log dutifully recorded it every day. Surface failures where the
+    # owner actually looks.
+    if command -v terminal-notifier >/dev/null 2>&1; then
+        terminal-notifier \
+            -title "Daily maintenance: ${#FAILED_COMMANDS[@]} task(s) failed" \
+            -message "$(printf '%s; ' "${FAILED_COMMANDS[@]}")(details: ml)" \
+            >/dev/null 2>&1 || true
+    fi
     # Still record the run even with errors
     echo "$CURRENT_DATE" > "$LAST_RUN_FILE"
 fi

@@ -31,14 +31,20 @@ Terminal emulator. Bindings come from the `keybind =` lines.
 
 ## Layer 2: Multiplexers (ctrl+a prefix)
 
+This table is the contract between the two multiplexers: any keybind
+change on either side must update the matching row here, or record it
+as an intentional divergence. `prefix+ctrl+a` (`C-a C-a`) sends a
+literal prefix keystroke through to the app in both tools — the
+escape hatch for nested or remote tmux sessions.
+
 tmux and herdr share the `ctrl+a` prefix. One table, two action
 columns, so shared muscle memory and divergences both stand out.
 `—` means the tool has no binding at that key in the config file.
 
 | Key | tmux action | herdr action |
 | --- | --- | --- |
-| `prefix+ctrl+a` | Send literal ctrl+a to app | — |
-| `prefix+r` | Reload tmux config | Enter resize mode (default) |
+| `prefix+ctrl+a` | Send literal ctrl+a to app | Same, built-in |
+| `prefix+r` | Reload config (legacy alias) | Enter resize mode (default) |
 | `prefix+\` | New pane right | New pane right (split_vertical) |
 | `prefix+-` | New pane below | New pane below (default) |
 | `prefix+c` | New window | — |
@@ -47,16 +53,17 @@ columns, so shared muscle memory and divergences both stand out.
 | `prefix+<` | Swap window with previous | — |
 | `prefix+>` | Swap window with next | — |
 | `prefix+alt+g` | Open lazygit popup | Open lazygit popup |
+| `prefix+e` | Lazygit popup (review) | Reviewr: review agent diffs |
 | `prefix+t` | Scratch terminal popup | Scratch terminal popup |
 | `prefix+T` | sesh session picker (fzf) | — |
 | `prefix+F` | Highlight links/paths to copy | — |
 | `prefix+?` | Which-key popup (list shortcuts) | Show help (default) |
-| `prefix+shift+r` | — | Reload herdr config (default) |
+| `prefix+R` | Reload config | Reload config (default) |
 | `prefix+g` | — | Go to / jump |
 | `prefix+w` | — | Workspace picker |
 | `prefix+shift+n` | — | New workspace |
 | `prefix+shift+g` | — | New worktree (per agent) |
-| `prefix+f` | — | Open project workspace |
+| `prefix+f` | Open project picker | Open project picker |
 | `prefix+shift+f` | — | Open worktree workspace |
 | `prefix+u` | — | Open visible link picker |
 | `prefix+shift+u` | — | Open visible file picker |
@@ -68,8 +75,9 @@ columns, so shared muscle memory and divergences both stand out.
 Notes on divergences:
 
 - `prefix+T` (sesh) has no herdr key match; closest is `prefix+f`.
-- `prefix+r` reloads tmux config but opens resize mode in herdr.
-- herdr reloads its own config via `prefix+shift+r` instead.
+- `prefix+r` (lowercase) is tmux's legacy reload alias; herdr enters
+  resize mode instead — an intentional divergence, not an alignment.
+- `prefix+R` (uppercase) is the aligned reload key in both tools.
 - jj workspace removal is unbound on purpose (destructive action).
 
 ## Layer 3: Seamless navigation (bare ctrl+h/j/k/l)

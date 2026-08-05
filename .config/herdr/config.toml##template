@@ -7,6 +7,15 @@
 
 onboarding = false
 
+# ── --remote mode: who reads what (source-verified) ─────────────────
+# CLIENT (this Mac) reads: [keys] (--remote-keybindings defaults to
+#   'local' — the remote's [keys] never applies), [ui.toast] (read
+#   once at attach; reload-config can't update a running client),
+#   [ui.sound] (hot-reloadable), [remote].
+# SERVER (where agents run) reads: [theme] [terminal] [session]
+#   [worktrees] [experimental] — and ALL plugins execute there, so
+#   install plugins on BOTH ends with the SAME --ref SHAs.
+
 # ── Theme: mirrors catppuccin/tmux (mocha) ─────────────────────────
 [theme]
 name = "catppuccin"
@@ -91,6 +100,14 @@ key = "prefix+shift+f"
 type = "plugin_action"
 command = "sessionizer.worktree-open"
 description = "open worktree workspace"
+
+# reviewr: review/comment on agent diffs in a side pane
+# prefix+e = "review changes" — aligned with tmux's bind e (lazygit)
+[[keys.command]]
+key = "prefix+e"
+type = "plugin_action"
+command = "persiyanov.reviewr.open"
+description = "review agent changes"
 
 # termscope: pick files/links visible on screen (tmux-thumbs successor).
 # Prefix-based on purpose — bare ctrl+e/a would steal readline keys.

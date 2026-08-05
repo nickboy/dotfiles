@@ -1,3 +1,24 @@
+# Homebrew requires third-party taps to be trusted before it will load their
+# formulae, and an untrusted one makes every brew command print a warning and
+# skip the package. Trust the individual formulae rather than whole taps:
+# `brew trust <tap>` also covers every formula the tap adds in future, which is
+# a lot of standing permission for a personal repo.
+#
+#   brew trust --formula charmbracelet/tap/mods
+#   brew trust --formula oven-sh/bun/bun
+#   brew trust --formula jstkdng/programs/ueberzugpp
+#   brew trust --formula smudge/smudge/nightlight
+#   brew trust --formula tw93/tap/mole
+#   brew trust --formula yakitrak/yakitrak/notesmd-cli
+#
+# Kept on Homebrew rather than moved to a runtime manager on purpose. A tap
+# pins a URL and a sha256 in a formula you can read, and refuses to load until
+# you say so; that visible gate plus an auditable pin is worth more than one
+# fewer tap. mise carries bun as a core tool, but the download source and
+# checksum are compiled into mise, there is no per-install gate, and its
+# verification settings are per-backend (node.verify and go checksums are on,
+# locked_verify_provenance is off) with nothing bun-specific.
+
 tap "charmbracelet/tap"
 tap "oven-sh/bun"
 tap "smudge/smudge"
@@ -187,11 +208,13 @@ cask "arc"
 cask "betterdisplay"
 cask "font-hack-nerd-font"
 cask "font-maple-mono-nf-cn"
-# Terminal emulator that uses platform-native UI and GPU acceleration.
-# @tip channel on purpose: matches auto-update-channel=tip in the Ghostty
-# config — the stable cask would fight the in-app updater (downgrade on
-# every stable release, Sparkle re-upgrades) and must not be re-added.
-cask "ghostty@tip"
+# Ghostty is deliberately NOT managed here. The config runs
+# auto-update-channel=tip and Sparkle keeps the app current by itself, so
+# whichever cask brew tracks goes stale immediately and then fights the
+# in-app updater. In practice brew had it pinned at the 1.3.1 stable cask
+# while the app on disk had already moved to 1.3.2-main, and `brew bundle`
+# failed with "Cask 'ghostty@tip' conflicts with 'ghostty'". Install it once
+# from ghostty.org and let it update itself; do not re-add either cask.
 # Free and open-source media player
 cask "iina"
 # Control your tools with a few keystrokes

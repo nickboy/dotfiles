@@ -98,14 +98,28 @@ else
     TIMEOUT_CMD=""
 fi
 
-# Function to run command with optional timeout
+# Function to run command with optional timeout.
+#
+# --foreground when a TTY is attached, and only then. Without it, timeout puts
+# the command in its own process group, which means a `sudo` further down (a
+# cask that removes a launchctl service, say) cannot take control of the
+# terminal: the password prompt appears with echo still ON and the typed
+# password never reaches sudo. The symptom is a prompt that shows your
+# keystrokes and then rejects them, which looks like a wrong password.
+#
+# The trade-off is real, which is why this is conditional: with --foreground
+# only the direct child is timed out, so a stalled grandchild can hang the run.
+# That protection matters most in the unattended launchd run, and there is no
+# TTY there anyway (nor anyone to answer a prompt), so the strict form is used.
 run_with_timeout() {
     local seconds="$1"
     shift
-    if [ -n "$TIMEOUT_CMD" ]; then
-        $TIMEOUT_CMD "$seconds" "$@"
-    else
+    if [ -z "$TIMEOUT_CMD" ]; then
         "$@"
+    elif [ -t 0 ] && [ -t 1 ]; then
+        $TIMEOUT_CMD --foreground "$seconds" "$@"
+    else
+        $TIMEOUT_CMD "$seconds" "$@"
     fi
 }
 

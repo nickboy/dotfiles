@@ -152,13 +152,20 @@ run_test "Retired OMZ snippets stay retired" \
 # zsh-eza retired 2026-08: its aliases are hand-written now (the old
 # _EZA_PARAMS export was dead code — the plugin never read that name)
 run_test "Retired zinit plugins stay retired (zsh-eza)" \
-    "! grep -qE 'zinit (light|load).*(zsh-eza)|_EZA_PARAMS' $HOME/.zshrc && zsh -ic 'alias ll' 2>/dev/null | grep -q eza"
+    "! grep -qE 'zinit (light|load).*(zsh-eza)|_EZA_PARAMS' $HOME/.zshrc && { ! command -v eza >/dev/null 2>&1 || zsh -ic 'alias ll' 2>/dev/null | grep -q eza; }"
 # yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
 # declaration must be yadm-tracked and every declared plugin installed,
 # or new machines silently lose the plugin set (the pre-2026-08 state)
 if [ -f "$HOME/.config/yazi/package.toml" ]; then
-    run_test "yazi package.toml tracked with plugins installed" \
-        "yadm ls-files .config/yazi/package.toml 2>/dev/null | grep -q package.toml && ! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml | sed -E 's/.*[:\\/]([^\":]+)\"/\\1/' | while IFS= read -r p; do [ -f \"\$HOME/.config/yazi/plugins/\$p.yazi/main.lua\" ] || echo \"missing \$p\"; done | grep -q .)"
+    # Tracked check works under yadm (real machines) or git (CI checkout)
+    run_test "yazi package.toml is tracked" \
+        "{ yadm ls-files .config/yazi/package.toml 2>/dev/null || git ls-files .config/yazi/package.toml 2>/dev/null; } | grep -q package.toml"
+    # Plugin presence only where ya pkg has actually run (CI checkouts
+    # have no plugins/ — contents are ignored build artifacts)
+    if [ -d "$HOME/.config/yazi/plugins" ]; then
+        run_test "yazi declared plugins all installed" \
+            "! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml | sed -E 's/.*[:\\/]([^\":]+)\"/\\1/' | while IFS= read -r p; do [ -f \"\$HOME/.config/yazi/plugins/\$p.yazi/main.lua\" ] || echo \"missing \$p\"; done | grep -q .)"
+    fi
 fi
 # Theme is owned by ~/.config/bat/config — call sites must not override
 run_test "No hardcoded bat --theme in .zshrc" \

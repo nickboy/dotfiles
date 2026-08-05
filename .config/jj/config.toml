@@ -4,6 +4,8 @@
 # --include-defaults`); `jj resolve --tool mergiraf` just works.
 
 [user]
+# Personal default. Corp repos on the work machine override per-repo:
+#   jj config set --repo user.email <work-email>
 name = "Tzu-Hua(Nick) Liu"
 email = "nickboy@users.noreply.github.com"
 
@@ -14,5 +16,5 @@ diff-formatter = ":git"
 [revset-aliases]
 # my own work
 'mine' = 'author("nickboy")'
-# the current stack of work below @
-'stack' = 'ancestors(@, 10)'
+# my working stack below @, excluding mainline history
+'stack' = 'ancestors(@, 10) ~ ::trunk()'

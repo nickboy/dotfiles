@@ -121,6 +121,13 @@ type = "plugin_action"
 command = "nathanflurry.jj-workspace.new-tab"
 description = "new jj workspace (tab)"
 
+# ── UI ─────────────────────────────────────────────────────────────────
+[ui]
+# Show detected agent labels on split pane borders (which pane is which)
+show_agent_labels_on_pane_borders = true
+# Reclaim a row when a workspace has only one tab
+hide_tab_bar_when_single_tab = true
+
 # ── Notifications ──────────────────────────────────────────────────
 # "terminal" = the CLIENT asks its outer terminal (Ghostty) to post
 # the banner. Chosen over "system" on purpose: macOS only has GHOSTTY

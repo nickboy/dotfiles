@@ -64,7 +64,15 @@ keybind = cmd+alt+l=goto_split:right
 
 # Shell Integration for Claude Code
 shell-integration = detect
-shell-integration-features = sudo,title,path
+# ssh-terminfo (NOT ssh-env): pushes xterm-ghostty terminfo to remotes so
+# TERM keeps its value — ssh-env would downgrade TERM to xterm-256color
+# and break herdr's terminal-notification backend detection over SSH
+shell-integration-features = sudo,title,path,ssh-terminfo
+
+# Native splits/tabs inherit the pane's cwd (parity with tmux's
+# split-window -c "#{pane_current_path}")
+split-inherit-working-directory = true
+tab-inherit-working-directory = true
 
 # Notify when commands finish in unfocused splits (great for Claude Code + split workflow)
 # Sends macOS banner notification instead of bell (1.3.0+)

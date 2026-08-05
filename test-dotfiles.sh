@@ -149,6 +149,17 @@ run_test "No ~/.local/bin executables shadow system binaries" \
 # extract: replaced by ouch aliases in the July round)
 run_test "Retired OMZ snippets stay retired" \
     "! grep -qE 'OMZP::(dotenv|rbenv|ruby|rake|extract)' $HOME/.zshrc"
+# zsh-eza retired 2026-08: its aliases are hand-written now (the old
+# _EZA_PARAMS export was dead code — the plugin never read that name)
+run_test "Retired zinit plugins stay retired (zsh-eza)" \
+    "! grep -qE 'zinit (light|load).*(zsh-eza)|_EZA_PARAMS' $HOME/.zshrc && zsh -ic 'alias ll' 2>/dev/null | grep -q eza"
+# yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
+# declaration must be yadm-tracked and every declared plugin installed,
+# or new machines silently lose the plugin set (the pre-2026-08 state)
+if [ -f "$HOME/.config/yazi/package.toml" ]; then
+    run_test "yazi package.toml tracked with plugins installed" \
+        "yadm ls-files .config/yazi/package.toml 2>/dev/null | grep -q package.toml && ! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml | sed -E 's/.*[:\\/]([^\":]+)\"/\\1/' | while IFS= read -r p; do [ -f \"\$HOME/.config/yazi/plugins/\$p.yazi/main.lua\" ] || echo \"missing \$p\"; done | grep -q .)"
+fi
 # Theme is owned by ~/.config/bat/config — call sites must not override
 run_test "No hardcoded bat --theme in .zshrc" \
     "! grep -qE 'bat [^|]*--theme=' $HOME/.zshrc"
@@ -289,6 +300,16 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             run_test "jj accepts the user config" \
                 "jj config list --user >/dev/null 2>&1"
         fi
+    fi
+    # ripgrep config was dormant for ages (env var never exported).
+    # Assert it is wired AND stays a pure search-filter config: output
+    # flags (--pretty/--context/--column) would leak into piped and
+    # scripted rg calls the moment the config is active.
+    if command -v rg >/dev/null 2>&1; then
+        run_test "ripgrep config exported and parses" \
+            "grep -q 'export RIPGREP_CONFIG_PATH=' $HOME/.zshrc && RIPGREP_CONFIG_PATH=$HOME/.config/ripgrep/config rg --files $HOME/docs >/dev/null 2>&1"
+        run_test "ripgrep config has no output-format flags" \
+            "! grep -qE '^--(pretty|context=|column|line-number)' $HOME/.config/ripgrep/config"
     fi
     # mergiraf must be wired end-to-end: the attributes line without the
     # driver definition (or vice versa) is a silent no-op

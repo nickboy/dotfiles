@@ -219,7 +219,9 @@ Mid-session `/rename` syncs on the next resume (no hook event exists).
 ```bash
 hbox() {
   while true; do
-    herdr --remote user@box "$@" && break
+    # --handoff: if the attach replaces the remote server (version
+    # sync), live panes are handed over instead of killed
+    herdr --remote user@box --handoff "$@" && break
     print "connection lost — retrying in 2s (Ctrl-C to stop)"
     sleep 2
   done
@@ -229,14 +231,39 @@ hbox() {
 - Fallback from anywhere: `ssh <host>` then plain `herdr` — same
   binary, same version, always attaches.
 
-## Upgrades (Mac automatic, remote follows)
+## Upgrades (Mac automatic, remote self-syncs)
 
 The formula is unpinned by owner decision: the Mac side is upgraded
 by the daily maintenance run, which detects a bump landing on a live
 server and sends a notification (restart when convenient — the wire
-protocol refuses attach across versions). The REMOTE side stays
-manual: when `herdr --remote <host>` starts refusing with a protocol
-mismatch after a Mac upgrade, bring the remote up to match:
+protocol refuses attach across versions).
+
+The REMOTE side follows AUTOMATICALLY (source-verified): every
+`herdr --remote <host>` attach checks the remote binary's version
+string against the local one and installs/replaces it on mismatch.
+`--handoff` decides what happens to live remote panes during that
+replacement:
+
+- without it (default): old server stops → panes killed → snapshot
+  restore + `claude --resume` rebuilds layout and conversations, but
+  running processes (builds, tests, tails) start over
+- with it: the old server hands live PTYs/processes to the new one —
+  panes keep running (experimental; in-flight API requests and
+  subscription streams may still drop and need a retry)
+
+So the whole flow is: Mac auto-upgrades daily; next remote attach
+syncs the box. Always attach with `--handoff` (the hbox wrapper
+below bakes it in).
+
+Limits: Mac-side `herdr update --handoff` is DISABLED for Homebrew
+installs (upstream policy) — the LOCAL server upgrade stays a
+restart + native resume; that blast radius is the accepted cost of
+keeping herdr under Brewfile management. And never run
+`herdr --remote` from non-interactive automation: replacing a remote
+binary while its server runs requires an interactive confirmation
+and errors otherwise — keep it out of daily-maintenance.
+
+Manual fallback (or first install):
 
 ```bash
 ssh <host> 'curl -fsSL https://herdr.dev/install.sh | sh'

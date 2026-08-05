@@ -275,7 +275,11 @@ records = true
 
 [daemon]
 ## Enables using the daemon to sync. Requires the daemon to be running in the background. Start it with `atuin daemon`
-# enabled = false
+# Daemon keeps a hot in-memory search index (frizbee engine + frecency
+# ranking since 18.19) — faster Ctrl+R. The process is managed by
+# launchd: `brew services start atuin` (per machine — the test suite
+# asserts the socket is live whenever this is enabled).
+enabled = true
 
 ## How often the daemon should sync in seconds
 # sync_frequency = 300

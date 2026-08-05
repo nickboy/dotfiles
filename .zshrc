@@ -13,6 +13,9 @@ else
 fi
 export EDITOR='nvim'
 export LANG=en_US.UTF-8
+# Activates ~/.config/ripgrep/config (filters only — no output flags,
+# so piped/scripted rg calls stay clean). Was dormant until 2026-08.
+export RIPGREP_CONFIG_PATH="$HOME/.config/ripgrep/config"
 
 # ============================================================================
 # PATH Configuration (Consolidated and deduplicated)
@@ -40,8 +43,12 @@ export PATH="/Library/TeX/texbin:$PATH"
 # inherit the exported vars, and the explicit prepend above guarantees the
 # brew paths for any non-login edge case — no need to eval it again here.
 
-# Bob Neovim (MUST be last to have highest priority)
+# Bob Neovim (MUST be last to have highest priority).
+# bob's dev branch moved its data dir to the macOS-native location in
+# July 2026; the old ~/.local/share path is kept second for machines
+# still on the old layout (nonexistent PATH entries are harmless).
 export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
+export PATH="$HOME/Library/Application Support/bob/nvim-bin:$PATH"
 
 # Compilation flags for macOS
 export LDFLAGS="-L/opt/homebrew/lib"
@@ -137,18 +144,20 @@ zinit snippet OMZP::brew
 zinit snippet OMZP::common-aliases
 zinit snippet OMZP::colored-man-pages
 zinit snippet OMZP::web-search
-zinit snippet OMZP::dotenv
-zinit snippet OMZP::rake
-zinit snippet OMZP::rbenv
-zinit snippet OMZP::ruby
 zinit snippet OMZP::sudo
 
-# eza aliases plugin - configure params before loading
-export _EZA_PARAMS=(
-    '--git' '--icons=always' '--group' '--group-directories-first'
-    '--time-style=long-iso' '--color-scale=all' '--color=always'
-)
-zinit light z-shell/zsh-eza
+# eza aliases (hand-written; retired the z-shell/zsh-eza plugin so all
+# modern-CLI aliases live here — one fewer zinit dep, one place to edit)
+if command -v eza &> /dev/null; then
+    alias ls='eza --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias l='eza --git-ignore --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias ll='eza --all --header --long --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias llm='eza --all --header --long --sort=modified --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias la='eza -lbhHigUmuSa --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias lx='eza -lbhHigUmuSa@ --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias lt='eza --tree --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias tree='eza --tree --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+fi
 
 # ============================================================================
 # Deferred Plugins (Load after prompt for faster startup)
@@ -269,14 +278,16 @@ zinit light Aloxaf/fzf-tab
 # Configure fzf-tab
 zstyle ':fzf-tab:*' fzf-command fzf
 zstyle ':fzf-tab:*' fzf-pad 4
-# Inherit FZF theme and add specific flags for fzf-tab
+# Inherit FZF_DEFAULT_OPTS (Catppuccin colors etc.) instead of rebuilding
+# the theme here — future theme changes apply in one place
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
 zstyle ':fzf-tab:*' fzf-flags --height=50% --border=rounded
 
 # Configure preview for different completion types
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
 zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
 zstyle ':fzf-tab:complete:ls:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
-zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --icons=always --color=always $realpath | head -200 || [[ -f $realpath ]] && bat --style=numbers --color=always --theme=tokyonight_night --line-range :500 $realpath || echo $desc'
+zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --icons=always --color=always $realpath | head -200 || [[ -f $realpath ]] && bat --style=numbers --color=always --line-range :500 $realpath || echo $desc'
 
 # Group colors and descriptions
 zstyle ':completion:*' group-name ''
@@ -325,10 +336,8 @@ fi
 alias extract='ouch decompress'
 alias x='ouch decompress'
 
-# Modern replacements (managed by z-shell/zsh-eza plugin)
-# Plugin provides: ls, l, ll, llm, la, lx, tree
-# With custom params: --git, --icons=always, --group, --group-directories-first,
-#                     --time-style=long-iso, --color-scale=all, --color=always
+# Modern replacements (hand-written eza aliases, see Zinit Plugin section
+# above: ls, l, ll, llm, la, lx, tree)
 
 # Custom eza aliases (override plugin or add new ones)
 alias lt='eza -l --grid --header --icons=always --color=always'  # Grid view (override plugin's tree lt)
@@ -531,6 +540,12 @@ fi
 # Search and replace TUI (scooter replaced serpl)
 if command -v scooter &> /dev/null; then
     alias sr='scooter'
+fi
+
+# television's explicit role: full-text CONTENT search entry point
+# (fzf owns filename/history flows — no overlap, one entry each)
+if command -v tv &> /dev/null; then
+    alias tvt='tv text'
 fi
 
 # herdr trial: let TUIs that use C-hjkl themselves (lazygit) receive the

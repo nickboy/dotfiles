@@ -23,7 +23,9 @@ macOS (Apple Silicon) development environment:
 1. `/opt/homebrew/bin` (Homebrew)
 2. `~/.local/bin` (user scripts)
 3. `~/.cargo/bin` (Rust)
-4. `~/.local/share/bob/nvim-bin` (Neovim)
+4. `~/Library/Application Support/bob/nvim-bin` (Neovim; bob's git-dev
+   build moved here July 2026 — `~/.local/share/bob/nvim-bin` is the
+   legacy fallback)
 
 ## Mandatory Rules
 

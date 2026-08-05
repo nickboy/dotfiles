@@ -42,8 +42,14 @@ this repo — most common) or **fresh clone**. Update path first.
     auth → settings.local.json; herdr SessionStart hook warns
     harmlessly until `herdr integration install claude` or herdr is
     skipped entirely)
-  - `bash ~/test-dotfiles.sh` — the suite is the cross-machine
-    verification of the whole update
+  - `yadm bootstrap` — idempotent; now covers the machine services
+    (`brew services start atuin`, `ya pkg install`, bat cache,
+    treesitter) and ends by running the full test suite as
+    verification. Prefer it over running those steps by hand; a
+    standalone `bash ~/test-dotfiles.sh` afterwards re-checks anytime.
+  - Verify desktop notifications actually render on this machine (MDM
+    can block them, and maintenance-failure banners matter most here):
+    `terminal-notifier -title test -message ok` — a banner must appear.
 - [ ] Push transport for THIS machine: keep HTTPS +
   `gh auth login`, or a work SSH key — set in the machine's untracked
   `~/.gitconfig`. Do not copy the personal 1Password setup.
@@ -136,6 +142,10 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
   gh auth status && gh auth setup-git
   yadm push --dry-run
   ```
+
+- [ ] For corp repos, set the work identity in jj too:
+  `jj config set --repo user.email <work-email>` (the tracked jj
+  config carries the personal default).
 
 ## Homebrew
 

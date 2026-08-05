@@ -1,0 +1,5 @@
+# Global gitattributes (core default path: ~/.config/git/attributes).
+# Enables the mergiraf merge driver (defined in ~/.config/git/config)
+# for every repo — mergiraf falls back to normal git merge for
+# languages it does not understand, so this is safe as a blanket rule.
+* merge=mergiraf

@@ -1,14 +1,14 @@
--- OSC52 clipboard for remote SSH sessions
+-- OSC52 clipboard: forced OSC 52 for SSH sessions only (deterministic even
+-- when tmux servers hold a stale SSH_TTY env; local sessions — tmux or
+-- herdr — use the system clipboard via pbcopy).
 -- Uses Neovim's built-in OSC52 support (0.10+)
--- Only activates when SSH_CONNECTION or TMUX is detected
 return {
   {
     "LazyVim/LazyVim",
     opts = function()
       local is_remote = vim.env.SSH_CONNECTION ~= nil
-      local is_tmux = vim.env.TMUX ~= nil
 
-      if is_remote or is_tmux then
+      if is_remote then
         vim.g.clipboard = {
           name = "OSC 52",
           copy = {

@@ -5,6 +5,12 @@
 
 set -e
 
+# CWD-independence: many tests use relative paths and *.sh globs that
+# assume the yadm worktree root. Run from a subdir and 40+ glob tests
+# silently vanish while ls-files pathspecs misreport — anchor here.
+# (CI overrides HOME to the checkout, so this stays correct there too.)
+cd "$HOME" || exit 1
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -144,6 +150,34 @@ run_test "env resolves to /usr/bin/env (no executable shim)" \
     "[ \"\$(command -v env)\" = /usr/bin/env ]"
 run_test "No ~/.local/bin executables shadow system binaries" \
     "! (for f in \$HOME/.local/bin/*; do b=\$(basename \"\$f\"); [ -x \"\$f\" ] && { [ -e \"/usr/bin/\$b\" ] || [ -e \"/bin/\$b\" ]; } && echo \"\$b\"; done | grep -q .)"
+# Retired plugins must stay retired (dotenv: cd-triggered .env sourcing
+# in an agent-heavy workflow; rbenv/ruby/rake: mise-era leftovers;
+# extract: replaced by ouch aliases in the July round)
+run_test "Retired OMZ snippets stay retired" \
+    "! grep -qE 'OMZP::(dotenv|rbenv|ruby|rake|extract)' $HOME/.zshrc"
+# zsh-eza retired 2026-08: its aliases are hand-written now (the old
+# _EZA_PARAMS export was dead code — the plugin never read that name)
+run_test "Retired zinit plugins stay retired (zsh-eza)" \
+    "! grep -qE 'zinit (light|load).*(zsh-eza)|_EZA_PARAMS' $HOME/.zshrc && { ! command -v eza >/dev/null 2>&1 || zsh -ic 'alias ll' 2>/dev/null | grep -q eza; }"
+# yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
+# declaration must be yadm-tracked and every declared plugin installed,
+# or new machines silently lose the plugin set (the pre-2026-08 state)
+if [ -f "$HOME/.config/yazi/package.toml" ]; then
+    # Tracked check works under yadm (real machines) or git (CI checkout)
+    run_test "yazi package.toml is tracked" \
+        "{ yadm ls-files .config/yazi/package.toml 2>/dev/null || git ls-files .config/yazi/package.toml 2>/dev/null; } | grep -q package.toml"
+    # Plugin presence only where ya pkg has actually run (CI checkouts
+    # have no plugins/ — contents are ignored build artifacts)
+    if [ -d "$HOME/.config/yazi/plugins" ]; then
+        run_test "yazi declared plugins all installed" \
+            "! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml | sed -E 's/.*[:\\/]([^\":]+)\"/\\1/' | while IFS= read -r p; do [ -f \"\$HOME/.config/yazi/plugins/\$p.yazi/main.lua\" ] || echo \"missing \$p\"; done | grep -q .)"
+    fi
+fi
+# Theme is owned by ~/.config/bat/config — call sites must not override
+run_test "No hardcoded bat --theme in .zshrc" \
+    "! grep -qE 'bat [^|]*--theme=' $HOME/.zshrc"
+run_test "fzf-tab inherits FZF_DEFAULT_OPTS" \
+    "grep -q 'use-fzf-default-opts.*yes' $HOME/.zshrc"
 
 # Check for proper shebang
 for script in *.sh; do
@@ -202,6 +236,11 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # (a July 2026 incident deleted VS Code that way).
     run_test "Maintenance cask upgrade never uses greedy/auto-updates" \
         "! grep -E 'brew upgrade' $HOME/daily-maintenance.sh | grep -qE -- '--greedy(-auto-updates)?([[:space:]]|\$)'"
+    # Post-upgrade schema drift is invisible without these: a tool whose
+    # config stopped parsing falls back to its defaults silently (yazi did
+    # exactly that for weeks after the fetchers id -> group rename).
+    run_test "Maintenance runs config schema checks" \
+        "grep -q 'zellij setup --check' $HOME/daily-maintenance.sh && grep -q 'atuin doctor' $HOME/daily-maintenance.sh"
     # Tripwire: the maintenance run must never call the herdr CLI beyond
     # --version — any other subcommand can auto-start a server that
     # inherits the launchd environment (the CLAUDECODE-leak bug class).
@@ -212,6 +251,14 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # The strand guard depends on the shared lib being sourced.
     run_test "Maintenance sources daily-maintenance-lib.sh" \
         "grep -qE '^source .*daily-maintenance-lib.sh' $HOME/daily-maintenance.sh && grep -q 'dm_herdr_strand_detected' $HOME/daily-maintenance.sh"
+    # Failures must reach the desktop, not just the log (the bob wedge
+    # was recorded daily for a month and surfaced never)
+    run_test "Maintenance notifies on failed tasks" \
+        "grep -q 'Daily maintenance: \${#FAILED_COMMANDS\[@\]} task(s) failed' $HOME/daily-maintenance.sh"
+    # Bootstrap must keep the machine-service wiring (new machines and
+    # the pull-then-bootstrap flow depend on these being automated)
+    run_test "Bootstrap wires atuin service, ya pkg, and suite run" \
+        "grep -q 'brew services start atuin' $HOME/.config/yadm/bootstrap && grep -q 'ya pkg install' $HOME/.config/yadm/bootstrap && grep -q 'test-dotfiles.sh' $HOME/.config/yadm/bootstrap"
 fi
 echo
 
@@ -251,6 +298,52 @@ fi
 # Validate Starship config (TOML syntax)
 if [ -f "$HOME/.config/starship.toml" ]; then
     run_test "Starship config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/starship.toml').read_text())\""
+    if command -v bat >/dev/null 2>&1; then
+        run_test "bat Catppuccin Mocha theme registered" \
+            "bat --list-themes 2>/dev/null | grep -q 'Catppuccin Mocha' && grep -q 'Catppuccin Mocha' $HOME/.config/bat/config"
+    fi
+    if command -v tmux >/dev/null 2>&1; then
+        # Sources the real config incl. TPM; verified 3 throwaway runs
+        # leave ~/.tmux/resurrect untouched (no plugin side effects).
+        run_test "Tmux config parses (throwaway server)" \
+            "tmux -L cfgtest-suite -f $HOME/.tmux.conf new-session -d 2>/dev/null && tmux -L cfgtest-suite kill-server 2>/dev/null"
+        run_test "Tmux history-limit >= 50000" \
+            "grep -qE 'history-limit (5[0-9]{4,}|[6-9][0-9]{4}|[0-9]{6,})' $HOME/.tmux.conf"
+    fi
+    # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
+    # terminal-notification detection over SSH depends on it
+    # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)
+    run_test "Ghostty shell integration includes ssh-terminfo" \
+        "grep -E '^shell-integration-features' $HOME/.config/ghostty/config | grep -q 'ssh-terminfo'"
+    # Daily bob-nightly + plugin churn can desync editor and plugins
+    # (the neo-tree/nvim_win_resize incident: nvim frozen on a June
+    # nightly while plugins assumed a newer API) — a clean headless
+    # boot is the cheapest canary
+    if command -v nvim >/dev/null 2>&1; then
+        run_test "Neovim boots headless without errors" \
+            "! nvim --headless -c q 2>&1 | grep -qiE 'error|traceback'"
+    fi
+    if [ -f "$HOME/.config/jj/config.toml" ]; then
+        run_test "jj config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/jj/config.toml').read_text())\""
+        if command -v jj >/dev/null 2>&1; then
+            run_test "jj accepts the user config" \
+                "jj config list --user >/dev/null 2>&1"
+        fi
+    fi
+    # ripgrep config was dormant for ages (env var never exported).
+    # Assert it is wired AND stays a pure search-filter config: output
+    # flags (--pretty/--context/--column) would leak into piped and
+    # scripted rg calls the moment the config is active.
+    if command -v rg >/dev/null 2>&1; then
+        run_test "ripgrep config exported and parses" \
+            "grep -q 'export RIPGREP_CONFIG_PATH=' $HOME/.zshrc && RIPGREP_CONFIG_PATH=$HOME/.config/ripgrep/config rg --files $HOME/.config/ripgrep >/dev/null 2>&1"
+        run_test "ripgrep config has no output-format flags" \
+            "! grep -qE '^--(pretty|context=|column|line-number)' $HOME/.config/ripgrep/config"
+    fi
+    # mergiraf must be wired end-to-end: the attributes line without the
+    # driver definition (or vice versa) is a silent no-op
+    run_test "mergiraf attributes/driver pairing" \
+        "grep -q 'merge=mergiraf' $HOME/.config/git/attributes && grep -q 'merge \"mergiraf\"' $HOME/.config/git/config"
 fi
 
 # Validate Kitty config
@@ -261,6 +354,17 @@ fi
 # Validate Atuin config (TOML syntax)
 if [ -f "$HOME/.config/atuin/config.toml" ]; then
     run_test "Atuin config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/atuin/config.toml').read_text())\""
+    # Daemon mode is per-machine state the tracked config cannot carry: the
+    # config can say enabled = true on a machine where
+    # `brew services start atuin` was never run, and history then goes
+    # nowhere. Only assert when the config actually asks for the daemon.
+    # Guarded on atuin being installed: CI checks out the tracked config
+    # (daemon enabled) onto a runner with no atuin — skip there, still
+    # catch a real machine that never started the service.
+    if command -v atuin >/dev/null 2>&1 && grep -A6 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
+        run_test "atuin daemon socket live when enabled" \
+            "[ -S \"$HOME/.local/share/atuin/atuin.sock\" ]"
+    fi
 fi
 
 # Validate sesh config (TOML syntax)
@@ -278,6 +382,7 @@ if [ -f "$HOME/.config/sesh/sesh.toml" ]; then
     # Yazi 26 broke silently on a stale fetchers schema (id -> group):
     # --version fails when the config no longer parses, so this catches
     # the next schema break instead of yazi quietly using preset config.
+    # (verified: --version exits 1 on broken config, 0 when clean)
     if command -v yazi >/dev/null 2>&1; then
         run_test "Yazi config parses (yazi --version)" \
             "yazi --version >/dev/null 2>&1"
@@ -352,6 +457,10 @@ if command -v npx >/dev/null 2>&1; then
 else
     echo -e "${YELLOW}  npx not available; skipping markdown lint (CI will enforce it)${NC}"
 fi
+# The README split moved sections into docs/ pages — every relative .md
+# link in the READMEs and docs/ must resolve, or the split rots silently.
+run_test "Relative .md links in README/docs resolve" \
+    "! (for f in \$HOME/README.md \$HOME/README.zh-TW.md \$HOME/docs/*.md; do d=\$(dirname \"\$f\"); grep -oE '\\]\\(([A-Za-z0-9._/-]+\\.md)[)#]' \"\$f\" 2>/dev/null | sed -E 's/^\\]\\(//; s/[)#]\$//' | while IFS= read -r l; do [ -f \"\$d/\$l\" ] || echo \"\$f -> \$l\"; done; done | grep -q .)"
 echo
 
 # Test 14: ShellCheck on ALL tracked bash/sh scripts (shebang-detected)
@@ -388,6 +497,10 @@ echo
 echo -e "${YELLOW}15. Unit Tests${NC}"
 
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
+# Since herdr left Homebrew (2026-08-05) the maintenance call site is a
+# no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled
+# and auto-upgraded) — the predicate's semantics are unchanged, so
+# these polarity tests stand as-is.
 # A real unix socket is required for the -S branch; python3 binds one in
 # a temp dir so all four polarities are exercised.
 if [ -f "$HOME/daily-maintenance-lib.sh" ]; then

@@ -190,7 +190,11 @@ update_bob_self() {
 #      `bob rollback` does not need the hash dirs. GC'd unconditionally.
 update_bob_nightly() {
     local bob_bin="$BOB_BIN"
-    local bob_dir="$HOME/.local/share/bob"
+    # bob's dev branch moved its data dir to the macOS-native location
+    # in July 2026 — prefer it, fall back to the legacy path (the wrong
+    # target made the chmod proxy-fix a no-op and left nightly wedged)
+    local bob_dir="$HOME/Library/Application Support/bob"
+    [ -d "$bob_dir" ] || bob_dir="$HOME/.local/share/bob"
     local nvim_proxy="$bob_dir/nvim-bin/nvim"
 
     echo ""
@@ -330,18 +334,22 @@ FAILED_COMMANDS=()
 # Run your daily maintenance commands
 # 900s timeout: a stalled network otherwise hangs the whole run (the other
 # network steps are already wrapped; brew was the only unguarded one)
-# herdr is deliberately UNPINNED (owner wants every release): capture its
-# version before the upgrade so a bump can be detected afterwards.
+# herdr LEFT Homebrew 2026-08-05 (self-updater managed; see
+# docs/herdr-setup.md), so brew can no longer change its version and
+# this check is normally a no-op. It stays as a TRIPWIRE: if a brew
+# copy is ever mistakenly reinstalled (shadow-racing ~/.local/bin) and
+# auto-upgraded, the version delta below catches it the same morning.
 # 'herdr --version' reads the binary only — it never auto-starts a server.
 HERDR_VERSION_BEFORE="$(herdr --version 2>/dev/null || true)"
 if ! run_command "Homebrew formula upgrade" run_with_timeout 900 brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
-# herdr's wire protocol refuses attach on ANY version mismatch, so a bump
-# strands a still-running server. NEVER kill it here — the owner may be in
-# a live session, and no herdr CLI may be called (it could auto-start a
-# server that inherits this launchd environment). Detect via the socket
+# Tripwire evaluation (see the capture comment above): herdr's wire
+# protocol refuses attach on ANY version mismatch, so an unexpected bump
+# strands a still-running server. NEVER kill it here — the owner may be
+# in a live session, and no herdr CLI may be called (it could auto-start
+# a server inheriting this launchd environment). Detect via the socket
 # and notify; agent panes resume natively after the owner restarts.
 HERDR_VERSION_AFTER="$(herdr --version 2>/dev/null || true)"
 if dm_herdr_strand_detected "$HERDR_VERSION_BEFORE" "$HERDR_VERSION_AFTER"; then
@@ -533,6 +541,61 @@ if command -v brew >/dev/null 2>&1; then
     fi
 fi
 
+# --- Config schema checks ---------------------------------------------------
+# Daily auto-upgrades can silently break a tool's config schema: a past yazi
+# upgrade renamed a config field and yazi fell back to preset settings for
+# weeks without saying a word. Each check below asks the tool itself to parse
+# its tracked config, so a schema break surfaces the day the upgrade lands
+# instead of months later.
+# Verified 2026-08-04: 'yazi --version' exits 1 on a broken yazi.toml
+# (0 when clean), so it does catch the id->group class of breakage.
+echo ""
+echo "----------------------------------------"
+echo "Task: Config schema checks"
+
+if command -v yazi >/dev/null 2>&1; then
+    echo -n "Status: yazi (yazi --version) "
+    if yazi --version >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: yazi")
+    fi
+fi
+
+if command -v zellij >/dev/null 2>&1; then
+    echo -n "Status: zellij (zellij setup --check) "
+    if zellij setup --check >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: zellij")
+    fi
+fi
+
+if command -v atuin >/dev/null 2>&1; then
+    echo -n "Status: atuin (atuin doctor) "
+    if atuin doctor >/dev/null 2>&1; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: atuin")
+    fi
+fi
+
+# Parse .tmux.conf on a throwaway server socket so a live session is never
+# touched; the server is killed again immediately.
+if command -v tmux >/dev/null 2>&1; then
+    echo -n "Status: tmux (throwaway-server parse) "
+    if tmux -L schemacheck -f "$HOME/.tmux.conf" new-session -d 2>/dev/null \
+        && tmux -L schemacheck kill-server 2>/dev/null; then
+        echo "✓ SUCCESS"
+    else
+        echo "✗ FAILED"
+        FAILED_COMMANDS+=("schema check: tmux")
+    fi
+fi
+
 # --- Machine-local extras ---------------------------------------------------
 # Deliberately the LAST step. Anything here is specific to one machine — a work
 # laptop needs steps touching remote hosts and corp tooling that must never land
@@ -562,6 +625,22 @@ else
     for cmd in "${FAILED_COMMANDS[@]}"; do
         echo "  - $cmd failed"
     done
+    # A failure that only lands in the log can stay silent for weeks —
+    # the bob-nightly wedge lived in this branch for a month while the
+    # log dutifully recorded it every day. Surface failures where the
+    # owner actually looks.
+    if command -v terminal-notifier >/dev/null 2>&1; then
+        # Banner text truncates on long lists: lead with the 'ml' hint
+        # (the part that must survive), cap the list at three tasks.
+        FAIL_PREVIEW=$(printf '%s; ' "${FAILED_COMMANDS[@]:0:3}")
+        if [ ${#FAILED_COMMANDS[@]} -gt 3 ]; then
+            FAIL_PREVIEW="${FAIL_PREVIEW}+$(( ${#FAILED_COMMANDS[@]} - 3 )) more"
+        fi
+        terminal-notifier \
+            -title "Daily maintenance: ${#FAILED_COMMANDS[@]} task(s) failed" \
+            -message "details: ml — ${FAIL_PREVIEW}" \
+            >/dev/null 2>&1 || true
+    fi
     # Still record the run even with errors
     echo "$CURRENT_DATE" > "$LAST_RUN_FILE"
 fi

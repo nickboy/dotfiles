@@ -19,8 +19,9 @@ Library/LaunchAgents/com.daily-maintenance.plist
 # Neovim auto-generated files
 .config/nvim/lazy-lock.json
 
-# Yazi vendor files (managed by ya pkg, not yadm)
-.config/yazi/package.toml
+# Yazi plugin CONTENTS are ya-pkg build artifacts — but package.toml is
+# the tracked declaration (SHA-pinned deps; `ya pkg install` on new
+# machines restores everything from it)
 .config/yazi/plugins/*/
 .config/yazi/flavors/*/
 

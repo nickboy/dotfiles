@@ -24,6 +24,8 @@
 	navigate = true
 	side-by-side = true
 	line-numbers = true
+	# OSC 8 links (Ghostty renders them clickable)
+	hyperlinks = true
 
 [init]
 	defaultBranch = main

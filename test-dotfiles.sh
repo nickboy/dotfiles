@@ -322,7 +322,7 @@ if [ -f "$HOME/.config/starship.toml" ]; then
     # scripted rg calls the moment the config is active.
     if command -v rg >/dev/null 2>&1; then
         run_test "ripgrep config exported and parses" \
-            "grep -q 'export RIPGREP_CONFIG_PATH=' $HOME/.zshrc && RIPGREP_CONFIG_PATH=$HOME/.config/ripgrep/config rg --files $HOME/docs >/dev/null 2>&1"
+            "grep -q 'export RIPGREP_CONFIG_PATH=' $HOME/.zshrc && RIPGREP_CONFIG_PATH=$HOME/.config/ripgrep/config rg --files $HOME/.config/ripgrep >/dev/null 2>&1"
         run_test "ripgrep config has no output-format flags" \
             "! grep -qE '^--(pretty|context=|column|line-number)' $HOME/.config/ripgrep/config"
     fi

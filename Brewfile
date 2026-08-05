@@ -142,6 +142,9 @@ brew "tokei"
 brew "tmux"
 # Smart session manager for tmux
 brew "sesh"
+# 7-Zip (7zz) — required by yazi's compress plugin (only legacy 7z was
+# present; the plugin probes 7zz first)
+brew "sevenzip"
 # Universal command argument completion
 brew "carapace"
 # Internet file retriever

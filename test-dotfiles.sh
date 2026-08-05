@@ -305,7 +305,10 @@ if [ -f "$HOME/.config/atuin/config.toml" ]; then
     # config can say enabled = true on a machine where
     # `brew services start atuin` was never run, and history then goes
     # nowhere. Only assert when the config actually asks for the daemon.
-    if grep -A6 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
+    # Guarded on atuin being installed: CI checks out the tracked config
+    # (daemon enabled) onto a runner with no atuin — skip there, still
+    # catch a real machine that never started the service.
+    if command -v atuin >/dev/null 2>&1 && grep -A6 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
         run_test "atuin daemon socket live when enabled" \
             "[ -S \"$HOME/.local/share/atuin/atuin.sock\" ]"
     fi

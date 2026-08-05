@@ -531,6 +531,12 @@ if command -v scooter &> /dev/null; then
     alias sr='scooter'
 fi
 
+# television's explicit role: full-text CONTENT search entry point
+# (fzf owns filename/history flows — no overlap, one entry each)
+if command -v tv &> /dev/null; then
+    alias tvt='tv text'
+fi
+
 # herdr trial: let TUIs that use C-hjkl themselves (lazygit) receive the
 # chord instead of vim-herdr-navigation moving pane focus
 if command -v herdr &> /dev/null; then

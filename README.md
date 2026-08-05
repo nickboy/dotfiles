@@ -109,6 +109,8 @@ Focused guides live in `docs/`:
   (Mac + remote Linux)
 - [docs/work-machine-checklist.md](docs/work-machine-checklist.md) —
   deploying onto a machine that already has its own config
+- [docs/upgrade-watch.md](docs/upgrade-watch.md) — version-sensitive
+  configs, breaking-change history, and their canaries
 
 ## 📋 Daily Maintenance Automation
 

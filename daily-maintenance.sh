@@ -334,18 +334,22 @@ FAILED_COMMANDS=()
 # Run your daily maintenance commands
 # 900s timeout: a stalled network otherwise hangs the whole run (the other
 # network steps are already wrapped; brew was the only unguarded one)
-# herdr is deliberately UNPINNED (owner wants every release): capture its
-# version before the upgrade so a bump can be detected afterwards.
+# herdr LEFT Homebrew 2026-08-05 (self-updater managed; see
+# docs/herdr-setup.md), so brew can no longer change its version and
+# this check is normally a no-op. It stays as a TRIPWIRE: if a brew
+# copy is ever mistakenly reinstalled (shadow-racing ~/.local/bin) and
+# auto-upgraded, the version delta below catches it the same morning.
 # 'herdr --version' reads the binary only — it never auto-starts a server.
 HERDR_VERSION_BEFORE="$(herdr --version 2>/dev/null || true)"
 if ! run_command "Homebrew formula upgrade" run_with_timeout 900 brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
-# herdr's wire protocol refuses attach on ANY version mismatch, so a bump
-# strands a still-running server. NEVER kill it here — the owner may be in
-# a live session, and no herdr CLI may be called (it could auto-start a
-# server that inherits this launchd environment). Detect via the socket
+# Tripwire evaluation (see the capture comment above): herdr's wire
+# protocol refuses attach on ANY version mismatch, so an unexpected bump
+# strands a still-running server. NEVER kill it here — the owner may be
+# in a live session, and no herdr CLI may be called (it could auto-start
+# a server inheriting this launchd environment). Detect via the socket
 # and notify; agent panes resume natively after the owner restarts.
 HERDR_VERSION_AFTER="$(herdr --version 2>/dev/null || true)"
 if dm_herdr_strand_detected "$HERDR_VERSION_BEFORE" "$HERDR_VERSION_AFTER"; then

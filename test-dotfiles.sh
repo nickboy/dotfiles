@@ -491,6 +491,10 @@ echo
 echo -e "${YELLOW}15. Unit Tests${NC}"
 
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
+# Since herdr left Homebrew (2026-08-05) the maintenance call site is a
+# no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled
+# and auto-upgraded) — the predicate's semantics are unchanged, so
+# these polarity tests stand as-is.
 # A real unix socket is required for the -S branch; python3 binds one in
 # a temp dir so all four polarities are exercised.
 if [ -f "$HOME/daily-maintenance-lib.sh" ]; then

@@ -5,6 +5,12 @@
 
 set -e
 
+# CWD-independence: many tests use relative paths and *.sh globs that
+# assume the yadm worktree root. Run from a subdir and 40+ glob tests
+# silently vanish while ls-files pathspecs misreport — anchor here.
+# (CI overrides HOME to the checkout, so this stays correct there too.)
+cd "$HOME" || exit 1
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'

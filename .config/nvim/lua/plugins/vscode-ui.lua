@@ -1,3 +1,9 @@
+-- dropbar: the hand-written BufModifiedSet bridge for Neovim 0.13 is gone.
+-- Upstream commit 808ba31cde89aec8833e9789f5e04557cd31c9e1 (2026-05-31,
+-- "feat(configs): support specifying event pattern in config") added
+-- `{ event = "OptionSet", pattern = "modified" }` to the default
+-- bar.update_events.buf. This file overrides that list, so the entry is
+-- mirrored below rather than inherited.
 return {
   -- Breadcrumb navigation bar (like VS Code breadcrumbs)
   {
@@ -5,10 +11,14 @@ return {
     event = "LazyFile",
     opts = {
       bar = {
-        -- Neovim 0.13 removed BufModifiedSet; bridge added in config() below.
         update_events = {
           win = { "CursorMoved", "WinResized" },
-          buf = { "FileChangedShellPost", "TextChanged", "ModeChanged" },
+          buf = {
+            { event = "OptionSet", pattern = "modified" },
+            "FileChangedShellPost",
+            "TextChanged",
+            "ModeChanged",
+          },
           global = { "DirChanged", "VimResized" },
         },
         sources = function(buf, _)
@@ -31,14 +41,6 @@ return {
     },
     config = function(_, opts)
       require("dropbar").setup(opts)
-      vim.api.nvim_create_autocmd("OptionSet", {
-        pattern = "modified",
-        group = vim.api.nvim_create_augroup("DropbarModifiedBridge", { clear = true }),
-        callback = function(args)
-          require("dropbar.utils").bar.exec("update", { buf = args.buf })
-        end,
-        desc = "dropbar: replacement for removed BufModifiedSet (Neovim 0.13+)",
-      })
     end,
   },
 

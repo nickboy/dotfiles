@@ -103,6 +103,8 @@ bash ~/install-daily-maintenance.sh
   （Mac + 遠端 Linux，英文）
 - [docs/work-machine-checklist.md](docs/work-machine-checklist.md)
   — 部署到已有自訂設定的機器（英文）
+- [docs/upgrade-watch.md](docs/upgrade-watch.md) — 版本敏感設定與
+  破壞性變更史（英文）
 
 ## 每日維護自動化
 

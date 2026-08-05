@@ -224,3 +224,27 @@ per repo at a time.
 ```bash
 yadm diff --cached --name-only
 ```
+
+## Neovim plugins error with "attempt to call a nil value" (API missing)
+
+**Symptom:** A plugin (e.g. neo-tree) throws a `vim.schedule` callback
+error; the stack ends in an `nvim_*` API call that does not exist.
+
+**Root cause:** nvim runs a stale nightly while plugins update daily.
+`has("nvim-0.13")` is true for every 0.13-dev build, so plugins call
+APIs that landed in later nightlies. In August 2026 the deeper cause
+was bob's git-dev build moving its data dir to
+`~/Library/Application Support/bob`: a half-finished install there
+wedged `bob install nightly` ("Couldn't find bob.json") for a month.
+
+**Fix:** Remove the half-installed `nightly/` dir (and stray tarball)
+from the NEW data dir, reinstall, and make sure PATH prefers the new
+`nvim-bin`:
+
+```bash
+bob install nightly && bob use nightly
+command -v nvim && nvim --version | head -1
+```
+
+The suite's "Neovim boots headless" check and the maintenance bob task
+status are the canaries.

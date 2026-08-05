@@ -245,6 +245,10 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     # The strand guard depends on the shared lib being sourced.
     run_test "Maintenance sources daily-maintenance-lib.sh" \
         "grep -qE '^source .*daily-maintenance-lib.sh' $HOME/daily-maintenance.sh && grep -q 'dm_herdr_strand_detected' $HOME/daily-maintenance.sh"
+    # Failures must reach the desktop, not just the log (the bob wedge
+    # was recorded daily for a month and surfaced never)
+    run_test "Maintenance notifies on failed tasks" \
+        "grep -q 'Daily maintenance: \${#FAILED_COMMANDS\[@\]} task(s) failed' $HOME/daily-maintenance.sh"
 fi
 echo
 

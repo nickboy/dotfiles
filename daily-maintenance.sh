@@ -190,7 +190,11 @@ update_bob_self() {
 #      `bob rollback` does not need the hash dirs. GC'd unconditionally.
 update_bob_nightly() {
     local bob_bin="$BOB_BIN"
-    local bob_dir="$HOME/.local/share/bob"
+    # bob's dev branch moved its data dir to the macOS-native location
+    # in July 2026 — prefer it, fall back to the legacy path (the wrong
+    # target made the chmod proxy-fix a no-op and left nightly wedged)
+    local bob_dir="$HOME/Library/Application Support/bob"
+    [ -d "$bob_dir" ] || bob_dir="$HOME/.local/share/bob"
     local nvim_proxy="$bob_dir/nvim-bin/nvim"
 
     echo ""

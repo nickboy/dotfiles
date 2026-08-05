@@ -15,6 +15,7 @@ maintenance.
 | `~/.config/zellij/*` | Zellij | (5) | `zellij setup --check` |
 | `lazygit config.yml` | lazygit | (6) | none needed |
 | `~/.local/bin/env` (uv artifact) | uv | (7) | suite `env` check |
+| bob data dir (PATH + maintenance) | bob (git dev) | (8) | suite nvim boot |
 
 ## Notes
 
@@ -46,3 +47,10 @@ maintenance.
 7. **uv** — `~/.local/bin/env` is a PATH snippet meant to be sourced. If
    it ever becomes executable it shadows `/usr/bin/env` and swallows
    commands; the suite asserts `env` still resolves to `/usr/bin/env`.
+8. **bob** — the git-dev build moved its data dir to
+   `~/Library/Application Support/bob` (July 2026), abandoning
+   `~/.local/share/bob`. A half-finished install there wedged nightly
+   updates for a month ("Couldn't find bob.json") while plugins kept
+   advancing — until neo-tree called an API the frozen nvim lacked.
+   PATH and the maintenance proxy-chmod now target the new dir (old
+   kept as fallback). The suite's headless nvim boot is the canary.

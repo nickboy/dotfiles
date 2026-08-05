@@ -43,8 +43,12 @@ export PATH="/Library/TeX/texbin:$PATH"
 # inherit the exported vars, and the explicit prepend above guarantees the
 # brew paths for any non-login edge case — no need to eval it again here.
 
-# Bob Neovim (MUST be last to have highest priority)
+# Bob Neovim (MUST be last to have highest priority).
+# bob's dev branch moved its data dir to the macOS-native location in
+# July 2026; the old ~/.local/share path is kept second for machines
+# still on the old layout (nonexistent PATH entries are harmless).
 export PATH="$HOME/.local/share/bob/nvim-bin:$PATH"
+export PATH="$HOME/Library/Application Support/bob/nvim-bin:$PATH"
 
 # Compilation flags for macOS
 export LDFLAGS="-L/opt/homebrew/lib"

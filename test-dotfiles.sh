@@ -301,6 +301,14 @@ if [ -f "$HOME/.config/starship.toml" ]; then
     # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)
     run_test "Ghostty shell integration includes ssh-terminfo" \
         "grep -E '^shell-integration-features' $HOME/.config/ghostty/config | grep -q 'ssh-terminfo'"
+    # Daily bob-nightly + plugin churn can desync editor and plugins
+    # (the neo-tree/nvim_win_resize incident: nvim frozen on a June
+    # nightly while plugins assumed a newer API) — a clean headless
+    # boot is the cheapest canary
+    if command -v nvim >/dev/null 2>&1; then
+        run_test "Neovim boots headless without errors" \
+            "! nvim --headless -c q 2>&1 | grep -qiE 'error|traceback'"
+    fi
     if [ -f "$HOME/.config/jj/config.toml" ]; then
         run_test "jj config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/jj/config.toml').read_text())\""
         if command -v jj >/dev/null 2>&1; then

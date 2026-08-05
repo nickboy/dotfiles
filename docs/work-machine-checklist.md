@@ -166,6 +166,41 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
 - [ ] herdr (if used): follow [herdr-setup.md](herdr-setup.md) —
   version lockstep with any remote, server started from a clean
   login shell, clients re-attach after toast-config changes.
+- [ ] **A corp-managed toolchain can shadow a Homebrew formula, and the
+  error suggests the one fix you must not apply.** `brew bundle` reports
+  something like
+
+  ```text
+  Target /opt/homebrew/bin/g[ already exists.
+  To force the link and overwrite all conflicting files:
+    brew link --overwrite coreutils
+  ```
+
+  Those entries may not be stale Homebrew symlinks. On a managed machine
+  they can be tiny root-owned shell scripts, placed by the config
+  management system, that exec a vendor build of the same tool from a
+  different prefix. `--overwrite` deletes files that system owns, it
+  restores them on its next run so the conflict returns, and anything
+  depending on the vendor build can break in between.
+
+  The tell, before you decide anything is broken: a real Homebrew link is
+  a **symlink owned by you**; a managed shim is a **regular file owned by
+  root**.
+
+  ```bash
+  ls -la /opt/homebrew/bin/<name>     # symlink + your user, or file + root?
+  ```
+
+  When it is a shim, leave the formula unlinked and treat the recurring
+  "needs to be linked" report as a false alarm on that machine. Check the
+  capability you actually depend on instead of the link status. For
+  coreutils here that is timeout's `--foreground`, which daily-maintenance
+  needs and the shimmed build (GNU coreutils 8.32) provides:
+
+  ```bash
+  command -v gtimeout && gtimeout --foreground 1 true && echo ok
+  ```
+
 - [ ] **`~/.ssh/config.d/*` is first-match-wins, and `00-defaults.conf`
   has a `Host *` block.** ssh takes the FIRST value it sees for each
   keyword and reads the directory in glob order, so a per-host block

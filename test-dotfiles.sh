@@ -144,6 +144,16 @@ run_test "env resolves to /usr/bin/env (no executable shim)" \
     "[ \"\$(command -v env)\" = /usr/bin/env ]"
 run_test "No ~/.local/bin executables shadow system binaries" \
     "! (for f in \$HOME/.local/bin/*; do b=\$(basename \"\$f\"); [ -x \"\$f\" ] && { [ -e \"/usr/bin/\$b\" ] || [ -e \"/bin/\$b\" ]; } && echo \"\$b\"; done | grep -q .)"
+# Retired plugins must stay retired (dotenv: cd-triggered .env sourcing
+# in an agent-heavy workflow; rbenv/ruby/rake: mise-era leftovers;
+# extract: replaced by ouch aliases in the July round)
+run_test "Retired OMZ snippets stay retired" \
+    "! grep -qE 'OMZP::(dotenv|rbenv|ruby|rake|extract)' $HOME/.zshrc"
+# Theme is owned by ~/.config/bat/config — call sites must not override
+run_test "No hardcoded bat --theme in .zshrc" \
+    "! grep -qE 'bat [^|]*--theme=' $HOME/.zshrc"
+run_test "fzf-tab inherits FZF_DEFAULT_OPTS" \
+    "grep -q 'use-fzf-default-opts.*yes' $HOME/.zshrc"
 
 # Check for proper shebang
 for script in *.sh; do
@@ -251,6 +261,31 @@ fi
 # Validate Starship config (TOML syntax)
 if [ -f "$HOME/.config/starship.toml" ]; then
     run_test "Starship config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/starship.toml').read_text())\""
+    if command -v bat >/dev/null 2>&1; then
+        run_test "bat Catppuccin Mocha theme registered" \
+            "bat --list-themes 2>/dev/null | grep -q 'Catppuccin Mocha' && grep -q 'Catppuccin Mocha' $HOME/.config/bat/config"
+    fi
+    if command -v tmux >/dev/null 2>&1; then
+        run_test "Tmux config parses (throwaway server)" \
+            "tmux -L cfgtest-suite -f $HOME/.tmux.conf new-session -d 2>/dev/null && tmux -L cfgtest-suite kill-server 2>/dev/null"
+        run_test "Tmux history-limit >= 50000" \
+            "grep -qE 'history-limit (5[0-9]{4,}|[6-9][0-9]{4}|[0-9]{6,})' $HOME/.tmux.conf"
+    fi
+    # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
+    # terminal-notification detection over SSH depends on it
+    run_test "Ghostty shell integration includes ssh-terminfo" \
+        "grep -E '^shell-integration-features' $HOME/.config/ghostty/config | grep -q 'ssh-terminfo'"
+    if [ -f "$HOME/.config/jj/config.toml" ]; then
+        run_test "jj config TOML valid" "python3 -c \"import tomllib, pathlib; tomllib.loads(pathlib.Path('$HOME/.config/jj/config.toml').read_text())\""
+        if command -v jj >/dev/null 2>&1; then
+            run_test "jj accepts the user config" \
+                "jj config list --user >/dev/null 2>&1"
+        fi
+    fi
+    # mergiraf must be wired end-to-end: the attributes line without the
+    # driver definition (or vice versa) is a silent no-op
+    run_test "mergiraf attributes/driver pairing" \
+        "grep -q 'merge=mergiraf' $HOME/.config/git/attributes && grep -q 'merge \"mergiraf\"' $HOME/.config/git/config"
 fi
 
 # Validate Kitty config
@@ -352,6 +387,10 @@ if command -v npx >/dev/null 2>&1; then
 else
     echo -e "${YELLOW}  npx not available; skipping markdown lint (CI will enforce it)${NC}"
 fi
+# The README split moved sections into docs/ pages — every relative .md
+# link in the READMEs and docs/ must resolve, or the split rots silently.
+run_test "Relative .md links in README/docs resolve" \
+    "! (for f in \$HOME/README.md \$HOME/README.zh-TW.md \$HOME/docs/*.md; do d=\$(dirname \"\$f\"); grep -oE '\\]\\(([A-Za-z0-9._/-]+\\.md)[)#]' \"\$f\" 2>/dev/null | sed -E 's/^\\]\\(//; s/[)#]\$//' | while IFS= read -r l; do [ -f \"\$d/\$l\" ] || echo \"\$f -> \$l\"; done; done | grep -q .)"
 echo
 
 # Test 14: ShellCheck on ALL tracked bash/sh scripts (shebang-detected)

@@ -159,12 +159,13 @@ brew "yadm"
 brew "yazi"
 # Terminal multiplexer (modern tmux alternative)
 brew "zellij"
-# AI-agent-aware multiplexer — 2-week trial for Claude Code sessions.
-# UNPINNED on purpose (owner tracks every release; fast-moving upstream).
-# Its wire protocol refuses attach across versions, so daily-maintenance
-# detects a bump landing on a live server and notifies instead of killing
-# it — restart when convenient; agent panes resume natively.
-brew "herdr"
+# herdr (AI-agent-aware multiplexer) is DELIBERATELY NOT in this file —
+# it is managed by its own updater (~/.local/bin/herdr, install:
+# curl -fsSL https://herdr.dev/install.sh | sh). Upstream disables
+# 'herdr update' for brew installs, and only the self-updater supports
+# LIVE HANDOFF (server replacement without killing panes). Owner call
+# 2026-08-05: same class as ghostty@tip and bob — do not re-add the
+# formula; a brew copy would shadow-race the self-managed binary.
 # Shell extension to navigate your filesystem faster
 brew "zoxide"
 # Magical shell history with sync and search

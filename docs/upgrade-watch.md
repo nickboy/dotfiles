@@ -37,7 +37,9 @@ maintenance.
 4. **herdr** — the wire protocol refuses to attach across ANY version
    gap. `herdr integration install claude` rewrites `settings.json` with
    an absolute `/Users` path; re-fix it to `$HOME` afterwards.
-   Maintenance notifies when an upgrade lands on a live server.
+   Self-updater managed since 2026-08-05 (left the Brewfile — brew
+   installs can't live-handoff): upgrade via `herdr update --handoff`;
+   never from non-interactive automation.
 5. **Zellij** — 0.44 swapped wasmtime for wasmi, breaking every wasm
    plugin built before 2026-03. zjstatus needs ≥ 0.23; the layout pins
    v0.24.0 by URL.

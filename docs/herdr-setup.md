@@ -41,11 +41,16 @@ Rules learned the hard way:
 
 ## Install
 
-Mac:
+Mac — self-updater managed, NOT Homebrew (owner call 2026-08-05:
+upstream disables `herdr update` for brew installs, and only the
+self-updater supports live handoff; same class as ghostty@tip/bob):
 
 ```bash
-brew install herdr   # UNPINNED: daily maintenance auto-upgrades it
+curl -fsSL https://herdr.dev/install.sh | sh   # -> ~/.local/bin/herdr
 ```
+
+`~/.local/bin` precedes `/opt/homebrew/bin` in PATH, so never install
+the brew formula alongside — it would shadow-race this binary.
 
 Linux (**⚠ verify** the official installer URL on setup day):
 
@@ -255,13 +260,14 @@ So the whole flow is: Mac auto-upgrades daily; next remote attach
 syncs the box. Always attach with `--handoff` (the hbox wrapper
 below bakes it in).
 
-Limits: Mac-side `herdr update --handoff` is DISABLED for Homebrew
-installs (upstream policy) — the LOCAL server upgrade stays a
-restart + native resume; that blast radius is the accepted cost of
-keeping herdr under Brewfile management. And never run
-`herdr --remote` from non-interactive automation: replacing a remote
-binary while its server runs requires an interactive confirmation
-and errors otherwise — keep it out of daily-maintenance.
+Mac upgrades (self-updater managed since 2026-08-05): run
+`herdr update --handoff` when the in-app version check nags — live
+handoff replaces the local server WITHOUT killing panes (in-flight
+API requests may need a retry). Daily maintenance no longer touches
+herdr at all (it left the Brewfile); its strand-detection guard stays
+as a harmless no-op. Never run `herdr --remote` OR `herdr update`
+from non-interactive automation: replacing a running server requires
+an interactive confirmation and errors otherwise.
 
 Manual fallback (or first install):
 

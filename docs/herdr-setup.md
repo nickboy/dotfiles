@@ -44,7 +44,7 @@ Rules learned the hard way:
 Mac:
 
 ```bash
-brew install herdr && brew pin herdr   # pinned: upgrades are manual
+brew install herdr   # UNPINNED: daily maintenance auto-upgrades it
 ```
 
 Linux (**⚠ verify** the official installer URL on setup day):
@@ -203,13 +203,16 @@ hbox() {
 - Fallback from anywhere: `ssh <host>` then plain `herdr` — same
   binary, same version, always attaches.
 
-## Upgrades (both ends together, always manual)
+## Upgrades (Mac automatic, remote follows)
 
-Daily maintenance never touches herdr (`brew pin`, enforced by a
-test-suite assertion). To upgrade, do both machines in one sitting:
+The formula is unpinned by owner decision: the Mac side is upgraded
+by the daily maintenance run, which detects a bump landing on a live
+server and sends a notification (restart when convenient — the wire
+protocol refuses attach across versions). The REMOTE side stays
+manual: when `herdr --remote <host>` starts refusing with a protocol
+mismatch after a Mac upgrade, bring the remote up to match:
 
 ```bash
-brew unpin herdr && brew upgrade herdr && brew pin herdr
 ssh <host> 'curl -fsSL https://herdr.dev/install.sh | sh'
 herdr --version && ssh <host> 'herdr --version'   # must match
 ```

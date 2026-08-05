@@ -87,178 +87,31 @@ bash ~/install-daily-maintenance.sh
 ~/daily-maintenance-control.sh status
 ```
 
+## 文件
+
+各主題的詳細指南放在 `docs/`：
+
+- [docs/daily-maintenance.zh-TW.md](docs/daily-maintenance.zh-TW.md)
+  — 更新自動化：排程、控制指令、設定、日誌
+- [docs/keybindings.md](docs/keybindings.md) — 終端機、多工器與編輯器
+  的快捷鍵總覽（英文）
+- [docs/troubleshooting.md](docs/troubleshooting.md) — 常見問題與
+  排除方式（英文）
+- [docs/herdr.zh-TW.md](docs/herdr.zh-TW.md) — herdr 試驗筆記、插件
+  安裝、已知限制
+- [docs/herdr-setup.md](docs/herdr-setup.md) — herdr 雙機建置指南
+  （Mac + 遠端 Linux，英文）
+- [docs/work-machine-checklist.md](docs/work-machine-checklist.md)
+  — 部署到已有自訂設定的機器（英文）
+
 ## 每日維護自動化
 
-### 概覽
+Homebrew、zinit、Oh-My-Zsh、bob、LazyVim 與 treesitter 每日上午 9:00
+透過 launchd 自動更新；若筆電當時關機，登入時會自動補執行。
+快速別名：`mr`（執行）、`ms`（狀態）、`ml`（日誌）。
 
-自動化每日系統維護任務，包括：
-
-- Homebrew formula 更新（`brew upgrade`）
-- Homebrew cask 更新 — `brew upgrade --cask --greedy-latest --yes`:
-  非互動式,並涵蓋無版本號的 cask
-- Zinit 外掛更新（`zinit update --all --quiet`）
-- Oh-My-Zsh 更新
-- Bob 自我更新：從 git dev 分支重建（SHA 快取，僅在上游推進時才重新
-  編譯）
-- Bob（Neovim 版本管理器）nightly 更新與舊版目錄清理
-  （`bob install nightly` + `bob use nightly`）
-- LazyVim 外掛更新（`nvim --headless '+Lazy! sync' +qa`）
-- Treesitter parser 更新（`nvim --headless '+TSUpdate' +qa`）
-- Homebrew 清理（`brew cleanup --prune=all`）— 移除舊版本並清除快取
-
-### 功能特色
-
-- 每日上午 9:00 透過 launchd 自動執行
-- **補執行機制**：若錯過排程時間，登入時自動執行
-- **並發鎖**：登入補執行不會與 9AM 排程互撞；殭屍鎖
-  （PID 已死或超過 6 小時）會自動清除
-- 完整日誌記錄至 `~/Library/Logs/`，超過 5 MB 自動輪替
-- 網路步驟均在 watchdog timeout 下執行（timeout 中止與
-  一般失敗在日誌中可區分）
-- 錯誤處理與狀態報告
-- 支援手動執行與便捷別名
-- 簡易啟用/停用控制
-- GitHub Actions CI/CD 流程
-- Pre-commit hook 驗證
-- 內建本機測試套件
-- 無硬編碼路徑 — 使用 yadm 原生 `##template`（每次 clone/pull
-  時由 `yadm alt` 自動重生）
-
-### 安裝每日維護
-
-#### 自動安裝
-
-```bash
-# 執行安裝腳本
-bash ~/install-daily-maintenance.sh
-```
-
-#### 手動安裝
-
-```bash
-# 1. 設定腳本執行權限
-chmod +x ~/daily-maintenance.sh
-chmod +x ~/daily-maintenance-control.sh
-
-# 2. 從 yadm 範本產生 plist（clone/pull 時 yadm alt 也會
-#    自動執行，通常已經完成）
-yadm alt
-
-# 3. 載入 LaunchAgent（現代 launchctl，回傳真實 exit code）
-launchctl enable "gui/$(id -u)/com.daily-maintenance"
-launchctl bootstrap "gui/$(id -u)" \
-  ~/Library/LaunchAgents/com.daily-maintenance.plist
-```
-
-### 使用方式
-
-#### 快速存取別名（在 .zshrc 中設定）
-
-```bash
-# 日常操作快捷鍵
-mr  # 手動執行維護（跳過日期檢查）
-ms  # 檢查維護狀態
-ml  # 查看維護日誌
-```
-
-#### 完整控制指令
-
-```bash
-# 檢查狀態
-~/daily-maintenance-control.sh status
-
-# 手動執行
-~/daily-maintenance-control.sh run
-
-# 查看日誌
-~/daily-maintenance-control.sh logs
-
-# 停止自動化
-~/daily-maintenance-control.sh stop
-
-# 啟動自動化
-~/daily-maintenance-control.sh start
-
-# 編輯維護腳本
-~/daily-maintenance-control.sh edit
-```
-
-### 設定
-
-#### 變更排程
-
-編輯 `~/Library/LaunchAgents/com.daily-maintenance.plist`：
-
-```xml
-<key>StartCalendarInterval</key>
-<dict>
-    <key>Hour</key>
-    <integer>9</integer>  <!-- 變更小時 (0-23) -->
-    <key>Minute</key>
-    <integer>0</integer>   <!-- 變更分鐘 (0-59) -->
-</dict>
-```
-
-編輯後重新載入：
-
-```bash
-~/daily-maintenance-control.sh restart
-```
-
-#### 新增指令
-
-編輯 `~/daily-maintenance.sh`，依照現有模式新增指令：
-
-```bash
-if ! run_command "描述" your-command --args; then
-    FAILED_COMMANDS+=("your-command")
-fi
-```
-
-### 疑難排解
-
-#### 檢查自動化是否正在執行
-
-```bash
-launchctl list | grep daily-maintenance
-```
-
-#### 查看最新日誌
-
-```bash
-tail -f ~/Library/Logs/daily-maintenance.log
-```
-
-#### 查看錯誤日誌
-
-```bash
-tail -f ~/Library/Logs/daily-maintenance-error.log
-```
-
-#### 重設自動化
-
-```bash
-~/daily-maintenance-control.sh stop
-~/daily-maintenance-control.sh start
-```
-
-### 解除安裝
-
-完全移除自動化（保留腳本）：
-
-```bash
-bash ~/uninstall-daily-maintenance.sh
-```
-
-或手動移除：
-
-```bash
-# 停止並卸載自動化
-launchctl bootout "gui/$(id -u)/com.daily-maintenance"
-
-# 選擇性：移除日誌檔
-rm ~/Library/Logs/daily-maintenance*.log
-```
+安裝、控制指令、排程、日誌、疑難排解與解除安裝請見
+[docs/daily-maintenance.zh-TW.md](docs/daily-maintenance.zh-TW.md)。
 
 ## Ghostty 終端機設定
 
@@ -767,33 +620,14 @@ zjd             # zellij delete-session
 ## herdr（試驗中）
 
 [herdr](https://herdr.dev/) 是感知 AI agent 狀態的多工器，目前進行
-兩週試驗——只承載 Claude Code session，tmux 仍是主力。formula
-刻意**不釘版**——每日維護會跟上每個 release。其協定在版本不匹配時
-拒絕 attach，因此維護腳本偵測到「升級落在活著的 server 上」時會發
-桌面通知而非殺掉它：方便時再重啟（`herdr server stop` 後 `herdr`，
-agent pane 會原生 resume）。設定在
+兩週試驗——只承載 Claude Code session，tmux 仍是主力。設定在
 `~/.config/herdr/config.toml`（ctrl+a prefix、對映 tmux 鍵位、
-Catppuccin）。插件屬機器本地產物；新機器以 SHA 釘版安裝
-（皆為小型第三方 repo，`--ref` 是供應鏈防護）：
+Catppuccin）；插件屬機器本地產物，以 SHA 釘版安裝。
 
-```bash
-herdr plugin install --yes paulbkim-dev/vim-herdr-navigation \
-  --ref 820d48f5d9c9a7dece6a4bebfa3982ec30bbfbb7
-herdr plugin install --yes andrewchng/herdr-sessionizer \
-  --ref 20827358a8da57b83d479cf899909bbf11919541
-herdr plugin install --yes iurysza/termscope \
-  --ref cbc6da8103c263343b7082e27e804cc91312f944   # build 可能經 brew 升級 television
-herdr plugin install --yes NathanFlurry/herdr-plugin-jj-workspace \
-  --ref a9f1d3bcdaa2354e336a5173da85cbe4970c0f2e
-herdr integration install claude   # 重新生成 agent-state hook
-```
-
-相對 tmux 組合的已知限制：sessionizer 沒有 blacklist、picker 預覽
-寫死（`bat`/`ls`，非 eza）；jj 插件的 *remove* 是銷毀性操作
-（forget + `rm -rf`，故意不綁鍵）。
-
-完整雙機建置指南（工作筆電／遠端 Linux、remote attach、通知、
-升級紀律）：[docs/herdr-setup.md](docs/herdr-setup.md)（英文）
+試驗筆記、插件安裝指令與已知限制：
+[docs/herdr.zh-TW.md](docs/herdr.zh-TW.md)。完整雙機建置指南
+（工作筆電／遠端 Linux）：[docs/herdr-setup.md](docs/herdr-setup.md)
+（英文）。
 
 ## Tmux 設定
 
@@ -1013,6 +847,8 @@ sesh clone https://github.com/user/repo
   子目錄）
 - **指令修正**: `fk` 執行 `pay-respects`（thefuck 的 Rust
   後繼者，由 bootstrap 腳本透過 cargo 安裝）
+- **內容搜尋**: television 是全文內容搜尋的入口 — `tvt` 是
+  `tv text` 的別名；檔名與歷史紀錄的搜尋流程仍由 fzf 負責
 
 ### 目錄導航
 
@@ -1403,4 +1239,4 @@ shellcheck *.sh  # 若已透過 brew 安裝
 
 ---
 
-最後更新：2026 年 7 月
+最後更新：2026-08-04

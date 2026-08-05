@@ -137,10 +137,6 @@ zinit snippet OMZP::brew
 zinit snippet OMZP::common-aliases
 zinit snippet OMZP::colored-man-pages
 zinit snippet OMZP::web-search
-zinit snippet OMZP::dotenv
-zinit snippet OMZP::rake
-zinit snippet OMZP::rbenv
-zinit snippet OMZP::ruby
 zinit snippet OMZP::sudo
 
 # eza aliases plugin - configure params before loading
@@ -269,14 +265,16 @@ zinit light Aloxaf/fzf-tab
 # Configure fzf-tab
 zstyle ':fzf-tab:*' fzf-command fzf
 zstyle ':fzf-tab:*' fzf-pad 4
-# Inherit FZF theme and add specific flags for fzf-tab
+# Inherit FZF_DEFAULT_OPTS (Catppuccin colors etc.) instead of rebuilding
+# the theme here — future theme changes apply in one place
+zstyle ':fzf-tab:*' use-fzf-default-opts yes
 zstyle ':fzf-tab:*' fzf-flags --height=50% --border=rounded
 
 # Configure preview for different completion types
 zstyle ':fzf-tab:complete:cd:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
 zstyle ':fzf-tab:complete:__zoxide_z:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
 zstyle ':fzf-tab:complete:ls:*' fzf-preview 'eza --tree --icons=always --color=always $realpath | head -200'
-zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --icons=always --color=always $realpath | head -200 || [[ -f $realpath ]] && bat --style=numbers --color=always --theme=tokyonight_night --line-range :500 $realpath || echo $desc'
+zstyle ':fzf-tab:complete:*:*' fzf-preview '[[ -d $realpath ]] && eza --tree --icons=always --color=always $realpath | head -200 || [[ -f $realpath ]] && bat --style=numbers --color=always --line-range :500 $realpath || echo $desc'
 
 # Group colors and descriptions
 zstyle ':completion:*' group-name ''

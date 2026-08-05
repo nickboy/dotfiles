@@ -271,6 +271,8 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             "bat --list-themes 2>/dev/null | grep -q 'Catppuccin Mocha' && grep -q 'Catppuccin Mocha' $HOME/.config/bat/config"
     fi
     if command -v tmux >/dev/null 2>&1; then
+        # Sources the real config incl. TPM; verified 3 throwaway runs
+        # leave ~/.tmux/resurrect untouched (no plugin side effects).
         run_test "Tmux config parses (throwaway server)" \
             "tmux -L cfgtest-suite -f $HOME/.tmux.conf new-session -d 2>/dev/null && tmux -L cfgtest-suite kill-server 2>/dev/null"
         run_test "Tmux history-limit >= 50000" \
@@ -278,6 +280,7 @@ if [ -f "$HOME/.config/starship.toml" ]; then
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
+    # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)
     run_test "Ghostty shell integration includes ssh-terminfo" \
         "grep -E '^shell-integration-features' $HOME/.config/ghostty/config | grep -q 'ssh-terminfo'"
     if [ -f "$HOME/.config/jj/config.toml" ]; then
@@ -329,6 +332,7 @@ if [ -f "$HOME/.config/sesh/sesh.toml" ]; then
     # Yazi 26 broke silently on a stale fetchers schema (id -> group):
     # --version fails when the config no longer parses, so this catches
     # the next schema break instead of yazi quietly using preset config.
+    # (verified: --version exits 1 on broken config, 0 when clean)
     if command -v yazi >/dev/null 2>&1; then
         run_test "Yazi config parses (yazi --version)" \
             "yazi --version >/dev/null 2>&1"

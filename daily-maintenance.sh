@@ -539,6 +539,8 @@ fi
 # weeks without saying a word. Each check below asks the tool itself to parse
 # its tracked config, so a schema break surfaces the day the upgrade lands
 # instead of months later.
+# Verified 2026-08-04: 'yazi --version' exits 1 on a broken yazi.toml
+# (0 when clean), so it does catch the id->group class of breakage.
 echo ""
 echo "----------------------------------------"
 echo "Task: Config schema checks"

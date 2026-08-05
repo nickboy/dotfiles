@@ -44,6 +44,9 @@ this repo — most common) or **fresh clone**. Update path first.
     skipped entirely)
   - `bash ~/test-dotfiles.sh` — the suite is the cross-machine
     verification of the whole update
+  - `brew services start atuin` — the tracked atuin config enables
+    daemon mode; without the service, history writes go nowhere and
+    the test suite fails the socket check by design.
 - [ ] Push transport for THIS machine: keep HTTPS +
   `gh auth login`, or a work SSH key — set in the machine's untracked
   `~/.gitconfig`. Do not copy the personal 1Password setup.
@@ -136,6 +139,10 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
   gh auth status && gh auth setup-git
   yadm push --dry-run
   ```
+
+- [ ] For corp repos, set the work identity in jj too:
+  `jj config set --repo user.email <work-email>` (the tracked jj
+  config carries the personal default).
 
 ## Homebrew
 

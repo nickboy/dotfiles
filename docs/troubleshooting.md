@@ -72,8 +72,11 @@ A `test-dotfiles.sh` check now catches this regression.
 output.
 
 **Root cause:** `~/.local/bin/env` is the uv installer's PATH
-snippet, meant to be sourced, not executed. It was left `chmod +x`
-and shadowed `/usr/bin/env` via PATH.
+snippet, meant to be sourced, not executed. The culprit that made it
+executable was the bootstrap's blanket `chmod +x ~/.local/bin/*`
+(case closed 2026-08: the suite's env test caught the line re-arming
+the trap during a bootstrap re-run). Bootstrap now chmods only
+yadm-tracked scripts.
 
 **Fix:**
 

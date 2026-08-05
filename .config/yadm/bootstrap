@@ -9,7 +9,37 @@ echo "🚀 Starting yadm bootstrap..."
 echo "📁 Creating required directories..."
 mkdir -p ~/.config
 mkdir -p ~/.local/bin
+# macOS-only; harmless no-op elsewhere (used by install-daily-maintenance.sh).
 mkdir -p ~/Library/LaunchAgents
+
+# Normalise PATH for this script. Bootstrap runs from `yadm clone` in a
+# non-interactive shell that has NOT sourced the freshly-installed .zshrc,
+# so ~/.cargo/bin and /opt/homebrew/bin may be absent. Without this every
+# `command -v` guard below reads as "not installed" and re-runs a full
+# cargo rebuild of tools that are already present — the single biggest
+# re-run cost. Order mirrors the .zshrc priority; missing dirs are inert.
+export PATH="/opt/homebrew/bin:$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+# Fetch a URL to a path without destroying the existing copy on failure.
+# `curl -o` truncates its target before the transfer starts, so a network
+# blip or a 404 (upstream theme repos do move files) would replace a good
+# theme with an empty file or an HTML error page — a re-run leaving the
+# machine worse than before. Download to a temp file and keep it only if
+# curl reports success. A successful re-run always refetches (a few KB)
+# and overwrites with identical content.
+fetch_to() {
+    local dest="$1" url="$2" tmp
+    tmp="$(mktemp "${TMPDIR:-/tmp}/bootstrap-fetch.XXXXXX")" || return 1
+    if curl --fail --silent --show-error --location -o "$tmp" "$url"; then
+        chmod 0644 "$tmp"
+        # -f so the replace cannot turn into a y/n prompt under a shell
+        # that aliases mv to `mv -i`.
+        mv -f "$tmp" "$dest"
+    else
+        rm -f "$tmp"
+        return 1
+    fi
+}
 
 # Setup Ghostty configuration symlink
 echo "👻 Setting up Ghostty configuration..."
@@ -25,21 +55,29 @@ if [ -f "$HOME/.config/ghostty/config" ]; then
         mv "$GHOSTTY_APP_CONFIG/config" "$GHOSTTY_APP_CONFIG/config.backup.$(date +%s)"
     fi
 
-    # Create symlink if it doesn't exist
-    if [ ! -L "$GHOSTTY_APP_CONFIG/config" ]; then
-        echo "  Creating symlink for Ghostty config..."
-        ln -sf "$HOME/.config/ghostty/config" "$GHOSTTY_APP_CONFIG/config"
+    # Create/retarget symlink. -n so an existing symlink is replaced rather
+    # than dereferenced, and we retarget a symlink that points elsewhere
+    # instead of reporting "already exists" for a wrong link.
+    if [ "$(readlink "$GHOSTTY_APP_CONFIG/config" 2>/dev/null)" = "$HOME/.config/ghostty/config" ]; then
+        echo "  Ghostty symlink already correct"
     else
-        echo "  Ghostty symlink already exists"
+        echo "  Creating symlink for Ghostty config..."
+        ln -sfn "$HOME/.config/ghostty/config" "$GHOSTTY_APP_CONFIG/config"
     fi
 
     # Create symlink for shaders directory if it exists
     if [ -d "$HOME/.config/ghostty/shaders" ]; then
-        if [ ! -L "$GHOSTTY_APP_CONFIG/shaders" ]; then
-            echo "  Creating symlink for Ghostty shaders..."
-            ln -sf "$HOME/.config/ghostty/shaders" "$GHOSTTY_APP_CONFIG/shaders"
+        if [ "$(readlink "$GHOSTTY_APP_CONFIG/shaders" 2>/dev/null)" = "$HOME/.config/ghostty/shaders" ]; then
+            echo "  Ghostty shaders symlink already correct"
         else
-            echo "  Ghostty shaders symlink already exists"
+            # A REAL directory here would make `ln -s` drop the link *inside*
+            # it (…/shaders/shaders). Move it aside first, then link with -n.
+            if [ -d "$GHOSTTY_APP_CONFIG/shaders" ] && [ ! -L "$GHOSTTY_APP_CONFIG/shaders" ]; then
+                echo "  Backing up existing Ghostty shaders directory..."
+                mv "$GHOSTTY_APP_CONFIG/shaders" "$GHOSTTY_APP_CONFIG/shaders.backup.$(date +%s)"
+            fi
+            echo "  Creating symlink for Ghostty shaders..."
+            ln -sfn "$HOME/.config/ghostty/shaders" "$GHOSTTY_APP_CONFIG/shaders"
         fi
     fi
 else
@@ -49,7 +87,11 @@ fi
 # Install Homebrew if not present
 if ! command -v brew &> /dev/null; then
     echo "🍺 Installing Homebrew..."
-    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    # NONINTERACTIVE=1 is required: bootstrap runs unattended from
+    # `yadm clone`, and the installer otherwise blocks on "Press RETURN".
+    NONINTERACTIVE=1 /bin/bash -c \
+        "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)" \
+        || echo "  ⚠️  Homebrew install failed — brew-dependent steps will be skipped"
 
     # Add Homebrew to PATH for Apple Silicon
     if [ -f "/opt/homebrew/bin/brew" ]; then
@@ -114,7 +156,9 @@ if command -v cargo &> /dev/null; then
             --branch dev --locked \
             || echo "  ⚠️  Failed to install bob"
         # Seed the SHA cache so the first maintenance run is a no-op.
-        if command -v bob &> /dev/null && [ -x "$HOME/.cargo/bin/bob" ]; then
+        # Test the binary path directly — `command -v bob` can miss a
+        # just-installed binary if this shell's PATH was captured earlier.
+        if [ -x "$HOME/.cargo/bin/bob" ]; then
             mkdir -p "$HOME/.cache/dotfiles"
             git ls-remote https://github.com/MordechaiHadad/bob.git refs/heads/dev \
                 2>/dev/null | awk '{print $1}' > "$HOME/.cache/dotfiles/bob-dev-sha" \
@@ -127,16 +171,21 @@ else
     echo "  ⚠️  cargo not found, skipping bob installation"
 fi
 
-# Setup tmux plugin manager
+# Setup tmux plugin manager. Anonymous HTTPS clone of a public repo is the
+# documented first-clone path and works without any credential helper.
 if [ ! -d "$HOME/.tmux/plugins/tpm" ]; then
     echo "🔌 Installing tmux plugin manager..."
-    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm
+    git clone https://github.com/tmux-plugins/tpm ~/.tmux/plugins/tpm \
+        || echo "  ⚠️  Failed to clone tpm"
+else
+    echo "🔌 tmux plugin manager already installed"
 fi
 
-# Install tmux plugins automatically
+# Install tmux plugins automatically (TPM skips already-cloned plugins)
 echo "📦 Installing tmux plugins..."
-if [ -f "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
-    "$HOME/.tmux/plugins/tpm/bin/install_plugins"
+if [ -x "$HOME/.tmux/plugins/tpm/bin/install_plugins" ]; then
+    "$HOME/.tmux/plugins/tpm/bin/install_plugins" \
+        || echo "  ⚠️  Some tmux plugins failed; run 'Ctrl-A + I' inside tmux"
 else
     echo "  Note: Run 'Ctrl-A + I' inside tmux to install plugins"
 fi
@@ -144,7 +193,10 @@ fi
 # Install Zinit if not present
 if [ ! -d "$HOME/.local/share/zinit/zinit.git" ]; then
     echo "⚡ Installing Zinit..."
-    bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)"
+    bash -c "$(curl --fail --show-error --silent --location https://raw.githubusercontent.com/zdharma-continuum/zinit/HEAD/scripts/install.sh)" \
+        || echo "  ⚠️  Failed to install Zinit"
+else
+    echo "⚡ Zinit already installed"
 fi
 
 # Clear zinit snippet cache to ensure fresh state (prevents OMZ loading issues)
@@ -157,9 +209,9 @@ echo "🎨 Installing/Updating Catppuccin themes..."
 # FZF Catppuccin theme
 echo "  Downloading FZF Catppuccin Mocha theme..."
 mkdir -p ~/.config/fzf
-curl -sL -o ~/.config/fzf/catppuccin-mocha.sh \
+fetch_to ~/.config/fzf/catppuccin-mocha.sh \
     https://raw.githubusercontent.com/catppuccin/fzf/main/themes/catppuccin-fzf-mocha.sh || \
-    echo "    ⚠️  Failed to download FZF theme"
+    echo "    ⚠️  Failed to download FZF theme (existing copy kept)"
 
 # Bat Catppuccin theme
 echo "  Downloading Bat Catppuccin Mocha theme..."
@@ -168,10 +220,11 @@ BAT_THEME_DIR="$BAT_CONFIG_DIR/themes"
 mkdir -p "$BAT_THEME_DIR"
 # Create syntaxes directory to avoid warning
 mkdir -p "$BAT_CONFIG_DIR/syntaxes"
-curl -sL -o "$BAT_THEME_DIR/Catppuccin Mocha.tmTheme" \
+fetch_to "$BAT_THEME_DIR/Catppuccin Mocha.tmTheme" \
     "https://github.com/catppuccin/bat/raw/main/themes/Catppuccin%20Mocha.tmTheme" || \
-    echo "    ⚠️  Failed to download Bat theme"
-# Rebuild bat cache if bat is installed
+    echo "    ⚠️  Failed to download Bat theme (existing copy kept)"
+# Rebuild bat cache AFTER the theme lands, otherwise ~/.config/bat/config's
+# --theme="Catppuccin Mocha" resolves to nothing. Must stay in this order.
 if command -v bat &> /dev/null; then
     bat cache --build >/dev/null 2>&1 || echo "    ⚠️  Failed to rebuild bat cache"
 fi
@@ -179,9 +232,9 @@ fi
 # Delta Catppuccin theme
 echo "  Downloading Delta Catppuccin theme..."
 mkdir -p ~/.config/delta
-curl -sL -o ~/.config/delta/catppuccin.gitconfig \
+fetch_to ~/.config/delta/catppuccin.gitconfig \
     https://raw.githubusercontent.com/catppuccin/delta/main/catppuccin.gitconfig || \
-    echo "    ⚠️  Failed to download Delta theme"
+    echo "    ⚠️  Failed to download Delta theme (existing copy kept)"
 
 # Eza Catppuccin theme (for macOS)
 echo "  Downloading Eza Catppuccin Mocha theme..."
@@ -191,23 +244,23 @@ else
     EZA_CONFIG="$HOME/.config/eza"
 fi
 mkdir -p "$EZA_CONFIG"
-curl -sL -o "$EZA_CONFIG/theme.yml" \
+fetch_to "$EZA_CONFIG/theme.yml" \
     https://raw.githubusercontent.com/catppuccin/eza/main/themes/mocha/catppuccin-mocha-mauve.yml || \
-    echo "    ⚠️  Failed to download Eza theme"
+    echo "    ⚠️  Failed to download Eza theme (existing copy kept)"
 
 # Atuin Catppuccin theme
 echo "  Downloading Atuin Catppuccin Mocha theme..."
 mkdir -p ~/.config/atuin/themes
-curl -sL -o ~/.config/atuin/themes/catppuccin-mocha-blue.toml \
+fetch_to ~/.config/atuin/themes/catppuccin-mocha-blue.toml \
     https://raw.githubusercontent.com/catppuccin/atuin/main/themes/mocha/catppuccin-mocha-blue.toml || \
-    echo "    ⚠️  Failed to download Atuin theme"
+    echo "    ⚠️  Failed to download Atuin theme (existing copy kept)"
 
 # btop Catppuccin theme
 echo "  Downloading btop Catppuccin Mocha theme..."
 mkdir -p ~/.config/btop/themes
-curl -sL -o ~/.config/btop/themes/catppuccin_mocha.theme \
+fetch_to ~/.config/btop/themes/catppuccin_mocha.theme \
     https://raw.githubusercontent.com/catppuccin/btop/main/themes/catppuccin_mocha.theme || \
-    echo "    ⚠️  Failed to download btop theme"
+    echo "    ⚠️  Failed to download btop theme (existing copy kept)"
 
 # Install yazi packages (plugins and flavors from package.toml)
 if command -v ya &> /dev/null; then
@@ -218,10 +271,26 @@ else
     echo "     Install yazi first, then run 'ya pkg install' manually"
 fi
 
-# Install daily maintenance automation
+# Atuin daemon service: the tracked config enables daemon mode, so the
+# launchd service must run on every machine or history writes go
+# nowhere (the test suite asserts the socket is live). Idempotent.
+if command -v atuin &> /dev/null && command -v brew &> /dev/null; then
+    if grep -A6 '\[daemon\]' ~/.config/atuin/config.toml 2>/dev/null | grep -qE '^enabled = true'; then
+        if ! brew services list 2>/dev/null | grep -qE '^atuin\s+started'; then
+            echo "🚀 Starting atuin daemon service..."
+            brew services start atuin >/dev/null 2>&1 || \
+                echo "  ⚠️  Failed to start atuin service"
+        fi
+    fi
+fi
+
+# Install daily maintenance automation. That script has its own `set -e`
+# and exits 1 on a missing prerequisite — swallow it so a failure there
+# cannot kill the chmod/treesitter/test-suite tail of this bootstrap.
 if [ -f "$HOME/install-daily-maintenance.sh" ]; then
     echo "🔧 Setting up daily maintenance automation..."
-    bash "$HOME/install-daily-maintenance.sh"
+    bash "$HOME/install-daily-maintenance.sh" \
+        || echo "  ⚠️  Daily maintenance install failed — run it manually"
 fi
 
 # Make all scripts executable
@@ -230,7 +299,16 @@ chmod +x ~/daily-maintenance*.sh 2>/dev/null || true
 chmod +x ~/install-daily-maintenance.sh 2>/dev/null || true
 chmod +x ~/uninstall-daily-maintenance.sh 2>/dev/null || true
 chmod +x ~/test-dotfiles.sh 2>/dev/null || true
-chmod +x ~/.local/bin/* 2>/dev/null || true
+# Only the repo's own TRACKED scripts — never a blanket ~/.local/bin/*.
+# The blanket form once chmod +x'd uv's sourceable 'env' PATH snippet,
+# which then shadowed /usr/bin/env and silently swallowed every
+# 'env ... cmd' invocation (the suite's env-shim test exists because
+# of it, and caught this very line re-arming the trap).
+if command -v yadm >/dev/null 2>&1; then
+    yadm ls-files 2>/dev/null | grep '^\.local/bin/' | while IFS= read -r f; do
+        chmod +x "$HOME/$f" 2>/dev/null || true
+    done
+fi
 
 # Install essential treesitter parsers for Neovim
 if command -v nvim &> /dev/null; then
@@ -250,6 +328,16 @@ if command -v nvim &> /dev/null; then
         "+TSInstall vim regex lua bash markdown markdown_inline python json yaml toml" \
         "+sleep 20" +qa 2>/dev/null || echo "  ⚠️  Some parsers may need manual installation"
     echo "  ✓ Treesitter parsers installed"
+fi
+
+# Final self-verification: the suite encodes every cross-machine
+# assumption (services, plugin sets, config schemas) — running it here
+# turns "bootstrap finished" into "bootstrap verified".
+echo "🧪 Running the test suite (final verification)..."
+if bash ~/test-dotfiles.sh > /tmp/bootstrap-suite.log 2>&1; then
+    echo "  ✓ Test suite green"
+else
+    echo "  ⚠️  Test suite reported failures — run: bash ~/test-dotfiles.sh"
 fi
 
 echo "✅ Bootstrap complete!"

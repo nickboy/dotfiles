@@ -42,6 +42,11 @@ this repo — most common) or **fresh clone**. Update path first.
     auth → settings.local.json; herdr SessionStart hook warns
     harmlessly until `herdr integration install claude` or herdr is
     skipped entirely)
+  - herdr licensing changed 0.8.0: AGPL-3.0 → Apache-2.0, so the
+    usual corp legal objection is gone — installing herdr here is now
+    a policy question, not a license one. If installed: use the
+    official installer, NOT brew (see docs/herdr-setup.md), and
+    mirror the plugin `--ref` SHAs.
   - `yadm bootstrap` — idempotent; now covers the machine services
     (`brew services start atuin`, `ya pkg install`, bat cache,
     treesitter) and ends by running the full test suite as

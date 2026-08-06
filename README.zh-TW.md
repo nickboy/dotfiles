@@ -456,6 +456,14 @@ Claude Code 本身已內建跨專案的工作階段探索 — 關鍵在於替工
 - `claude-notify`(OSC 9/777)與 OSC52 剪貼簿已把通知與複製橋接回
   Ghostty。
 
+### 複製 Claude 的上一則回覆
+
+`~/.local/bin/claude-copy-last`(別名 `ccl`,tmux `prefix+O`)直接從
+工作階段的 transcript JSONL 取出 Claude 最新的回覆並複製到剪貼簿,拿到
+的是**原始 markdown**,而不是螢幕上折行後的文字 — 在 tmux、herdr 或
+純 Ghostty 裡行為完全相同。`ccl -n 2` 可往回撈一則;接管線時輸出原始
+markdown(`ccl | glow`、`ccl > notes.md`)。
+
 ## 遠端開發
 
 ### Shell TERM 處理
@@ -1160,6 +1168,7 @@ nvim --headless '+Lazy! sync' +qa
 ├── .local/
 │   └── bin/           # 使用者腳本
 │       ├── battery-status        # 電池監控
+│       ├── claude-copy-last      # 複製 Claude 上一則回覆(ccl)
 │       ├── claude-name-session   # 自動命名 Claude Code 工作階段
 │       ├── claude-notify         # OSC 9/777 桌面通知
 │       ├── claude-statusline     # Claude Code 豐富狀態列

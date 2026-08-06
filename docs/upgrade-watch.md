@@ -16,6 +16,7 @@ maintenance.
 | `lazygit config.yml` | lazygit | (6) | none needed |
 | `~/.local/bin/env` (uv artifact) | uv | (7) | suite `env` check |
 | bob data dir (PATH + maintenance) | bob (git dev) | (8) | suite nvim boot |
+| `~/.claude/projects/*.jsonl` | Claude Code | (9) | suite fixture test |
 
 ## Notes
 
@@ -56,3 +57,12 @@ maintenance.
    advancing — until neo-tree called an API the frozen nvim lacked.
    PATH and the maintenance proxy-chmod now target the new dir (old
    kept as fallback). The suite's headless nvim boot is the canary.
+9. **Claude Code transcripts** — `claude-copy-last` (alias `ccl`,
+   tmux `prefix+O`) reads the session transcript JSONL under
+   `~/.claude/projects/<slug>/`, filtering on `.type == "assistant"`
+   and `.isSidechain`, then pulling `.message.content[].type` and
+   `.text`. That is Claude Code's internal on-disk format with no
+   compatibility guarantee: a renamed field anywhere in it turns a
+   copy into silent nothing. The suite's fixture test
+   ("claude-copy-last extracts latest message from fixture") is the
+   canary — it fails the day the schema drifts.

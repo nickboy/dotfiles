@@ -1,0 +1,107 @@
+#!/usr/bin/env bash
+# claude-copy-last — copy Claude's latest reply from the session
+# transcript, no screen selection involved.
+#
+# The Claude app has a per-message copy button; a terminal only has the
+# rendered screen. But Claude Code writes every message to
+# ~/.claude/projects/<slug>/<session>.jsonl, so the ORIGINAL markdown is
+# always on disk — reading it from there works identically in tmux,
+# herdr, or bare Ghostty, unaffected by scrollback, wrapping, or theme.
+#
+# Usage: claude-copy-last [-n N] [-c]
+#   -n N   N-th most recent assistant message (default 1 = latest);
+#          handy when the latest entry is a question back to you
+#   -c     always copy to clipboard, print nothing (for tmux run-shell,
+#          where stdout is not a tty)
+#
+# On a tty: copies to clipboard and prints a one-line preview.
+# Piped/redirected: raw markdown to stdout (ccl | glow, ccl > notes.md).
+#
+# CAVEAT: the transcript JSONL is Claude Code internal format with no
+# compatibility guarantee — tracked in docs/upgrade-watch.md; the test
+# suite asserts extraction against a fixture so schema drift is caught.
+
+set -euo pipefail
+
+# tmux run-shell and other minimal contexts may lack the brew PATH (jq)
+case ":$PATH:" in
+  *:/opt/homebrew/bin:*) ;;
+  *) PATH="/opt/homebrew/bin:$PATH" ;;
+esac
+
+n=1
+copy=auto
+while getopts "n:ch" opt; do
+    case "$opt" in
+        n) n="$OPTARG" ;;
+        c) copy=always ;;
+        h)
+            sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+            exit 0
+            ;;
+        *) exit 2 ;;
+    esac
+done
+
+case "$n" in
+    '' | *[!0-9]* | 0)
+        echo "claude-copy-last: -n takes a positive integer" >&2
+        exit 2
+        ;;
+esac
+
+projects_root="${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}"
+
+# Claude Code slugs the launch cwd by replacing every non-alphanumeric
+# character with '-' (verified against real dirs under ~/.claude/projects).
+# Sessions are keyed to the cwd where claude was launched, so walk up
+# from $PWD until a project dir that actually has transcripts exists —
+# this is what keeps concurrent agents in other projects from bleeding
+# in: the pane's own cwd decides which transcript is read.
+dir="$PWD"
+proj=""
+while :; do
+    slug=$(printf '%s' "$dir" | sed 's/[^A-Za-z0-9]/-/g')
+    if ls "$projects_root/$slug"/*.jsonl >/dev/null 2>&1; then
+        proj="$projects_root/$slug"
+        break
+    fi
+    [ "$dir" = "/" ] && break
+    dir=$(dirname "$dir")
+done
+
+if [ -z "$proj" ]; then
+    echo "claude-copy-last: no Claude transcripts for $PWD (or parents)" >&2
+    exit 1
+fi
+
+# Newest transcript = the active / most recent session for this project
+# shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
+transcript=$(ls -t "$proj"/*.jsonl | head -1)
+
+# Sidechain entries are subagent traffic, not the conversation. One turn
+# can hold several text blocks (status notes between tool calls); each
+# counts as one step of -n, latest first. tail bounds the jq parse.
+msg=$(tail -n 5000 "$transcript" | jq -rs --argjson n "$n" '
+    [.[]
+     | select(.type == "assistant" and (.isSidechain != true))
+     | [.message.content[]? | select(.type == "text") | .text]
+     | select(length > 0)
+     | join("\n")]
+    | if length < $n then "" else .[length - $n] end')
+
+if [ -z "$msg" ]; then
+    echo "claude-copy-last: no assistant message (n=$n) in ${transcript##*/}" >&2
+    exit 1
+fi
+
+if [ "$copy" = always ]; then
+    printf '%s' "$msg" | pbcopy
+elif [ -t 1 ]; then
+    printf '%s' "$msg" | pbcopy
+    first_line=$(printf '%s' "$msg" | head -n 1)
+    printf 'copied %s chars from %s\n' "${#msg}" "${transcript##*/}"
+    printf '%.100s…\n' "$first_line"
+else
+    printf '%s\n' "$msg"
+fi

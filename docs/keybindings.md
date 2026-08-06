@@ -71,16 +71,28 @@ columns, so shared muscle memory and divergences both stand out.
 | `prefix+alt+j` | — | New jj workspace (new tab) |
 | `prefix+1..9` | Switch to window N (default) | Switch to tab N (default) |
 | `prefix+[` | Copy mode, vi keys | Copy mode, vi keys (default) |
+| `prefix+P` | Copy previous command's output | — (FR drafted) |
+| `prefix+O` | Copy Claude's last reply (transcript) | — (FR drafted) |
 | `F12` | Toggle nested/outer tmux | — |
 
 Copy mode is the same in both tools: `prefix+[` to enter, then vim
 motions (`h/j/k/l`, `w/b/e`, `0/^/$`, `{`/`}`, `g/G`), `/`+`n/N` to
 search, `v` to start a selection (`V` whole line), `y` to copy and
 exit, `q` to leave without copying. tmux additionally has `C-v` for
-rectangle selection. For structured strings (paths, URLs, hashes)
+rectangle selection and `(` / `)` to jump backward / forward between
+shell prompt marks. For structured strings (paths, URLs, hashes)
 skip copy mode entirely: `prefix+F` (tmux thumbs) or `prefix+u`/
 `prefix+shift+u` (herdr termscope) hint-pick them in one keystroke,
 and Ghostty's `cmd+f` searches the scrollback directly.
+
+Copying a whole block comes in two flavours. `prefix+P` grabs the
+previous command's complete output by walking the OSC 133 prompt
+marks that Ghostty's zsh shell integration emits (they survive into
+tmux panes), so it covers shell commands only. Claude Code's TUI
+emits no OSC 133 marks at all, which is why `prefix+O` — and the
+`ccl` alias for `~/.local/bin/claude-copy-last` — skips the screen
+entirely and reads the session transcript JSONL instead, returning
+the original markdown rather than the rendered, wrapped text.
 
 Notes on divergences:
 
@@ -88,6 +100,8 @@ Notes on divergences:
 - `prefix+r` (lowercase) is tmux's legacy reload alias; herdr enters
   resize mode instead — an intentional divergence, not an alignment.
 - `prefix+R` (uppercase) is the aligned reload key in both tools.
+- `prefix+P` / `prefix+O` have no herdr equivalent yet; both are
+  drafted as upstream feature requests.
 - jj workspace removal is unbound on purpose (destructive action).
 
 ## Layer 3: Seamless navigation (bare ctrl+h/j/k/l)

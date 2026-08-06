@@ -314,6 +314,11 @@ if [ -f "$HOME/.config/starship.toml" ]; then
         run_test "Tmux copy mode pinned to vi keys" \
             "grep -q 'mode-keys vi' $HOME/.tmux.conf && \
              grep -q 'copy-mode-vi v send -X begin-selection' $HOME/.tmux.conf"
+        # Keyboard copy: prefix+P (last shell output via OSC 133 marks)
+        # and prefix+O (last Claude reply via claude-copy-last)
+        run_test "Tmux keyboard-copy bindings present" \
+            "grep -q 'previous-prompt -o' $HOME/.tmux.conf && \
+             grep -q 'claude-copy-last -c' $HOME/.tmux.conf"
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
@@ -535,6 +540,34 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     run_test "herdr strand: herdr absent (empty before) -> silent" \
         "bash -c \"$UT_SRC ! dm_herdr_strand_detected '' 'herdr 2.0' '$HERDR_UT_DIR/live.sock'\""
     rm -rf "$HERDR_UT_DIR"
+fi
+
+# claude-copy-last: fixture-based extraction. The transcript JSONL is
+# Claude Code INTERNAL format with no compat guarantee (tracked in
+# docs/upgrade-watch.md) — if an upgrade renames .type/.isSidechain/
+# .message.content, these turn red the same day. Fixture exercises the
+# real selection rules: sidechain entries and tool-use-only entries are
+# skipped, -n reaches past them.
+if [ -x "$HOME/.local/bin/claude-copy-last" ] && command -v jq >/dev/null 2>&1; then
+    CCL_TMP=$(mktemp -d)
+    mkdir -p "$CCL_TMP/work"
+    CCL_SLUG=$(printf '%s' "$CCL_TMP/work" | sed 's/[^A-Za-z0-9]/-/g')
+    mkdir -p "$CCL_TMP/projects/$CCL_SLUG"
+    cat > "$CCL_TMP/projects/$CCL_SLUG/fixture.jsonl" <<'CCL_EOF'
+{"type":"user","message":{"content":[{"type":"text","text":"hi"}]}}
+{"type":"assistant","isSidechain":false,"message":{"content":[{"type":"text","text":"first reply"}]}}
+{"type":"assistant","isSidechain":true,"message":{"content":[{"type":"text","text":"sidechain noise"}]}}
+{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash"}]}}
+{"type":"assistant","message":{"content":[{"type":"text","text":"final answer"}]}}
+CCL_EOF
+    CCL_RUN="cd '$CCL_TMP/work' && CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' '$HOME/.local/bin/claude-copy-last'"
+    run_test "claude-copy-last extracts latest message from fixture" \
+        "[ \"\$(bash -c \"$CCL_RUN\")\" = 'final answer' ]"
+    run_test "claude-copy-last -n 2 skips sidechain and tool-use entries" \
+        "[ \"\$(bash -c \"$CCL_RUN -n 2\")\" = 'first reply' ]"
+    run_test "claude-copy-last fails cleanly when history exhausted" \
+        "! bash -c \"$CCL_RUN -n 9\" 2>/dev/null"
+    rm -rf "$CCL_TMP"
 fi
 
 # gitleaks pre-commit engine: same invocation the yadm hook uses, against

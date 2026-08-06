@@ -537,6 +537,11 @@ if command -v glow &> /dev/null; then
     alias md='glow'
 fi
 
+# Copy Claude's latest reply (original markdown, from the session
+# transcript — screen-independent). ccl -n 2 reaches one message back;
+# pipes emit raw markdown: ccl | glow, ccl > notes.md
+alias ccl='claude-copy-last'
+
 # Search and replace TUI (scooter replaced serpl)
 if command -v scooter &> /dev/null; then
     alias sr='scooter'

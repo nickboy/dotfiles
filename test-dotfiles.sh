@@ -315,6 +315,13 @@ if [ -f "$HOME/.config/starship.toml" ]; then
     # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)
     run_test "Ghostty shell integration includes ssh-terminfo" \
         "grep -E '^shell-integration-features' $HOME/.config/ghostty/config | grep -q 'ssh-terminfo'"
+    # Deliberate text-quality choices for the 0.82-opacity background
+    # (2026-08 tip audit) — guard against accidental reversion
+    run_test "Ghostty translucency text-quality settings present" \
+        "grep -q '^alpha-blending = linear-corrected' $HOME/.config/ghostty/config && \
+         grep -q '^minimum-contrast = 1.1' $HOME/.config/ghostty/config && \
+         grep -q '^faint-opacity = 0.7' $HOME/.config/ghostty/config && \
+         grep -q '^undo-timeout = 30s' $HOME/.config/ghostty/config"
     # Daily bob-nightly + plugin churn can desync editor and plugins
     # (the neo-tree/nvim_win_resize incident: nvim frozen on a June
     # nightly while plugins assumed a newer API) — a clean headless

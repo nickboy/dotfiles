@@ -476,6 +476,14 @@ live Claude panes are identifiable in the status bar.
 - `claude-notify` (OSC 9/777) and OSC52 clipboard already bridge
   notifications and copy back to Ghostty.
 
+### Copying Claude's Last Reply
+
+`~/.local/bin/claude-copy-last` (alias `ccl`, tmux `prefix+O`) copies
+Claude's latest reply from the session transcript JSONL, so you get the
+*original* markdown instead of the wrapped screen text — identical in
+tmux, herdr, or bare Ghostty. `ccl -n 2` reaches a message further
+back; piping emits raw markdown (`ccl | glow`, `ccl > notes.md`).
+
 ## 🌐 Remote Development
 
 ### Shell TERM Handling
@@ -1190,6 +1198,7 @@ nvim --headless '+Lazy! sync' +qa
 ├── .local/
 │   └── bin/           # User scripts
 │       ├── battery-status        # Battery monitoring
+│       ├── claude-copy-last      # Copies Claude's last reply (ccl)
 │       ├── claude-name-session   # Auto-names Claude Code sessions
 │       ├── claude-notify         # OSC 9/777 desktop notifications
 │       ├── claude-statusline     # Rich Claude Code statusline

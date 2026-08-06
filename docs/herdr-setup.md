@@ -157,10 +157,13 @@ yadm diff .claude/settings.json   # review, then commit if it changed
 ```
 
 **Verified**: it merge-edits settings.json and preserves existing
-hooks (claude-notify, claude-name-session) and the statusline. Two
-fixups it needs every time it (re)writes: the hook command uses a
-hardcoded `/Users/...` path (change to `"$HOME/..."`), and the file
-loses its trailing newline. The generated hook script
+hooks (claude-notify, claude-name-session) and the statusline. On
+0.7.x it also re-sorted every key (53-line diff noise) and dropped
+the trailing newline — 0.8.0 fixed both upstream (#2066: key order
+and formatting preserved). One fixup likely still needed after a
+(re)write: the hook command uses a hardcoded `/Users/...` path —
+change it to `"$HOME/..."` (verify on the next reinstall; the
+changelog doesn't mention the path). The generated hook script
 (`~/.claude/hooks/herdr-agent-state.sh`) is a machine artifact — do
 not track; rerun the integration command to regenerate.
 

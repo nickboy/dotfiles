@@ -309,6 +309,11 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             "tmux -L cfgtest-suite -f $HOME/.tmux.conf new-session -d 2>/dev/null && tmux -L cfgtest-suite kill-server 2>/dev/null"
         run_test "Tmux history-limit >= 50000" \
             "grep -qE 'history-limit (5[0-9]{4,}|[6-9][0-9]{4}|[0-9]{6,})' $HOME/.tmux.conf"
+        # vi copy mode must be pinned in config, not inherited from
+        # EDITOR=nvim — a shell without that env falls back to emacs
+        run_test "Tmux copy mode pinned to vi keys" \
+            "grep -q 'mode-keys vi' $HOME/.tmux.conf && \
+             grep -q 'copy-mode-vi v send -X begin-selection' $HOME/.tmux.conf"
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it

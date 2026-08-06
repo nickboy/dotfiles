@@ -70,7 +70,17 @@ columns, so shared muscle memory and divergences both stand out.
 | `prefix+shift+j` | — | New jj workspace |
 | `prefix+alt+j` | — | New jj workspace (new tab) |
 | `prefix+1..9` | Switch to window N (default) | Switch to tab N (default) |
+| `prefix+[` | Copy mode, vi keys | Copy mode, vi keys (default) |
 | `F12` | Toggle nested/outer tmux | — |
+
+Copy mode is the same in both tools: `prefix+[` to enter, then vim
+motions (`h/j/k/l`, `w/b/e`, `0/^/$`, `{`/`}`, `g/G`), `/`+`n/N` to
+search, `v` to start a selection (`V` whole line), `y` to copy and
+exit, `q` to leave without copying. tmux additionally has `C-v` for
+rectangle selection. For structured strings (paths, URLs, hashes)
+skip copy mode entirely: `prefix+F` (tmux thumbs) or `prefix+u`/
+`prefix+shift+u` (herdr termscope) hint-pick them in one keystroke,
+and Ghostty's `cmd+f` searches the scrollback directly.
 
 Notes on divergences:
 

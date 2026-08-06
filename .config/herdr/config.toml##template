@@ -23,6 +23,11 @@ auto_switch = false
 
 [theme.custom]
 panel_bg = "reset" # like tmux window-style bg=default: Ghostty transparency shows through
+# Chrome labels (agents/grouped/new/menu headers) render in overlay0 —
+# Mocha's #6c7086 is unreadable on the dark panel. Lift it to the
+# OFFICIAL Mocha overlay2 value (#9399b2): still in-palette, two steps
+# brighter, applies to every dim chrome label consistently.
+overlay0 = "#9399b2"
 
 # ── Terminal behavior ──────────────────────────────────────────────
 [terminal]
@@ -144,6 +149,21 @@ description = "new jj workspace (tab)"
 show_agent_labels_on_pane_borders = true
 # Reclaim a row when a workspace has only one tab
 hide_tab_bar_when_single_tab = true
+
+# Agent panel rows were unreadably dim. Theme-matched across the
+# stack: workspace in Mocha blue (same #89b4fa zjstatus uses for the
+# session name), tab in subtext1, agent line in overlay2 — all
+# official Mocha tones, no plain white. dim = false kills the
+# contextual dimming; state_icon keeps its state colors.
+[ui.sidebar.agents]
+rows = [
+  [
+    { token = "state_icon" },
+    { token = "workspace", fg = "#89b4fa", bold = true, dim = false },
+    { token = "tab", fg = "#bac2de", dim = false },
+  ],
+  [{ token = "agent", fg = "#9399b2", dim = false }],
+]
 
 # ── Notifications ──────────────────────────────────────────────────
 # "terminal" = the CLIENT asks its outer terminal (Ghostty) to post

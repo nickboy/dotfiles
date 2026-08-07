@@ -320,6 +320,13 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             "grep -q 'previous-prompt -o' $HOME/.tmux.conf && \
              grep -q 'claude-copy-last -c' $HOME/.tmux.conf"
     fi
+    # Keybind contract: herdr must carry the same copy-last-reply key
+    # (prefix+shift+o = tmux's prefix+O) in the TEMPLATE (source of
+    # truth — the generated config.toml is derived from it)
+    if [ -f "$HOME/.config/herdr/config.toml##template" ]; then
+        run_test "herdr copy-last-reply binding present in template" \
+            "grep -q 'claude-copy-last -c' '$HOME/.config/herdr/config.toml##template'"
+    fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
     # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)
@@ -582,7 +589,8 @@ if command -v gitleaks >/dev/null 2>&1 && command -v git >/dev/null 2>&1; then
     GL_TMP=$(mktemp -d)
     GL_GIT="env -u GIT_DIR -u GIT_WORK_TREE git"
     $GL_GIT -C "$GL_TMP" init -q &&
-        $GL_GIT -C "$GL_TMP" -c user.email=t@t -c user.name=t commit -q --allow-empty -m init
+        $GL_GIT -C "$GL_TMP" -c user.email=t@t -c user.name=t \
+            -c commit.gpgsign=false commit -q --allow-empty -m init
     printf 'aws_key = "%s%s"\n' "AKIA" "ZZZQK9X2M4P7L3TQ" > "$GL_TMP/leak.txt"
     $GL_GIT -C "$GL_TMP" add leak.txt
     run_test "gitleaks flags a staged canary secret" \

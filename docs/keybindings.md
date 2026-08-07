@@ -72,7 +72,7 @@ columns, so shared muscle memory and divergences both stand out.
 | `prefix+1..9` | Switch to window N (default) | Switch to tab N (default) |
 | `prefix+[` | Copy mode, vi keys | Copy mode, vi keys (default) |
 | `prefix+P` | Copy previous command's output | — (FR drafted) |
-| `prefix+O` | Copy Claude's last reply (transcript) | — (FR drafted) |
+| `prefix+O` | Copy Claude's last reply (transcript) | Same (shell command) |
 | `F12` | Toggle nested/outer tmux | — |
 
 Copy mode is the same in both tools: `prefix+[` to enter, then vim
@@ -100,8 +100,14 @@ Notes on divergences:
 - `prefix+r` (lowercase) is tmux's legacy reload alias; herdr enters
   resize mode instead — an intentional divergence, not an alignment.
 - `prefix+R` (uppercase) is the aligned reload key in both tools.
-- `prefix+P` / `prefix+O` have no herdr equivalent yet; both are
-  drafted as upstream feature requests.
+- `prefix+P` has no herdr equivalent yet (copy mode lacks prompt
+  jumps; drafted as an upstream feature request). `prefix+O` works in
+  both: tmux binds `O`, herdr spells it `prefix+shift+o` — the same
+  physical keystroke — as a `type = "shell"` custom command that runs
+  `claude-copy-last -c` with the focused pane's cwd. herdr keybinds
+  are read at client attach, so after config changes reload the
+  server AND re-attach the client. A native
+  `copy_last_agent_message` action remains in the FR draft.
 - jj workspace removal is unbound on purpose (destructive action).
 
 ## Layer 3: Seamless navigation (bare ctrl+h/j/k/l)

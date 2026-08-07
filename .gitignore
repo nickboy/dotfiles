@@ -6,6 +6,20 @@
 # Claude Code local settings (machine-specific permissions)
 .claude/settings.local.json
 
+# Machine-local shell overrides. On a work machine this holds corp paths
+# and identity, so it must never be committed to this PUBLIC repo. Note
+# status.showUntrackedFiles=no means an unignored file here would be
+# INVISIBLE to `yadm status` while still stageable by `yadm add -A`.
+.zshrc.local
+.zshenv.local
+.daily-maintenance.local
+
+# Backup/snapshot copies of any of the above — same content, same risk
+*.bak
+*.bak-*
+*.backup
+*.orig
+
 .bin/assets/corona
 .config/vifm/vifminfo
 vim/plugged/

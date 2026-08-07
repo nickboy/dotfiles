@@ -31,6 +31,14 @@ this repo — most common) or **fresh clone**. Update path first.
   ```
 
 - [ ] Post-pull migration (delta since mid-2026 versions):
+  - Keyboard copy (2026-08-06, PRs #76–#78): after this pull you have
+    `claude-copy-last` (`ccl`) — copies Claude's latest reply from the
+    session transcript to the clipboard; `ccl -n 2` reaches back. To
+    activate: open a new shell (alias), `tmux source ~/.tmux.conf`
+    (`prefix+P` = last shell output, `prefix+O` = last Claude reply,
+    vi copy mode with `v`/`C-v`/`(`/`)`), and if herdr is installed,
+    detach + re-attach the client (`prefix+shift+o`, keys are read at
+    attach). Uses `pbcopy` on macOS; jq required (Brewfile has it).
   - `yadm bootstrap` — idempotent; installs TPM/pay-respects/etc.
   - `brew bundle --file=~/Brewfile` selectively (`gitleaks` matters:
     the pre-commit hook uses it; it skips with a warning if absent)

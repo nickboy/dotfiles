@@ -66,6 +66,19 @@ command = "zsh"
 width = "80%"
 height = "70%"
 
+# Copy Claude's latest reply — same physical keystroke as tmux's
+# prefix+O (tmux "O" = shift+o; herdr spells the shift out). "shell"
+# type runs detached with the FOCUSED PANE's cwd (source-verified:
+# navigate.rs custom_command_env sets cwd = pane_cwd), so the script's
+# pane-cwd session disambiguation carries over. Silent on success —
+# just paste. A native copy_last_agent_message action is in the
+# upstream FR draft; this is the workaround until then.
+[[keys.command]]
+key = "prefix+shift+o"
+type = "shell"
+command = "$HOME/.local/bin/claude-copy-last -c"
+description = "copy last Claude message"
+
 # ── Plugin bindings ────────────────────────────────────────────────
 # vim-herdr-navigation: same bare ctrl+hjkl contract as the existing
 # tmux vim-tmux-navigator plugin — vim-aware, falls through to pane focus

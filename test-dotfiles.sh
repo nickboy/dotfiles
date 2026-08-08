@@ -473,6 +473,12 @@ if [ -f "$HOME/.github/workflows/ci.yml" ]; then
     run_test "CI runs gitleaks as a blocking secret scan" \
         "grep -qE 'gitleaks/v8@v[0-9]+\.[0-9]+\.[0-9]+' $HOME/.github/workflows/ci.yml &&
          ! grep -B8 -A4 'gitleaks/v8@v' $HOME/.github/workflows/ci.yml | grep -q 'continue-on-error'"
+    # The action SHA does not pin the scanner it docker-runs; that input
+    # defaults to the mutable `latest`. Bare semver, no `v` — the GHCR
+    # tag is 3.96.0 while the git tag is v3.96.0, and the wrong one is a
+    # 404 that surfaces as docker exit 125, i.e. a scan "failure".
+    run_test "CI pins the TruffleHog scanner version (not latest)" \
+        "grep -qE '^ *version: [0-9]+\.[0-9]+\.[0-9]+ *\$' $HOME/.github/workflows/ci.yml"
 fi
 
 # Credential files must NEVER become tracked in this PUBLIC repo. The

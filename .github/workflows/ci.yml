@@ -223,11 +223,14 @@ jobs:
       # runs `docker run ghcr.io/trufflesecurity/trufflehog:<version>`
       # and that input defaults to the MUTABLE `latest` tag, the same
       # class of mutable ref that got Trivy's @master pinned earlier.
+      # NOTE the tag has NO `v` prefix: the git tag is v3.96.0 but the
+      # GHCR tag is 3.96.0. `v3.96.0` is a 404 and docker run exits 125
+      # (image pull failure), which reads as a scan failure, not a typo.
       - name: Check for secrets (blocking)
         uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # v3.96.0
         with:
           path: ./
-          version: v3.96.0
+          version: 3.96.0
           extra_args: --results=verified
 
       # Second, complementary net. --results=verified above means

@@ -66,3 +66,13 @@ maintenance.
    copy into silent nothing. The suite's fixture test
    ("claude-copy-last extracts latest message from fixture") is the
    canary — it fails the day the schema drifts.
+   The herdr delivery path (`-c` from `prefix+shift+o`) additionally
+   pins three herdr internals (all verified 0.8.0, watched by the
+   suite's stub-herdr OSC 52 tests): custom commands are stripped
+   from client keymaps (`parse_client_keybindings` —
+   `--remote-keybindings=server` is load-bearing), clipboard writes
+   over 192 KiB decoded are silently dropped (`MAX_CLIPBOARD_BYTES`,
+   script guards at 190 KiB), and `pane process-info` omits `tty` on
+   macOS so the script falls back to `/bin/ps -o tty=`. If an
+   upgrade changes any of these, the keybinding goes dark or the
+   toast fallback stops firing.

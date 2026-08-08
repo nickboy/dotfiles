@@ -68,11 +68,18 @@ height = "70%"
 
 # Copy Claude's latest reply — same physical keystroke as tmux's
 # prefix+O (tmux "O" = shift+o; herdr spells the shift out). "shell"
-# type runs detached with the FOCUSED PANE's cwd (source-verified:
-# navigate.rs custom_command_env sets cwd = pane_cwd), so the script's
-# pane-cwd session disambiguation carries over. Silent on success —
-# just paste. A native copy_last_agent_message action is in the
-# upstream FR draft; this is the workaround until then.
+# type runs detached IN THE SERVER PROCESS with the FOCUSED PANE's cwd
+# (source-verified: navigate.rs custom_command_env sets cwd =
+# pane_cwd), so the script's pane-cwd session disambiguation carries
+# over, and the script delivers to the attached client's clipboard via
+# OSC 52 to the pane's pty (pbcopy alone would set the SERVER
+# clipboard). REMOTE ATTACH: this binding only fires with
+# `--remote-keybindings=server` — the server strips [[keys.command]]
+# from client-supplied keymaps (parse_client_keybindings clears
+# keys.command; deliberate policy, see docs/herdr-setup.md). Silent on
+# success — just paste; failures toast via `herdr notification show`.
+# A native copy_last_agent_message action is in the upstream FR draft;
+# this is the workaround until then.
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"

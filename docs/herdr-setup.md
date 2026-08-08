@@ -98,15 +98,32 @@ Practical consequences:
   `--remote-keybindings` defaults to `local`: the client's `[keys]`
   always wins. Override with `--remote-keybindings=server` to use
   the remote's `[keys]` instead.
+- **Custom commands NEVER fire from a client-supplied keymap**
+  (source-verified 0.8.0): the server strips every `[[keys.command]]`
+  when parsing client keybindings (`parse_client_keybindings` runs
+  `config.keys.command.clear()`; a unit test asserts it — deliberate
+  policy so a client config can't inject shell onto the server host).
+  So bindings like `prefix+shift+o` (claude-copy-last) are dead under
+  a default `--remote` attach no matter which machine's config has
+  them — attach with `--remote-keybindings=server` (harmless here:
+  yadm ships the same config everywhere). When they do fire, the
+  shell spawns IN THE SERVER PROCESS with stdio null'd: `pbcopy` sets
+  the server's clipboard, stderr goes nowhere. `claude-copy-last`
+  therefore writes OSC 52 to the pane's pty (herdr forwards it to the
+  FOREGROUND attached client only — a second client sees nothing) and
+  toasts failures via `herdr notification show`. herdr silently drops
+  clipboard writes over 192 KiB decoded (`MAX_CLIPBOARD_BYTES`); the
+  script guards at 190 KiB and toasts instead.
 - **A locally-bound plugin key goes silent if the remote lacks the
   plugin.** Plugin actions execute server-side (e.g. `prefix+e` →
   reviewr), so every plugin must be installed on BOTH ends, pinned
   to the SAME `--ref` SHAs — mirror the block in Plugins below onto
   the remote machine.
-- **Toast delivery changes need a client re-attach, not a reload.**
-  `[ui.toast]` is read once at attach; `server reload-config` can't
-  push it to an already-attached client. `[ui.sound]` is the only
-  UI class that hot-reloads.
+- **Client-side config is attach-time, full stop.** Everything the
+  client reads (`[keys]`, `[ui.toast]`, `[remote]`) is read once at
+  attach; `server reload-config` only covers the server-side half.
+  `[ui.sound]` is the lone exception that hot-reloads. After changing
+  any client-side setting, detach and reattach every client.
 
 ## Plugins (each machine, SHA-pinned)
 
@@ -214,11 +231,12 @@ Mid-session `/rename` syncs on the next resume (no hook event exists).
 ## Daily entrypoints
 
 - Local: run `herdr` in a Ghostty tab (auto-starts the server).
-- Remote: `herdr --remote user@host`. **Verified from CLI help**:
-  `--remote-keybindings local` is the default — your local muscle
-  memory follows you. herdr's generated SSH config includes
-  `~/.ssh/config` first, so ProxyJump/ControlMaster/1Password agent
-  settings all apply.
+- Remote: `herdr --remote user@host --remote-keybindings=server`.
+  The `server` override is required for `[[keys.command]]` bindings
+  (stripped from client keymaps — see above) and costs nothing on
+  muscle memory since yadm ships identical configs. herdr's generated
+  SSH config includes `~/.ssh/config` first, so
+  ProxyJump/ControlMaster/1Password agent settings all apply.
 - The client does NOT auto-reconnect after a network drop (it exits
   with a reattach hint). A retry wrapper for `.zshrc`, **⚠ verify
   first** that a deliberate `prefix+q` detach exits 0 (detach once,
@@ -228,8 +246,10 @@ Mid-session `/rename` syncs on the next resume (no hook event exists).
 hbox() {
   while true; do
     # --handoff: if the attach replaces the remote server (version
-    # sync), live panes are handed over instead of killed
-    herdr --remote user@box --handoff "$@" && break
+    # sync), live panes are handed over instead of killed;
+    # server keybindings: [[keys.command]] is stripped from client
+    # keymaps, so custom commands need the server's own keymap
+    herdr --remote user@box --handoff --remote-keybindings=server "$@" && break
     print "connection lost — retrying in 2s (Ctrl-C to stop)"
     sleep 2
   done

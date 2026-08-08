@@ -79,6 +79,25 @@ PCT=${PCT_RAW%.*}
 FIVE_H_INT=${FIVE_H%.*}
 SEVEN_D_INT=${SEVEN_D%.*}
 
+# Feed HerdDeck's Stream Deck context donut with the percentage we just
+# parsed. Claude Code is the only thing that knows it, and the
+# statusline is the only place it surfaces — so the donut has to be fed
+# from here or it stays dark.
+#
+# The reporter writes ctx_pct to the herdr server of whichever machine
+# this agent runs on (via herdr's injected HERDR_PANE_ID /
+# HERDR_SOCKET_PATH), so a HerdDeck daemon on another machine picks it
+# up through the SSH tunnel already forwarding that socket. It is a
+# silent no-op outside a herdr pane, when herdr is stopped, or when
+# HerdDeck isn't installed.
+#
+# Backgrounded with stdout/stderr closed: a hung socket must never
+# stall the prompt, and an inherited stdout would leave Claude Code
+# waiting on EOF.
+if command -v herddeck-report-ctx >/dev/null 2>&1; then
+    herddeck-report-ctx "$PCT" >/dev/null 2>&1 &
+fi
+
 # -----------------------------------------------------------------------------
 # Colors — Catppuccin Mocha palette (24-bit truecolor) to match starship/tmux
 # -----------------------------------------------------------------------------

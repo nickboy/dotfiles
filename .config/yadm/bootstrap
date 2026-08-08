@@ -330,6 +330,13 @@ if command -v nvim &> /dev/null; then
     echo "  ✓ Treesitter parsers installed"
 fi
 
+# SSH ControlMaster socket dir — 00-defaults.conf sets
+# ControlPath ~/.ssh/sockets/%r@%h-%p but ssh never creates the
+# directory itself; without it every connection fails with
+# "unix_listener: cannot bind" (bit us live 2026-08-08).
+mkdir -p "$HOME/.ssh/sockets" && chmod 700 "$HOME/.ssh/sockets"
+echo "  ✓ ~/.ssh/sockets ready (ControlMaster)"
+
 # Final self-verification: the suite encodes every cross-machine
 # assumption (services, plugin sets, config schemas) — running it here
 # turns "bootstrap finished" into "bootstrap verified".

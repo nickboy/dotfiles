@@ -6,6 +6,12 @@ on:
   pull_request:
     branches: [ main, master ]
   workflow_dispatch:
+  # TruffleHog scans a base..head DIFF on push/PR events and the FULL
+  # history only on workflow_dispatch/schedule (see security-scan). This
+  # weekly run is what makes its verified-credential scan eventually
+  # cover every commit, including anything merged before it was added.
+  schedule:
+    - cron: '17 4 * * 1'
 
 # Least-privilege GITHUB_TOKEN: nothing in this pipeline writes to the repo
 permissions:
@@ -203,15 +209,25 @@ jobs:
           output: 'trivy-results.sarif'
         continue-on-error: true
 
-      # BLOCKING secret scan over the FULL git history (not a base..head
-      # diff — the old diff mode failed with base==head on master pushes,
-      # which is why it was continue-on-error, i.e. decorative).
-      # --results=verified: only credentials that TruffleHog actively
-      # confirmed against the provider fail the build (no regex noise).
+      # BLOCKING, but scoped to a DIFF, not full history — verified by
+      # reading action.yml at the pinned SHA: with only `path` set it
+      # derives BASE/HEAD from the event (push -> before..after,
+      # pull_request -> base.sha..head.sha) and scans everything only on
+      # workflow_dispatch/schedule. That is why this job also carries a
+      # schedule trigger, and why gitleaks below is the true
+      # full-history net. fetch-depth: 0 stays REQUIRED either way —
+      # those base shas cannot resolve in a depth-1 clone.
+      # --results=verified: only credentials TruffleHog confirmed live
+      # against the provider fail the build (no regex noise).
+      # version: pins the scanner itself. The action SHA does not — it
+      # runs `docker run ghcr.io/trufflesecurity/trufflehog:<version>`
+      # and that input defaults to the MUTABLE `latest` tag, the same
+      # class of mutable ref that got Trivy's @master pinned earlier.
       - name: Check for secrets (blocking)
         uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # v3.96.0
         with:
           path: ./
+          version: v3.96.0
           extra_args: --results=verified
 
       # Second, complementary net. --results=verified above means

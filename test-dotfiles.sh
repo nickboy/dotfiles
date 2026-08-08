@@ -503,8 +503,17 @@ cat > "$CRED_DENY_FILE" <<'CRED_EOF'
 \.(pem|p12|pfx)$
 \.(bak|orig)$
 CRED_EOF
+# *.pub is PUBLIC key material and legitimately trackable — .ssh/id_
+# would otherwise flag id_ed25519.pub, which is the same class as the
+# already-tracked .ssh/allowed_signers. Filter before matching.
 run_test "No credential files tracked (public repo)" \
-    "! { yadm ls-files 2>/dev/null || git ls-files 2>/dev/null; } | grep -qEf '$CRED_DENY_FILE'"
+    "! { yadm ls-files 2>/dev/null || git ls-files 2>/dev/null; } |
+     grep -v '\.pub\$' | grep -qEf '$CRED_DENY_FILE'"
+# An empty listing greps clean and passes — the exact vacuous-pass this
+# section exists to prevent (yadm present but silent never trips the
+# || fallback). Assert the list has a plausible floor.
+run_test "credential scan ran against a non-empty file list" \
+    "[ \"\$({ yadm ls-files 2>/dev/null || git ls-files 2>/dev/null; } | wc -l)\" -gt 50 ]"
 # Test the test: a denylist that matches nothing passes vacuously, which
 # is how a scanner rots into decoration. Canary paths are never real
 # files here — they only prove the pattern set still bites.

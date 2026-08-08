@@ -20,6 +20,15 @@
 # Per-machine statusline segment switches (see claude-statusline)
 .config/claude-statusline/config.sh
 
+# Third-party BINARIES do not belong in a dotfiles repo. obsidian-cli was
+# a 9.1 MB Mach-O universal build of someone else's project (Yakitrak),
+# committed here — it is not ours to redistribute, it cannot run on the
+# Linux work server, and Homebrew already provides it: the Brewfile
+# installs its renamed successor `yakitrak/yakitrak/notesmd-cli`, and
+# brew's own obsidian-cli is installed alongside. Tracking it only
+# shadowed the package-managed copy with a frozen one.
+.local/bin/obsidian-cli
+
 # Machine-local shell overrides. On a work machine this holds corp paths
 # and identity, so it must never be committed to this PUBLIC repo. Note
 # status.showUntrackedFiles=no means an unignored file here would be

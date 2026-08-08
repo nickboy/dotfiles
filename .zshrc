@@ -557,6 +557,33 @@ fi
 # chord instead of vim-herdr-navigation moving pane focus
 if command -v herdr &> /dev/null; then
     export HERDR_NAV_PASSTHROUGH_RE='^lazygit$'
+
+    # hbox — attach to a remote herdr server (works Mac or Linux on both
+    # ends; nothing here is host-specific).
+    #
+    # --remote-keybindings=server is LOAD-BEARING, not a preference. The
+    # default is local, which makes the SERVER strip every custom
+    # command out of the client's keymap (deliberate upstream: a client
+    # config must not inject shell onto the server host). Every custom
+    # binding — prefix+shift+o (claude-copy-last), sessionizer,
+    # termscope — then does nothing at all, with no error. Keybindings
+    # are read ONCE at attach, so a client already running cannot be
+    # fixed; it has to reattach. This cost a full debugging session.
+    #
+    # --handoff: when the attach replaces a version-mismatched remote
+    # server, live panes are handed over instead of killed.
+    #
+    # Host comes from $HERDR_REMOTE_HOST, set per machine in the
+    # UNTRACKED ~/.zshrc.local (this repo is public — no hosts in it),
+    # or passed directly: hbox user@otherbox
+    hbox() {
+        local target="${1:-$HERDR_REMOTE_HOST}"
+        if [[ -z "$target" ]]; then
+            print -u2 "hbox: set HERDR_REMOTE_HOST in ~/.zshrc.local, or pass user@host"
+            return 2
+        fi
+        herdr --remote="$target" --remote-keybindings=server --handoff
+    }
 fi
 
 # File management (yazi with cd-on-exit wrapper)

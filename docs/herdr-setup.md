@@ -254,14 +254,54 @@ the equivalent of the old tmux window rename. New sessions get the
 `project/branch` default; resumed sessions mirror their real title.
 Mid-session `/rename` syncs on the next resume (no hook event exists).
 
+## Remote attach checklist (same on macOS and Linux)
+
+Nothing below is OS-specific — it is the same on a Mac mini, a Linux
+box, or a work server. Use this when setting up a new pair.
+
+**Server** (the box being attached to): herdr installed at the SAME
+version as the client; every plugin installed that any key binds to,
+since plugin actions execute server-side; `config.toml` generated from
+the dotfiles (`yadm alt`) — under the flag below it is the server's
+`[keys]` that actually runs.
+
+**Client** (the laptop you sit at): herdr installed, same version;
+attach with `--remote-keybindings=server`; and be the ONLY attached
+client.
+
+Two settings are load-bearing and neither lives in `config.toml`:
+
+1. **`--remote-keybindings=server` on every attach.** There is no
+   config key for it (`[remote]` holds only `manage_ssh_config`), and
+   the internal `HERDR_REMOTE_KEYBINDINGS` env var must not be set by
+   hand — the client also uses its presence to decide whether it is a
+   remote process. Use the tracked `hbox` helper in `.zshrc`, which
+   bakes in the flag and reads the host from `$HERDR_REMOTE_HOST` in
+   the untracked `~/.zshrc.local` (this repo is public, so no hosts in
+   it):
+
+   ```bash
+   # ~/.zshrc.local on each client machine
+   export HERDR_REMOTE_HOST='user@work-server'
+   ```
+
+   Then `hbox` attaches, or `hbox user@otherbox` for a one-off.
+2. **Exactly one attached client**, or clipboard copies go to whichever
+   client holds foreground (see the stale-client bullet above).
+
+Clipboard, per OS: the copy is delivered to the CLIENT, so the client's
+OS is what matters and both are handled natively. On the SERVER the
+script also does a local copy as a convenience — `pbcopy` on macOS,
+`wl-copy`/`xclip` on Linux — and when none exists (a headless Linux
+server) that step is skipped without blocking the OSC 52 delivery that
+actually reaches you.
+
 ## Daily entrypoints
 
 - Local: run `herdr` in a Ghostty tab (auto-starts the server).
-- Remote: `herdr --remote user@host --remote-keybindings=server`.
-  The `server` override is required for `[[keys.command]]` bindings
-  (stripped from client keymaps — see above) and costs nothing on
-  muscle memory since yadm ships identical configs. herdr's generated
-  SSH config includes `~/.ssh/config` first, so
+- Remote: `hbox` (see the checklist above), which expands to
+  `herdr --remote=<host> --remote-keybindings=server --handoff`.
+  herdr's generated SSH config includes `~/.ssh/config` first, so
   ProxyJump/ControlMaster/1Password agent settings all apply.
 - The client does NOT auto-reconnect after a network drop (it exits
   with a reattach hint). A retry wrapper for `.zshrc`, **⚠ verify

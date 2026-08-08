@@ -17,6 +17,23 @@ set -uo pipefail
 
 INPUT=$(cat)
 
+# Per-machine segment switches. The two machines differ by TASTE, not by
+# capability — the script already degrades on its own where a feature is
+# absent (rate_limits defaults to -1 under enterprise billing, herdr and
+# herddeck calls are command -v guarded). What differs is that cost and
+# burn rate are meaningless under enterprise billing, so a work machine
+# wants them gone even though they would render.
+# Defaults reproduce this machine's output exactly; the override file is
+# UNTRACKED, so each machine keeps its own without touching the repo:
+#   ~/.config/claude-statusline/config.sh  ->  SHOW_COST=0
+SHOW_COST=1
+SHOW_BURN=1
+SHOW_RATE_LIMITS=1
+SHOW_HERDR=1
+# shellcheck source=/dev/null
+[ -f "$HOME/.config/claude-statusline/config.sh" ] &&
+    . "$HOME/.config/claude-statusline/config.sh"
+
 # -----------------------------------------------------------------------------
 # Parse stdin once
 # -----------------------------------------------------------------------------
@@ -95,7 +112,7 @@ SEVEN_D_INT=${SEVEN_D%.*}
 # Backgrounded with stdout/stderr closed: a hung socket must never
 # stall the prompt, and an inherited stdout would leave Claude Code
 # waiting on EOF.
-if command -v herddeck-report-ctx >/dev/null 2>&1; then
+if [ "${SHOW_HERDR:-1}" = 1 ] && command -v herddeck-report-ctx >/dev/null 2>&1; then
     herddeck-report-ctx "$PCT" >/dev/null 2>&1 &
 fi
 
@@ -112,7 +129,8 @@ fi
 # whatever the pane's agent happens to be called, and seeding the cache
 # silently means a fresh cache (reboot, /tmp wipe) costs one turn of lag
 # instead of destroying those names.
-if [ -n "${HERDR_TAB_ID:-}" ] && [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
+if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
+   [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
     NAME_CACHE="/tmp/claude-statusline-name-${SESSION_ID}"
     PREV_NAME=$(cat "$NAME_CACHE" 2>/dev/null || printf '')
     if [ "$PREV_NAME" != "$SESSION_NAME" ]; then
@@ -195,11 +213,15 @@ relative_reset() {
 # -----------------------------------------------------------------------------
 # Cost / burn rate / duration
 # -----------------------------------------------------------------------------
-COST_FMT=$(printf '$%.2f' "$COST_RAW" 2>/dev/null || printf '$0.00')
-COST_COLOR=$(threshold_color "${COST_RAW%.*}" 5 20)
+COST_STR=""
+if [ "${SHOW_COST:-1}" = 1 ]; then
+    COST_FMT=$(printf '$%.2f' "$COST_RAW" 2>/dev/null || printf '$0.00')
+    COST_COLOR=$(threshold_color "${COST_RAW%.*}" 5 20)
+    COST_STR="$(sep)💰 ${COST_COLOR}${COST_FMT}${C_RESET}"
+fi
 
 BURN_STR=""
-if [ "$DURATION_MS" -gt 60000 ]; then
+if [ "${SHOW_BURN:-1}" = 1 ] && [ "$DURATION_MS" -gt 60000 ]; then
     BURN_RATE=$(awk -v c="$COST_RAW" -v d="$DURATION_MS" 'BEGIN{
         if (d > 0) printf "%.2f", (c / (d / 3600000))
         else print "0.00"
@@ -266,6 +288,11 @@ fi
 # Assemble rate-limit segment (with reset countdown)
 # -----------------------------------------------------------------------------
 RL_STR=""
+if [ "${SHOW_RATE_LIMITS:-1}" != 1 ]; then
+    # Enterprise/Bedrock billing has no subscription limits to show
+    FIVE_H_INT=-1
+    SEVEN_D_INT=-1
+fi
 if [ "${FIVE_H_INT:-0}" != "-1" ] && [ -n "${FIVE_H_INT:-}" ]; then
     RL_COLOR=$(threshold_color "$FIVE_H_INT" 50 80)
     reset_5h=$(relative_reset "$FIVE_H_RESET")
@@ -336,10 +363,9 @@ fi
 # -----------------------------------------------------------------------------
 # Emit single line
 # -----------------------------------------------------------------------------
-printf '🤖 %s%s%s%s%s💰 %s%s%s%s%s%s%s%s\n' \
+printf '🤖 %s%s%s%s%s%s%s%s%s%s\n' \
     "$C_BLUE" "$MODEL" "$C_RESET" \
     "$EFFORT_STR" \
-    "$(sep)" \
-    "$COST_COLOR" "$COST_FMT" "$C_RESET" \
+    "$COST_STR" \
     "$BURN_STR" "$DUR_STR" \
     "$DIR_STR" "$RL_STR" "$BAR_STR"

@@ -17,6 +17,9 @@
 # personal ones.
 .claude/settings.json
 
+# Per-machine statusline segment switches (see claude-statusline)
+.config/claude-statusline/config.sh
+
 # Machine-local shell overrides. On a work machine this holds corp paths
 # and identity, so it must never be committed to this PUBLIC repo. Note
 # status.showUntrackedFiles=no means an unignored file here would be

@@ -137,6 +137,21 @@ claim was never verified and is removed rather than reworded.
   If the override loses to the default inside a real repo, model/auth
   overrides belong in that repo's own `.claude/settings.local.json`,
   not the home copy — update this checklist with what you find.
+- [ ] **Statusline segments** are switched per machine, not templated —
+  the script is one file on both machines and only its segments differ.
+  Under enterprise billing (Bedrock/Vertex) cost and burn rate are
+  meaningless and `rate_limits` is absent from the payload entirely, so
+  on a work machine write the untracked
+  `~/.config/claude-statusline/config.sh`:
+
+  ```bash
+  SHOW_COST=0
+  SHOW_BURN=0
+  SHOW_RATE_LIMITS=0
+  ```
+
+  Omitting the file keeps every segment on. `SHOW_HERDR=0` also drops
+  the herdr/herddeck side effects if that machine runs neither.
 - [ ] Merge work-required entries from the backup into
   `~/.claude/settings.local.json`: auth/gateway (Bedrock, proxy,
   `apiKeyHelper`), org permission policies, work-only plugins.

@@ -109,11 +109,37 @@ Practical consequences:
   yadm ships the same config everywhere). When they do fire, the
   shell spawns IN THE SERVER PROCESS with stdio null'd: `pbcopy` sets
   the server's clipboard, stderr goes nowhere. `claude-copy-last`
-  therefore writes OSC 52 to the pane's pty (herdr forwards it to the
-  FOREGROUND attached client only — a second client sees nothing) and
-  toasts failures via `herdr notification show`. herdr silently drops
-  clipboard writes over 192 KiB decoded (`MAX_CLIPBOARD_BYTES`); the
-  script guards at 190 KiB and toasts instead.
+  therefore writes OSC 52 to the pane's pty and toasts failures via
+  `herdr notification show`. herdr silently drops clipboard writes over
+  192 KiB decoded (`MAX_CLIPBOARD_BYTES`); the script guards at 190 KiB
+  and toasts instead.
+- **A stale second client silently steals every clipboard copy**
+  (**verified the hard way, 2026-08-08 — cost most of a day**).
+  `ClipboardWrite` goes to `foreground_client_id` ONLY —
+  `send_to_foreground_client`, deliberate upstream ("clipboard writes
+  are client-local side effects... not broadcast"). So a forgotten
+  `herdr` left attached on the SERVER host keeps foreground and every
+  copy lands on the server's pasteboard while your `--remote` client
+  gets nothing. There is no error, no toast, no log line — the copy
+  succeeds, just onto the wrong machine.
+  Symptom: `prefix+shift+o` "does nothing", but `pbpaste` ON THE SERVER
+  shows the text. Diagnosis, since no CLI exposes the client list:
+
+  ```bash
+  grep -oE 'client (connected|disconnected) client_id=[0-9]+' \
+    ~/.config/herdr/herdr-server.log |
+    awk '{split($3,a,"="); if($2=="connected") s[a[2]]=1; else delete s[a[2]]}
+         END {for (k in s) printf "%s ", k; print ""}'
+  ```
+
+  More than one id = the bug is live. Fix: `kill` the stale client's
+  process (a detach — the server and every pane survive);
+  `promote_latest_remaining_client` hands foreground back. Confirm with
+  a sentinel: set the server clipboard, write one OSC 52 to a pane tty,
+  and check that the server's clipboard is UNCHANGED — that proves the
+  write went to the remote client instead. Runtime `foreground_client_id`
+  is otherwise only visible via `HERDR_LOG=herdr=debug`, which needs a
+  server restart and therefore kills every pane.
 - **A locally-bound plugin key goes silent if the remote lacks the
   plugin.** Plugin actions execute server-side (e.g. `prefix+e` →
   reviewr), so every plugin must be installed on BOTH ends, pinned

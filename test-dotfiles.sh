@@ -455,7 +455,78 @@ fi
 if [ -f "$HOME/.github/workflows/ci.yml" ]; then
     run_test "CI checkouts all set persist-credentials false" \
         "[ \"\$(grep -c 'uses: actions/checkout@' $HOME/.github/workflows/ci.yml)\" -eq \"\$(grep -c 'persist-credentials: false' $HOME/.github/workflows/ci.yml)\" ]"
+    # A secret scanner on a shallow checkout sees ONE commit while
+    # reporting success — the same false-pass class as running gitleaks
+    # outside a repo ("0 commits scanned … no leaks found"). The
+    # security-scan job scans history, so it must fetch it.
+    run_test "CI security scan checks out full history (fetch-depth 0)" \
+        "grep -q 'fetch-depth: 0' $HOME/.github/workflows/ci.yml"
+    # TruffleHog runs --results=verified (zero false positives, but it
+    # only fails on credentials it could confirm live against a
+    # provider). gitleaks is the regex/entropy net that catches private
+    # keys, revoked-but-real tokens and anything unverifiable, and it is
+    # the same engine the yadm pre_commit hook runs — the hook is
+    # bypassable (--no-verify), so CI must own the authoritative copy.
+    # Version-pinned (never @latest — same supply-chain rule as the
+    # SHA-pinned actions) and blocking (no continue-on-error anywhere in
+    # the step, which is what made the old Trivy scan decorative).
+    run_test "CI runs gitleaks as a blocking secret scan" \
+        "grep -qE 'gitleaks/v8@v[0-9]+\.[0-9]+\.[0-9]+' $HOME/.github/workflows/ci.yml &&
+         ! grep -B8 -A4 'gitleaks/v8@v' $HOME/.github/workflows/ci.yml | grep -q 'continue-on-error'"
+    # The action SHA does not pin the scanner it docker-runs; that input
+    # defaults to the mutable `latest`. Bare semver, no `v` — the GHCR
+    # tag is 3.96.0 while the git tag is v3.96.0, and the wrong one is a
+    # 404 that surfaces as docker exit 125, i.e. a scan "failure".
+    run_test "CI pins the TruffleHog scanner version (not latest)" \
+        "grep -qE '^ *version: [0-9]+\.[0-9]+\.[0-9]+ *\$' $HOME/.github/workflows/ci.yml"
 fi
+
+# Credential files must NEVER become tracked in this PUBLIC repo. The
+# CLAUDE.md invariant is that identity and secrets live in UNTRACKED
+# files; until now nothing enforced it, and a single `yadm add -A` on a
+# new machine would publish them. Content scanners do not cover this:
+# a ~/.gitconfig holding a corp identity, or a gh hosts.yml token no
+# scanner can verify, is secret-BEARING without being secret-SHAPED.
+CRED_DENY_FILE=$(mktemp)
+cat > "$CRED_DENY_FILE" <<'CRED_EOF'
+^\.gitconfig$
+^\.netrc$
+^\.npmrc$
+^\.pypirc$
+^\.env$
+^\.secrets$
+^\.aws/
+^\.config/gh/hosts\.yml$
+^\.config/op/
+^\.docker/config\.json$
+^\.kube/config$
+^\.ssh/id_
+^\.local/share/atuin/key$
+^\.claude/settings\.local\.json$
+^\.zshrc\.local$
+^\.zshenv\.local$
+^\.daily-maintenance\.local$
+\.(pem|p12|pfx)$
+\.(bak|orig)$
+CRED_EOF
+# *.pub is PUBLIC key material and legitimately trackable — .ssh/id_
+# would otherwise flag id_ed25519.pub, which is the same class as the
+# already-tracked .ssh/allowed_signers. Filter before matching.
+run_test "No credential files tracked (public repo)" \
+    "! { yadm ls-files 2>/dev/null || git ls-files 2>/dev/null; } |
+     grep -v '\.pub\$' | grep -qEf '$CRED_DENY_FILE'"
+# An empty listing greps clean and passes — the exact vacuous-pass this
+# section exists to prevent (yadm present but silent never trips the
+# || fallback). Assert the list has a plausible floor.
+run_test "credential scan ran against a non-empty file list" \
+    "[ \"\$({ yadm ls-files 2>/dev/null || git ls-files 2>/dev/null; } | wc -l)\" -gt 50 ]"
+# Test the test: a denylist that matches nothing passes vacuously, which
+# is how a scanner rots into decoration. Canary paths are never real
+# files here — they only prove the pattern set still bites.
+run_test "credential denylist actually matches a canary path" \
+    "printf '%s\n' .aws/credentials .config/gh/hosts.yml .ssh/id_ed25519 .gitconfig |
+     [ \"\$(grep -cEf '$CRED_DENY_FILE')\" -eq 4 ]"
+rm -f "$CRED_DENY_FILE"
 echo
 
 # Test 12: Git/yadm checks

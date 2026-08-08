@@ -76,3 +76,9 @@ maintenance.
    macOS so the script falls back to `/bin/ps -o tty=`. If an
    upgrade changes any of these, the keybinding goes dark or the
    toast fallback stops firing.
+   It also reads `herdr pane get <id>` →
+   `.result.pane.agent_session.value` to select the transcript
+   belonging to the pane you pressed in. Renaming that field only
+   degrades to the old newest-file guess, which is wrong whenever two
+   agents share a directory — silently pasting the other pane's
+   reply. The suite asserts session-id selection beats mtime.

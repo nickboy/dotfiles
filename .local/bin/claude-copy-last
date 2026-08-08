@@ -96,15 +96,33 @@ if [ -z "$proj" ]; then
     exit 1
 fi
 
-# Newest transcript = the active / most recent session for this project.
-# KNOWN LIMITATION (review 2026-08-06): two concurrent sessions in the
-# SAME project share one slug dir, and last-write-wins picks whichever
-# wrote most recently — not necessarily the pane you pressed the key
-# in. The proper fix is matching the pane's session id against the
-# filename (claude-name-session already reaches that id); accepted for
-# now since the newest transcript is almost always the one on screen.
-# shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
-transcript=$(ls -t "$proj"/*.jsonl | head -1)
+# Which transcript belongs to the pane you pressed the key in?
+# Concurrent agents in one directory share a slug dir, so "newest file"
+# copies whichever session wrote last — with two Claude panes both in
+# $HOME, pressing in one reliably pasted the other's reply.
+# herdr answers this directly: it tracks each pane's Claude session id
+# and transcripts are named <session-id>.jsonl. Ask it first, fall back
+# to mtime for plain shells, tmux, or panes whose agent never reported
+# an identity (herdr leaves agent_session unset there).
+transcript=""
+if [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+    sid=$("$herdr_bin" pane get "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
+        jq -r '.result.pane.agent_session.value // empty' 2>/dev/null) || sid=""
+    if [ -n "$sid" ]; then
+        if [ -f "$proj/$sid.jsonl" ]; then
+            transcript="$proj/$sid.jsonl"
+        else
+            # cwd walk landed on a different project dir than the one
+            # claude was launched from — the id is authoritative, so
+            # take it wherever it lives
+            transcript=$(find "$projects_root" -maxdepth 2 -name "$sid.jsonl" -print -quit 2>/dev/null)
+        fi
+    fi
+fi
+if [ -z "$transcript" ]; then
+    # shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
+    transcript=$(ls -t "$proj"/*.jsonl | head -1)
+fi
 
 # Sidechain entries are subagent traffic, not the conversation. One turn
 # can hold several text blocks (status notes between tool calls); each

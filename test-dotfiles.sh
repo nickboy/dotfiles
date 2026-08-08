@@ -602,6 +602,42 @@ CCL_HERDR
         "bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
          [ \"\$(cat '$CCL_TMP/tty-capture' 2>/dev/null)\" = \"\$(printf '\\033]52;c;%s\\a' '$CCL_B64')\" ]"
 
+    # Concurrent agents in ONE project dir: picking the newest file by
+    # mtime copies whichever session wrote last, not the pane you
+    # pressed in — observed live with two Claude panes both in $HOME.
+    # herdr knows each pane's Claude session id and transcripts are
+    # named <session-id>.jsonl, so the id must win over mtime. Fixture
+    # makes the OTHER session newer, so mtime-selection fails this.
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"MY PANE"}]}}\n' \
+        > "$CCL_TMP/projects/$CCL_SLUG/11111111-1111-1111-1111-111111111111.jsonl"
+    sleep 1
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"OTHER PANE"}]}}\n' \
+        > "$CCL_TMP/projects/$CCL_SLUG/22222222-2222-2222-2222-222222222222.jsonl"
+    # Stub reports a pane session only when the fixture asks for one, so
+    # the later tests still exercise the mtime path.
+    cat > "$CCL_TMP/bin/herdr" <<CCL_HERDR2
+#!/usr/bin/env bash
+case "\$1 \$2" in
+    'pane get')
+        sid=\$(cat "$CCL_TMP/stub-session" 2>/dev/null)
+        [ -n "\$sid" ] || exit 0
+        printf '{"result":{"pane":{"agent_session":{"value":"%s"}}}}' "\$sid" ;;
+    'pane process-info')
+        : > "$CCL_TMP/tty-capture"
+        printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture" ;;
+    'notification show')
+        shift 2; printf '%s\n' "\$*" >> "$CCL_TMP/notify-log" ;;
+esac
+CCL_HERDR2
+    chmod +x "$CCL_TMP/bin/herdr"
+    printf '11111111-1111-1111-1111-111111111111' > "$CCL_TMP/stub-session"
+    run_test "claude-copy-last picks the pane's own session, not newest file" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'MY PANE' ]"
+    rm -f "$CCL_TMP/stub-session"
+    # Without a pane (plain shell / tmux) it must still fall back to mtime
+    run_test "claude-copy-last falls back to newest file without a pane id" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' '$HOME/.local/bin/claude-copy-last'\")\" = 'OTHER PANE' ]"
+
     # herdr silently DROPS clipboard writes over 192 KiB decoded
     # (ghostty MAX_CLIPBOARD_BYTES) — oversize must skip OSC 52 and
     # toast instead of vanishing.

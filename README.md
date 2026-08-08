@@ -881,7 +881,7 @@ Modern Rust-based replacements for traditional Unix tools:
 | - | **mergiraf** | Syntax-aware merge conflict resolver | (git driver) |
 | - | **posting** | API-testing TUI, requests as YAML | `posting` |
 | `thefuck` | **pay-respects** | Command correction (Rust, cargo) | `fk` |
-| - | **gitleaks** | Secret scan in the pre-commit hook | `gitleaks` |
+| - | **gitleaks** | Secret scan: pre-commit hook + CI | `gitleaks` |
 | - | **zizmor** | GitHub Actions security audit (CI) | `zizmor` |
 | - | **actionlint** | GitHub Actions workflow linter (CI) | `actionlint` |
 

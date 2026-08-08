@@ -183,6 +183,13 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+          # REQUIRED by both secret scanners below. checkout defaults to
+          # fetch-depth 1, which silently reduces a "full history" scan
+          # to a single commit while still reporting success — the same
+          # false-pass class as running gitleaks outside a repo (it says
+          # "0 commits scanned ... no leaks found"). Cheap here: the repo
+          # is ~1.6 MB over ~300 commits, scanned in well under a second.
+          fetch-depth: 0
 
       # Trivy stays advisory: filesystem CVE scanning is noisy for a
       # dotfiles repo. Pinned to a release SHA (was @master — a mutable
@@ -206,6 +213,21 @@ jobs:
         with:
           path: ./
           extra_args: --results=verified
+
+      # Second, complementary net. --results=verified above means
+      # TruffleHog only fails on credentials it could confirm LIVE
+      # against the provider: a private key block, a revoked-but-real
+      # token, a password, or any provider it cannot verify all pass it
+      # silently. gitleaks is regex/entropy based and catches those.
+      # It is also the same engine the yadm pre_commit hook runs, and
+      # that hook is bypassable (--no-verify, or a raw GIT_DIR commit),
+      # so CI holds the authoritative copy of the gate. go install is
+      # the pattern already used for actionlint (verified through the
+      # Go checksum database); ubuntu-latest ships Go preinstalled.
+      - name: Check for secrets — gitleaks (blocking, full history)
+        run: |
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          "$(go env GOPATH)/bin/gitleaks" git --no-banner --redact .
 
   macos-integration:
     name: macOS Integration + Test Suite

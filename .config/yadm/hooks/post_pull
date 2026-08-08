@@ -41,20 +41,11 @@ if [ ! -e "$HOME/.claude/settings.json" ]; then
          "that untracked it) — reinstalling the shared half"
 fi
 
+# One routine, two callers: bootstrap runs this same script, so a fresh
+# clone and a pull cannot drift apart. claude-settings-sync also
+# reinstates herdr's SessionStart entry, which it owns and which the
+# merge never writes.
 # Never fail the pull over this; a broken sync is a warning, not a stop.
 "$sync" || echo "post_pull: claude-settings-sync failed — run it by hand" >&2
-
-# herdr owns its own SessionStart hook, so claude-settings-sync
-# deliberately does not write it (a hardcoded copy would go stale and
-# recreate the two-writers problem). Regenerate it only when herdr is
-# installed and the script is actually missing — otherwise every session
-# logs a harmless-but-noisy hook error until someone remembers to run
-# this by hand. Cheap and idempotent because of the -f guard.
-if command -v herdr >/dev/null 2>&1 &&
-   [ ! -f "$HOME/.claude/hooks/herdr-agent-state.sh" ]; then
-    echo "post_pull: herdr agent-state hook missing — reinstalling integration"
-    herdr integration install claude >/dev/null 2>&1 ||
-        echo "post_pull: herdr integration install claude failed — run it by hand" >&2
-fi
 
 exit 0

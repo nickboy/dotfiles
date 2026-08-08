@@ -96,6 +96,39 @@ fingerprint() {
     [ -e "$1" ] && stat -f '%m:%z' "$1" 2>/dev/null || printf 'absent'
 }
 
+# herdr owns its SessionStart entry, so the merge above never writes it
+# — a hardcoded copy would go stale, and herdr bakes an ABSOLUTE path
+# into the command, which is wrong on every other machine anyway (one
+# more reason this file could never have been shared). Ask herdr to
+# reinstate it instead.
+#
+# Guarded on the ENTRY, not on the hook script. The script is untracked
+# and survives a pull; the settings.json entry does not — so guarding on
+# the script would skip exactly the repair this exists to perform.
+#
+# Guarded rather than unconditional for a reason found by running it:
+# herdr's installer removes only entries whose command matches its own
+# canonical string, so it does not recognise a hand-edited one. This
+# machine's entry was deliberately rewritten from herdr's absolute path
+# to "$HOME/..." (docs/work-machine-checklist.md prescribes that fix),
+# and an unconditional install appended a SECOND entry beside it — the
+# agent-state hook would then fire twice per session. Matching on the
+# script name covers both spellings.
+#
+# This is two writers with explicit, disjoint ownership — not the
+# unowned both-claim-the-whole-file pattern this script exists to end.
+ensure_herdr_integration() {
+    command -v herdr >/dev/null 2>&1 || return 0
+    if jq -e '[.. | .command? // empty] | any(test("herdr-agent-state"))' \
+        "$settings" >/dev/null 2>&1; then
+        return 0
+    fi
+    local err
+    if ! err=$(herdr integration install claude 2>&1 >/dev/null); then
+        echo "claude-settings-sync: herdr integration install claude failed: ${err:-unknown}" >&2
+    fi
+}
+
 read_and_merge() {
     # A missing or empty file is the fresh-machine case: start from {} so
     # the merge produces a complete, valid settings.json.
@@ -151,6 +184,11 @@ read_and_merge
 if [ "$(printf '%s' "$current" | jq -S .)" = "$(printf '%s' "$merged" | jq -S .)" ]; then
     [ "$check_only" = 1 ] && exit 0
     echo "claude-settings-sync: already in sync"
+    # Still ensure herdr's entry: the merge does not carry it, so a file
+    # missing ONLY that entry compares as in-sync and would otherwise
+    # take this early exit with the repair skipped — the same
+    # wrong-signal mistake as guarding on the hook script's presence.
+    ensure_herdr_integration
     exit 0
 fi
 
@@ -226,3 +264,5 @@ fi
 mv "$tmp" "$settings"
 trap - EXIT
 echo "claude-settings-sync: shared settings installed in $settings"
+
+ensure_herdr_integration

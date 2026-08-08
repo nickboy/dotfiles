@@ -733,6 +733,39 @@ CCL_HERDR2
     rm -rf "$CCL_TMP"
 fi
 
+# claude-statusline mirrors a mid-session /rename onto the herdr tab.
+# The dangerous case is over-firing: renaming on every turn would
+# overwrite hand-named tabs ("Reviewer") with the pane's agent name, so
+# assert BOTH that a rename propagates and that nothing fires on a
+# first sighting or an unchanged name. Stub herdr logs its argv; the
+# rename is backgrounded so each run gets a moment to land.
+if [ -x "$HOME/.local/bin/claude-statusline" ] && command -v jq >/dev/null 2>&1; then
+    CS_TMP=$(mktemp -d)
+    mkdir -p "$CS_TMP/bin"
+    printf '#!/bin/sh\necho "$*" >> "%s/calls.log"\n' "$CS_TMP" > "$CS_TMP/bin/herdr"
+    chmod +x "$CS_TMP/bin/herdr"
+    : > "$CS_TMP/calls.log"
+    cs_payload() {
+        printf '{"session_id":"utcs","session_name":"%s","model":{"display_name":"O"},"workspace":{"current_dir":"%s"},"context_window":{"used_percentage":5},"cost":{"total_cost_usd":0,"total_duration_ms":0},"rate_limits":{}}' "$1" "$HOME"
+    }
+    cs_run() {
+        cs_payload "$1" | env PATH="$CS_TMP/bin:$PATH" HERDR_TAB_ID=w1:t9 \
+            "$HOME/.local/bin/claude-statusline" >/dev/null 2>&1
+        sleep 0.4
+    }
+    rm -f /tmp/claude-statusline-name-utcs
+    cs_run alpha
+    run_test "claude-statusline: first sighting seeds without renaming the tab" \
+        "[ ! -s '$CS_TMP/calls.log' ] && [ \"\$(cat /tmp/claude-statusline-name-utcs)\" = alpha ]"
+    cs_run alpha
+    run_test "claude-statusline: an unchanged session name renames nothing" \
+        "[ ! -s '$CS_TMP/calls.log' ]"
+    cs_run beta
+    run_test "claude-statusline: a /rename propagates to the herdr tab" \
+        "[ \"\$(cat '$CS_TMP/calls.log')\" = 'tab rename w1:t9 beta' ]"
+    rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs
+fi
+
 # gitleaks pre-commit engine: same invocation the yadm hook uses, against
 # a throwaway fixture repo (plain git on purpose — the yadm-only rule is
 # for the dotfiles repo, not isolated fixtures). The canary is assembled

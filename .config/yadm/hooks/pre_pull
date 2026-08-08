@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+# Runs before every `yadm pull`.
+#
+# Takes a throwaway snapshot of ~/.claude/settings.json so no pull can
+# cost you that file. It is untracked now, but a pull that carries a
+# commit which REMOVES a still-tracked path deletes it on the receiving
+# machine — the file only becomes safe from the pull after that one.
+# More generally, Claude Code rewrites this file constantly and it holds
+# the model, effort level and plugin set, so a cheap pre-pull copy beats
+# remembering a manual step. post_pull reinstalls the shared half;
+# this is what preserves the personal half.
+#
+# NOTE this cannot protect the very first pull on a machine, because the
+# hook arrives WITH that pull. Do that one by hand, once per machine:
+#   cp ~/.claude/settings.json ~/.claude/settings.json.bak-manual
+#
+# A pre_ hook that exits non-zero makes yadm REFUSE to run the command,
+# so every path here ends in exit 0. Failing to take a backup must never
+# be the reason a pull cannot happen.
+
+set -uo pipefail
+
+settings="$HOME/.claude/settings.json"
+[ -s "$settings" ] || exit 0
+
+# The dash in .bak- matters: it matches the tracked `*.bak-*` ignore
+# rule, and `.claude/settings.json.*` covers it by name as well. An
+# unignored copy of this file is a personal model and plugin set one
+# `yadm add -A` away from a PUBLIC repo — and
+# status.showUntrackedFiles=no would hide it from `yadm status`.
+backup="$settings.bak-$(date +%Y%m%d%H%M%S)-$$"
+
+if cp -p "$settings" "$backup" 2>/dev/null; then
+    # Keep the three most recent; these are disposable snapshots.
+    # shellcheck disable=SC2012  # fixed-shape names, no odd characters
+    ls -1t "$settings".bak-* 2>/dev/null | tail -n +4 | while IFS= read -r old; do
+        rm -f "$old"
+    done
+else
+    echo "pre_pull: could not back up $settings — continuing anyway" >&2
+fi
+
+exit 0

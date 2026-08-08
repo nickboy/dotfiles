@@ -290,13 +290,19 @@ claim was never verified and is removed rather than reworded.
   yadm pull --ff-only
   ```
 
-  `.claude/settings.json` used to be the usual culprit here. **Before
-  the first pull that carries the untracking change, back it up —
-  that one pull still destroys it:**
+  `.claude/settings.json` used to be the usual culprit here. **On each
+  machine, back it up by hand before the FIRST pull that carries the
+  untracking change — that one pull still destroys it:**
 
   ```bash
   cp ~/.claude/settings.json ~/.claude/settings.json.bak-manual
   ```
+
+  Only that first pull needs the manual step, and only because the hook
+  that would have done it arrives *in* that pull. From then on
+  `~/.config/yadm/hooks/pre_pull` snapshots the file before every pull
+  and `post_pull` reinstalls the shared half after, so no later pull
+  needs a thought.
 
   From the pull after that one it is untracked and a pull genuinely
   cannot touch it. But on the receiving machine it is still tracked at

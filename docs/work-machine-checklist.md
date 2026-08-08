@@ -290,8 +290,21 @@ claim was never verified and is removed rather than reworded.
   yadm pull --ff-only
   ```
 
-  `.claude/settings.json` used to be the usual culprit here. It is now
-  untracked, so a pull cannot touch it and there is nothing to discard.
+  `.claude/settings.json` used to be the usual culprit here. **Before
+  the first pull that carries the untracking change, back it up —
+  that one pull still destroys it:**
+
+  ```bash
+  cp ~/.claude/settings.json ~/.claude/settings.json.bak-manual
+  ```
+
+  From the pull after that one it is untracked and a pull genuinely
+  cannot touch it. But on the receiving machine it is still tracked at
+  the moment that commit arrives, so that pull deletes it if clean, or
+  auto-stashes it if modified (`pull.rebase` and `rebase.autostash` are
+  both on in the tracked git config). Reading "it is untracked now" and
+  skipping the backup is exactly the mistake that loses the file.
+
   It had two writers — this repo and Claude Code itself, which rewrites
   it on `/model`, `/theme` and `/plugin` — and tracking it also
   published a personal model, effort level and plugin set from a public

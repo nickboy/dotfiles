@@ -16,6 +16,14 @@
 # bootstrap runs — it merges only those keys and never touches the
 # personal ones.
 .claude/settings.json
+# Every derivative too, anchored to the NAME rather than the extension:
+# backups, editor swap files, .orig, .save. The `*.bak-*` rule below
+# would only catch the shapes someone remembered to name that way, and
+# a dot-separated backup (settings.json.bak.<ts>) matches neither it nor
+# `*.bak`. That gap is not academic — status.showUntrackedFiles=no
+# hides such a file from `yadm status` while `yadm add -A` still stages
+# it, so one careless add publishes a personal model and plugin set.
+.claude/settings.json.*
 
 # Per-machine statusline segment switches (see claude-statusline)
 .config/claude-statusline/config.sh

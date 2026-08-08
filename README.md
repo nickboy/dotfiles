@@ -483,6 +483,10 @@ Claude's latest reply from the session transcript JSONL, so you get the
 *original* markdown instead of the wrapped screen text — identical in
 tmux, herdr, or bare Ghostty. `ccl -n 2` reaches a message further
 back; piping emits raw markdown (`ccl | glow`, `ccl > notes.md`).
+Inside herdr it copies the transcript of the pane you pressed in, asked
+for by session id — several agents sharing a directory share a
+transcript folder, so picking the most recently written file would
+paste the neighbouring pane's reply.
 
 ## 🌐 Remote Development
 
@@ -655,6 +659,26 @@ two-week trial for Claude Code sessions only — tmux stays primary.
 Config lives in `~/.config/herdr/config.toml` (ctrl+a prefix,
 tmux-mirrored keys, Catppuccin); plugins are machine-local and
 SHA-pinned.
+
+Connect to a remote herdr server with the `hbox` helper — never plain
+`herdr --remote`:
+
+```bash
+hbox                  # uses $HERDR_REMOTE_HOST from ~/.zshrc.local
+hbox user@otherbox    # one-off target
+```
+
+It bakes in `--remote-keybindings=server`, which is load-bearing rather
+than cosmetic: the default (`local`) makes the server strip every
+custom command out of the client's keymap, so `prefix+shift+O` and the
+plugin bindings do nothing at all, with no error. Keybindings are read
+once at attach, so a client already running cannot be fixed — it has to
+reattach. Set the host per machine in the untracked `~/.zshrc.local`
+(`export HERDR_REMOTE_HOST='user@host'`), since this repo is public.
+
+One more rule for clipboard copies: **only one client may be attached**.
+herdr delivers a copy to the foreground client alone, so a forgotten
+`herdr` left running on the server host silently swallows every copy.
 
 Trial notes, plugin install commands, and known limits:
 [docs/herdr.md](docs/herdr.md). Full dual-machine setup (work laptop /

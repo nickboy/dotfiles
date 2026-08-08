@@ -29,6 +29,26 @@ case ":$PATH:" in
   *) PATH="/opt/homebrew/bin:$PATH" ;;
 esac
 
+# herdr spawns [[keys.command]] shells in the SERVER process with the
+# daemon's (minimal) env — HERDR_BIN_PATH is injected there and beats
+# hoping `herdr` is on that PATH.
+herdr_bin="${HERDR_BIN_PATH:-herdr}"
+
+# Feedback for the detached -c path: spawn_custom_command nulls stdio,
+# so stderr goes nowhere — a herdr toast reaches the attached client
+# (local or --remote), unlike terminal-notifier which only ever reaches
+# the server's own screen. Toast only in -c mode; interactive has stderr.
+notify() {
+    if [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+        "$herdr_bin" notification show "claude-copy-last" --body "$1" \
+            >/dev/null 2>&1 && return
+    fi
+    if command -v terminal-notifier >/dev/null 2>&1; then
+        terminal-notifier -title claude-copy-last -message "$1" \
+            >/dev/null 2>&1 || true
+    fi
+}
+
 n=1
 copy=auto
 while getopts "n:ch" opt; do
@@ -72,18 +92,37 @@ done
 
 if [ -z "$proj" ]; then
     echo "claude-copy-last: no Claude transcripts for $PWD (or parents)" >&2
+    [ "$copy" = always ] && notify "no Claude transcripts for $PWD (or parents)"
     exit 1
 fi
 
-# Newest transcript = the active / most recent session for this project.
-# KNOWN LIMITATION (review 2026-08-06): two concurrent sessions in the
-# SAME project share one slug dir, and last-write-wins picks whichever
-# wrote most recently — not necessarily the pane you pressed the key
-# in. The proper fix is matching the pane's session id against the
-# filename (claude-name-session already reaches that id); accepted for
-# now since the newest transcript is almost always the one on screen.
-# shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
-transcript=$(ls -t "$proj"/*.jsonl | head -1)
+# Which transcript belongs to the pane you pressed the key in?
+# Concurrent agents in one directory share a slug dir, so "newest file"
+# copies whichever session wrote last — with two Claude panes both in
+# $HOME, pressing in one reliably pasted the other's reply.
+# herdr answers this directly: it tracks each pane's Claude session id
+# and transcripts are named <session-id>.jsonl. Ask it first, fall back
+# to mtime for plain shells, tmux, or panes whose agent never reported
+# an identity (herdr leaves agent_session unset there).
+transcript=""
+if [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+    sid=$("$herdr_bin" pane get "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
+        jq -r '.result.pane.agent_session.value // empty' 2>/dev/null) || sid=""
+    if [ -n "$sid" ]; then
+        if [ -f "$proj/$sid.jsonl" ]; then
+            transcript="$proj/$sid.jsonl"
+        else
+            # cwd walk landed on a different project dir than the one
+            # claude was launched from — the id is authoritative, so
+            # take it wherever it lives
+            transcript=$(find "$projects_root" -maxdepth 2 -name "$sid.jsonl" -print -quit 2>/dev/null)
+        fi
+    fi
+fi
+if [ -z "$transcript" ]; then
+    # shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
+    transcript=$(ls -t "$proj"/*.jsonl | head -1)
+fi
 
 # Sidechain entries are subagent traffic, not the conversation. One turn
 # can hold several text blocks (status notes between tool calls); each
@@ -103,6 +142,7 @@ if [ -z "$msg" ]; then
     if [ "$(wc -l < "$transcript")" -gt 5000 ]; then
         echo "claude-copy-last: note: only the last 5000 lines were searched" >&2
     fi
+    [ "$copy" = always ] && notify "no assistant message (n=$n) in ${transcript##*/}"
     exit 1
 fi
 
@@ -117,10 +157,64 @@ clip() {
     fi
 }
 
+# herdr drops clipboard writes over 192 KiB decoded SILENTLY (ghostty
+# MAX_CLIPBOARD_BYTES); guard at 190 KiB with margin. Computed once so
+# the two OSC 52 branches below can't drift apart.
+osc52_cap=194560
+msg_bytes=$(printf '%s' "$msg" | wc -c | tr -d ' ')
+
+osc52_seq() {
+    printf '\033]52;c;%s\a' "$(printf '%s' "$msg" | base64 | tr -d '\n')"
+}
+
+# herdr custom commands run in the SERVER process, so clip() above only
+# sets the SERVER's clipboard — invisible under `herdr --remote`.
+# Writing OSC 52 to the pane's pty enters herdr's own clipboard
+# pipeline (pane OSC 52 → ClipboardWrite → forwarded to the FOREGROUND
+# attached client, which sets its native clipboard).
+osc52_to_pane() {
+    [ -n "${HERDR_ACTIVE_PANE_ID:-}" ] || return 0
+    local info tty pid
+    if [ "$msg_bytes" -gt "$osc52_cap" ]; then
+        notify "message too large for remote clipboard ($msg_bytes bytes) — copied on the server only"
+        return 0
+    fi
+    info=$("$herdr_bin" pane process-info --pane "$HERDR_ACTIVE_PANE_ID" 2>/dev/null) || info=""
+    tty=$(printf '%s' "$info" | jq -r '.result.process_info.tty // empty' 2>/dev/null) || tty=""
+    if [ -z "$tty" ]; then
+        # macOS process-info omits tty (observed 0.8.0) — resolve via ps
+        pid=$(printf '%s' "$info" | jq -r '.result.process_info.shell_pid // .result.process_info.foreground_process_group_id // empty' 2>/dev/null) || pid=""
+        if [ -n "$pid" ]; then
+            tty=$(/bin/ps -o tty= -p "$pid" 2>/dev/null | tr -d ' ') || tty=""
+        fi
+        case "$tty" in '' | '??' | '-') tty="" ;; esac
+    fi
+    if [ -z "$tty" ]; then
+        notify "pane tty not resolvable — copied on the server only"
+        return 0
+    fi
+    case "$tty" in /*) ;; *) tty="/dev/$tty" ;; esac
+    if [ -w "$tty" ]; then
+        osc52_seq > "$tty" ||
+            notify "OSC 52 write to $tty failed — copied on the server only"
+    else
+        notify "pane tty $tty not writable — copied on the server only"
+    fi
+}
+
 if [ "$copy" = always ]; then
-    printf '%s' "$msg" | clip
+    # clip failure must not gate OSC 52 (stdio is nulled — toast it):
+    # on a clipboard-tool-less server the pane delivery still works
+    printf '%s' "$msg" | clip || notify "server clipboard tool failed — pane OSC 52 only"
+    osc52_to_pane
 elif [ -t 1 ]; then
     printf '%s' "$msg" | clip
+    # Also OSC 52 through the controlling terminal: reaches the LOCAL
+    # clipboard when this shell is remote (ssh, herdr --remote pane) —
+    # harmless duplicate of clip() when local. Same cap guard.
+    if [ "$msg_bytes" -le "$osc52_cap" ]; then
+        osc52_seq > /dev/tty || true
+    fi
     first_line=$(printf '%s' "$msg" | head -n 1)
     printf 'copied %s chars from %s\n' "${#msg}" "${transcript##*/}"
     printf '%.100s…\n' "$first_line"

@@ -1,0 +1,148 @@
+#!/usr/bin/env bash
+# claude-settings-sync — install the SHARED half of Claude Code's
+# settings without touching the personal half.
+#
+# ~/.claude/settings.json has two writers: this repo and Claude Code
+# itself (/model, /theme and /plugin rewrite it — that is where the
+# nested enabledPlugins and extraKnownMarketplaces come from). Tracking
+# the whole file therefore never held still, and it published a personal
+# model, effort level and plugin set to anyone cloning a PUBLIC repo. So
+# the file is untracked and this script installs only the parts that are
+# genuinely shared between machines:
+#
+#   statusLine, theme, hooks
+#
+# and never writes:
+#
+#   model, effortLevel, enabledPlugins, extraKnownMarketplaces, tui
+#
+# The line is "does this repo ship the thing it points at?" — statusLine
+# runs ~/.local/bin/claude-statusline, theme resolves to the tracked
+# .claude/themes/my-theme.json, and both hooks are tracked scripts.
+# `tui` points at nothing here, so it is taste, and is left alone.
+#
+# The herdr SessionStart hook is deliberately NOT here even though this
+# machine has one. herdr GENERATES ~/.claude/hooks/herdr-agent-state.sh
+# and owns its command string and timeout; writing a hardcoded copy from
+# here would recreate the two-writers problem this script exists to end,
+# and would go stale the moment herdr changes that format. The file is
+# also untracked, so a cloner without herdr would get exit 127 on every
+# SessionStart. `herdr integration install claude` owns it instead — see
+# docs/work-machine-checklist.md. Merging is additive, so a machine that
+# already has the hook keeps it.
+#
+# Idempotent: safe to re-run, and safe to run on a machine where Claude
+# Code has already written its own settings. bootstrap calls it.
+#
+# Usage: claude-settings-sync [--check]
+#   --check   report whether a sync is needed; write nothing (exit 1 if
+#             the shared keys are missing or stale)
+
+set -euo pipefail
+
+case ":$PATH:" in
+  *:/opt/homebrew/bin:*) ;;
+  *) PATH="/opt/homebrew/bin:$PATH" ;;
+esac
+
+check_only=0
+[ "${1:-}" = "--check" ] && check_only=1
+
+settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "claude-settings-sync: jq not found" >&2
+    exit 1
+fi
+
+# The shared half, verbatim. Paths stay in ~ / $HOME form so they work
+# for whichever user clones this — never hardcode /Users/<name>.
+shared=$(cat <<'SHARED_JSON'
+{
+  "statusLine": {
+    "command": "~/.local/bin/claude-statusline",
+    "refreshInterval": 5,
+    "type": "command"
+  },
+  "theme": "custom:my-theme",
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          { "command": "~/.local/bin/claude-notify", "type": "command" }
+        ],
+        "matcher": ""
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "command": "~/.local/bin/claude-name-session", "type": "command" }
+        ],
+        "matcher": ""
+      }
+    ]
+  }
+}
+SHARED_JSON
+)
+
+# A missing or empty file is the fresh-machine case: start from {} so
+# the merge below produces a complete, valid settings.json.
+current='{}'
+if [ -s "$settings" ]; then
+    if ! current=$(jq -e . "$settings" 2>/dev/null); then
+        echo "claude-settings-sync: $settings is not valid JSON — refusing to overwrite" >&2
+        exit 1
+    fi
+fi
+
+# Merge, NOT overwrite. jq's `*` deep-merges objects but REPLACES arrays
+# wholesale, so a plain `. * $shared` would delete any Notification or
+# SessionStart hook the machine already had — precisely the "do not
+# break other people's config" failure this change exists to prevent.
+# Flat keys are overridden (this repo owns them); hook arrays are
+# UNIONED per event, keeping existing entries first and appending ours
+# only when absent. Identity is (matcher, sorted commands), which makes
+# re-runs idempotent without reordering anyone's hooks.
+merged=$(printf '%s' "$current" | jq --argjson shared "$shared" '
+    def hook_key: [(.matcher // ""), ((.hooks // []) | map(.command) | sort)];
+    def dedup: reduce .[] as $x ([];
+        if any(.[]; hook_key == ($x | hook_key)) then . else . + [$x] end);
+    . as $base
+    | ($base * ($shared | del(.hooks)))
+    | .hooks = (
+        reduce ($shared.hooks | keys_unsorted[]) as $ev (
+            ($base.hooks // {});
+            .[$ev] = ((.[$ev] // []) + $shared.hooks[$ev] | dedup)
+        )
+      )
+')
+
+# jq builds this, so it is valid by construction — but validate anyway:
+# the one thing worse than no settings.json is a corrupt one.
+if ! printf '%s' "$merged" | jq -e . >/dev/null 2>&1; then
+    echo "claude-settings-sync: merge produced invalid JSON — aborting" >&2
+    exit 1
+fi
+
+if [ "$(printf '%s' "$current" | jq -S .)" = "$(printf '%s' "$merged" | jq -S .)" ]; then
+    [ "$check_only" = 1 ] && exit 0
+    echo "claude-settings-sync: already in sync"
+    exit 0
+fi
+
+if [ "$check_only" = 1 ]; then
+    echo "claude-settings-sync: $settings is missing shared keys (run without --check)" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$settings")"
+# Write via a temp file in the same directory so a crash cannot leave a
+# half-written settings.json behind.
+tmp=$(mktemp "$(dirname "$settings")/.settings.json.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+printf '%s\n' "$merged" > "$tmp"
+mv "$tmp" "$settings"
+trap - EXIT
+echo "claude-settings-sync: shared settings installed in $settings"

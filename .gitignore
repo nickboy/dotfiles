@@ -6,6 +6,17 @@
 # Claude Code local settings (machine-specific permissions)
 .claude/settings.local.json
 
+# Claude Code settings: TWO writers, so tracking it never held still —
+# yadm on one side, Claude Code itself on the other (/model, /theme,
+# /plugin rewrite it, hence the nested enabledPlugins and
+# extraKnownMarketplaces nobody hand-writes). Tracking also published
+# a personal model, effort level and plugin set to anyone cloning this
+# PUBLIC repo. The shared half (statusLine, theme, our two hooks) is
+# installed instead by ~/.local/bin/claude-settings-sync, which
+# bootstrap runs — it merges only those keys and never touches the
+# personal ones.
+.claude/settings.json
+
 # Machine-local shell overrides. On a work machine this holds corp paths
 # and identity, so it must never be committed to this PUBLIC repo. Note
 # status.showUntrackedFiles=no means an unignored file here would be

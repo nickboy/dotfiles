@@ -27,7 +27,7 @@ IFS=$'\x1f' read -r \
     SESSION_ID MODEL DIR EFFORT_STDIN \
     PCT_RAW COST_RAW DURATION_MS \
     FIVE_H FIVE_H_RESET \
-    SEVEN_D SEVEN_D_RESET < <(
+    SEVEN_D SEVEN_D_RESET SESSION_NAME < <(
     printf '%s' "$INPUT" | jq -r '
         [
             (.session_id // "nosession"),
@@ -40,7 +40,8 @@ IFS=$'\x1f' read -r \
             (.rate_limits.five_hour.used_percentage // -1),
             (.rate_limits.five_hour.resets_at // .rate_limits.five_hour.reset_at // ""),
             (.rate_limits.seven_day.used_percentage // -1),
-            (.rate_limits.seven_day.resets_at // .rate_limits.seven_day.reset_at // "")
+            (.rate_limits.seven_day.resets_at // .rate_limits.seven_day.reset_at // ""),
+            (.session_name // "")
         ] | map(tostring) | join("")
     ' 2>/dev/null
 )
@@ -96,6 +97,29 @@ SEVEN_D_INT=${SEVEN_D%.*}
 # waiting on EOF.
 if command -v herddeck-report-ctx >/dev/null 2>&1; then
     herddeck-report-ctx "$PCT" >/dev/null 2>&1 &
+fi
+
+# Mirror a mid-session /rename onto the herdr tab — the tmux
+# automatic-rename equivalent, which herdr has no built-in setting for.
+#
+# claude-name-session already names the tab, but only fires on
+# SessionStart, so a /rename halfway through a session left the tab on
+# its old name. The statusline is the only thing Claude Code runs every
+# turn that knows the current title (`.session_name`).
+#
+# ONLY on change, and never on the first sighting of a session. Renaming
+# every turn would clobber hand-named tabs ("Reviewer", "Dotfiles") with
+# whatever the pane's agent happens to be called, and seeding the cache
+# silently means a fresh cache (reboot, /tmp wipe) costs one turn of lag
+# instead of destroying those names.
+if [ -n "${HERDR_TAB_ID:-}" ] && [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
+    NAME_CACHE="/tmp/claude-statusline-name-${SESSION_ID}"
+    PREV_NAME=$(cat "$NAME_CACHE" 2>/dev/null || printf '')
+    if [ "$PREV_NAME" != "$SESSION_NAME" ]; then
+        printf '%s' "$SESSION_NAME" > "$NAME_CACHE" 2>/dev/null
+        [ -n "$PREV_NAME" ] &&
+            herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1 &
+    fi
 fi
 
 # -----------------------------------------------------------------------------

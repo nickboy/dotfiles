@@ -101,15 +101,63 @@ work key, not 1Password.
 
 ### Reconcile Claude Code settings
 
-Precedence (highest wins): managed-settings.json (MDM/org — never
-fight it) → `settings.local.json` (machine-local, gitignored) →
-`settings.json` (tracked, shared).
+`~/.claude/settings.json` is **untracked** (see below), so there is no
+longer a tracked file to reconcile against — only the shared keys that
+`claude-settings-sync` installs.
 
+Scopes, read out of the 2.1.220 binary rather than inferred:
+
+| Internal name | Reported scope |
+| --- | --- |
+| `policySettings` | managed |
+| `flagSettings` | cli flag |
+| `localSettings` | project, gitignored |
+| `projectSettings` | project |
+| `userSettings` | user |
+
+Note what that says about `settings.local.json`: `localSettings` is a
+**project** scope ("project local settings"), and the home-directory
+copy is handled by code that calls it *legacy*. This contradicts the
+older note here that described it as a machine-local user tier — that
+claim was never verified and is removed rather than reworded.
+
+- [ ] **Verify the scope before relying on it.** Unresolved, and only
+  testable on the work laptop: does `~/.claude/settings.local.json`
+  still apply when cwd is a real project with its own `.git`/`.claude`?
+  Circumstantial evidence says project-root discovery walks up to
+  `~/.claude` when nothing closer exists — which would mean the
+  override silently stops applying inside a work repo, exactly where it
+  is needed. Test it:
+
+  ```bash
+  mkdir -p /tmp/scope-test && cd /tmp/scope-test && git init -q
+  claude --print "just say ok"    # which model does the statusline report?
+  ```
+
+  If the override loses to the default inside a real repo, model/auth
+  overrides belong in that repo's own `.claude/settings.local.json`,
+  not the home copy — update this checklist with what you find.
+- [ ] **Statusline segments** are switched per machine, not templated —
+  the script is one file on both machines and only its segments differ.
+  Under enterprise billing (Bedrock/Vertex) cost and burn rate are
+  meaningless and `rate_limits` is absent from the payload entirely, so
+  on a work machine write the untracked
+  `~/.config/claude-statusline/config.sh`:
+
+  ```bash
+  SHOW_COST=0
+  SHOW_BURN=0
+  SHOW_RATE_LIMITS=0
+  ```
+
+  Omitting the file keeps every segment on. `SHOW_HERDR=0` also drops
+  the herdr/herddeck side effects if that machine runs neither.
 - [ ] Merge work-required entries from the backup into
   `~/.claude/settings.local.json`: auth/gateway (Bedrock, proxy,
   `apiKeyHelper`), org permission policies, work-only plugins.
-- [ ] Model override: tracked settings pin a personal model; if the
-  work plan lacks access, set `model` in `settings.local.json`.
+- [ ] Model override: nothing pins a personal model any more, since
+  `settings.json` is untracked — set `model` wherever the scope test
+  above shows it actually applies.
 - [ ] The tracked SessionStart hook
   `~/.claude/hooks/herdr-agent-state.sh` is a herdr-generated
   artifact. Either run `herdr integration install claude`
@@ -242,10 +290,58 @@ fight it) → `settings.local.json` (machine-local, gitignored) →
   yadm pull --ff-only
   ```
 
-  `.claude/settings.json` is the usual culprit: Claude Code rewrites
-  it on its own (plugin and permission state), so on a machine with
-  work-only plugins expect it to be permanently modified. Discard it
-  before each pull rather than trying to keep it clean.
+  `.claude/settings.json` used to be the usual culprit here. **On each
+  machine, back it up by hand before the FIRST pull that carries the
+  untracking change — that one pull still destroys it:**
+
+  ```bash
+  cp ~/.claude/settings.json ~/.claude/settings.json.bak-manual
+  ```
+
+  Only that first pull needs the manual step, and only because the hook
+  that would have done it arrives *in* that pull. From then on
+  `~/.config/yadm/hooks/pre_pull` snapshots the file before every pull
+  and `post_pull` reinstalls the shared half after, so no later pull
+  needs a thought.
+
+  From the pull after that one it is untracked and a pull genuinely
+  cannot touch it. But on the receiving machine it is still tracked at
+  the moment that commit arrives, so that pull deletes it if clean, or
+  auto-stashes it if modified (`pull.rebase` and `rebase.autostash` are
+  both on in the tracked git config). Reading "it is untracked now" and
+  skipping the backup is exactly the mistake that loses the file.
+
+  It had two writers — this repo and Claude Code itself, which rewrites
+  it on `/model`, `/theme` and `/plugin` — and tracking it also
+  published a personal model, effort level and plugin set from a public
+  repo. The shared half is installed instead by
+  `~/.local/bin/claude-settings-sync`, which bootstrap runs: it merges
+  only `statusLine`, `theme` and the two hooks whose scripts this repo
+  actually ships (`claude-notify`, `claude-name-session`), unions hook
+  arrays rather than replacing them so existing hooks survive, and never
+  writes `model`, `effortLevel`, `enabledPlugins`,
+  `extraKnownMarketplaces` or `tui`. Run it by hand any time the
+  statusline or hooks go missing.
+
+  **On the first pull that carries this change, expect the file to
+  disappear or to be stashed.** Untracking is a deletion as far as git
+  is concerned, so a machine pulling it gets one of two behaviours,
+  both verified: if its `settings.json` differs from the tracked copy,
+  git stashes the change and the file survives (say `yadm stash drop`
+  — the on-disk content was already what you wanted); if the file is
+  clean, git simply **deletes** it. So on every other machine: back the
+  file up before that pull, and run `claude-settings-sync` afterwards
+  to reinstate `statusLine`, `theme` and the hooks. Anything personal
+  in it (`model`, `effortLevel`, plugins) is yours to restore — the
+  sync script deliberately will not write those.
+
+  It deliberately does NOT write the herdr SessionStart hook. herdr
+  generates `~/.claude/hooks/herdr-agent-state.sh` and owns its command
+  and timeout, so a hardcoded copy here would restore the two-writers
+  problem and go stale on the next herdr change — and a machine without
+  herdr would get exit 127 every session. Run
+  `herdr integration install claude` on machines that use herdr (below);
+  merging is additive, so a machine that already has the hook keeps it.
 
 - [ ] **Claude Code effort: `settings.json` cannot express `max`.**
   The schema is

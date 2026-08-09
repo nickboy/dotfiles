@@ -20,12 +20,22 @@ macOS (Apple Silicon) development environment:
 
 ### PATH Priority
 
-1. `/opt/homebrew/bin` (Homebrew)
-2. `~/.local/bin` (user scripts)
-3. `~/.cargo/bin` (Rust)
-4. `~/Library/Application Support/bob/nvim-bin` (Neovim; bob's git-dev
+Highest first, as the live shell actually resolves it (`print -l
+${(s/:/)PATH}`) — this list used to be written the other way round,
+which mattered: it implied Homebrew always wins, so a stale binary in
+`~/.local/bin` looked inert when it was in fact the one executing.
+
+1. mise runtime shims (`~/.local/share/mise/installs/*/bin`) — node,
+   python, go, ruby, ahead of everything
+2. `~/Library/Application Support/bob/nvim-bin` (Neovim; bob's git-dev
    build moved here July 2026 — `~/.local/share/bob/nvim-bin` is the
    legacy fallback)
+3. `~/.cargo/bin` (Rust)
+4. `~/.local/bin` (user scripts)
+5. `/opt/homebrew/bin` (Homebrew) — **last of the four**, so anything
+   in `~/.local/bin` shadows a brew-installed command of the same name
+
+Check with `which -a <cmd>` before assuming which copy runs.
 
 ## Mandatory Rules
 

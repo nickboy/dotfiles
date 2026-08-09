@@ -480,15 +480,20 @@ live Claude panes are identifiable in the status bar.
 
 ### Copying Claude's Last Reply
 
-`~/.local/bin/claude-copy-last` (alias `ccl`, tmux `prefix+O`) copies
-Claude's latest reply from the session transcript JSONL, so you get the
-*original* markdown instead of the wrapped screen text — identical in
-tmux, herdr, or bare Ghostty. `ccl -n 2` reaches a message further
-back; piping emits raw markdown (`ccl | glow`, `ccl > notes.md`).
-Inside herdr it copies the transcript of the pane you pressed in, asked
-for by session id — several agents sharing a directory share a
-transcript folder, so picking the most recently written file would
-paste the neighbouring pane's reply.
+`prefix+O` (tmux) and `prefix+shift+O` (herdr) send Claude Code's own
+`/copy` to the pane, so you get the *original* markdown instead of the
+wrapped screen text, delivered to the **client's** clipboard over a
+remote attach. It runs inside the pane's own conversation, so nothing
+has to work out which session you meant — the question that a
+transcript-reading implementation could not answer reliably, since a
+background job inherits its pane id and Claude Code's agent view can
+render another pane's session.
+
+`~/.local/bin/claude-copy-last` (alias `ccl`) remains for what `/copy`
+cannot do: it reads the transcript off disk, so it works **while a turn
+is still streaming**, and it pipes (`ccl -n 2`, `ccl | glow`,
+`ccl > notes.md`). It reads the newest transcript for the current
+directory.
 
 ## 🌐 Remote Development
 

@@ -315,17 +315,25 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             "grep -q 'mode-keys vi' $HOME/.tmux.conf && \
              grep -q 'copy-mode-vi v send -X begin-selection' $HOME/.tmux.conf"
         # Keyboard copy: prefix+P (last shell output via OSC 133 marks)
-        # and prefix+O (last Claude reply via claude-copy-last)
+        # and prefix+O (last Claude reply). The latter drives Claude
+        # Code's own `/copy` rather than reading the transcript
+        # ourselves — it runs inside the pane's conversation, so it needs
+        # no answer to "which session is this pane running", which is the
+        # question that made the previous implementation large.
         run_test "Tmux keyboard-copy bindings present" \
             "grep -q 'previous-prompt -o' $HOME/.tmux.conf && \
-             grep -q 'claude-copy-last -c' $HOME/.tmux.conf"
+             grep -qF \"send-keys '/copy' Enter\" $HOME/.tmux.conf"
     fi
     # Keybind contract: herdr must carry the same copy-last-reply key
     # (prefix+shift+o = tmux's prefix+O) in the TEMPLATE (source of
-    # truth — the generated config.toml is derived from it)
+    # truth — the generated config.toml is derived from it), and must
+    # address the FOCUSED pane — HERDR_ACTIVE_PANE_ID is injected at
+    # keypress and never inherited, unlike HERDR_PANE_ID.
     if [ -f "$HOME/.config/herdr/config.toml##template" ]; then
         run_test "herdr copy-last-reply binding present in template" \
-            "grep -q 'claude-copy-last -c' '$HOME/.config/herdr/config.toml##template'"
+            "grep -qF \"pane run\" '$HOME/.config/herdr/config.toml##template' &&
+             grep -qF 'HERDR_ACTIVE_PANE_ID' '$HOME/.config/herdr/config.toml##template' &&
+             grep -qF \"'/copy'\" '$HOME/.config/herdr/config.toml##template'"
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
@@ -647,68 +655,28 @@ CCL_EOF
     run_test "claude-copy-last fails cleanly when history exhausted" \
         "! bash -c \"$CCL_RUN -n 9\" 2>/dev/null"
 
-    # herdr keybinding path (-c): custom commands spawn detached in the
-    # SERVER process with stdio null'd, so clipboard delivery is OSC 52
-    # written to the pane's pty (herdr forwards it to the attached
-    # client) and failures surface as herdr toasts. Stub herdr captures
-    # both; stub pbcopy keeps the suite off the real clipboard.
     mkdir -p "$CCL_TMP/bin"
-    cat > "$CCL_TMP/bin/herdr" <<CCL_HERDR
-#!/usr/bin/env bash
-case "\$1 \$2" in
-    'pane process-info')
-        : > "$CCL_TMP/tty-capture"   # a real pane tty always exists
-        printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture" ;;
-    'notification show')
-        shift 2; printf '%s\n' "\$*" >> "$CCL_TMP/notify-log" ;;
-esac
-CCL_HERDR
-    chmod +x "$CCL_TMP/bin/herdr"
     printf '#!/bin/sh\ncat > /dev/null\n' > "$CCL_TMP/bin/pbcopy"
     chmod +x "$CCL_TMP/bin/pbcopy"
     # Fixed PATH: the ambient one may contain spaces (Application Support)
     # which cannot survive unquoted expansion inside the inner bash -c
-    CCL_ENV="PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' HERDR_ACTIVE_PANE_ID=w1:p1 HERDR_BIN_PATH='$CCL_TMP/bin/herdr'"
-    CCL_B64=$(printf '%s' 'final answer' | base64 | tr -d '\n')
-    run_test "claude-copy-last -c writes OSC 52 to the herdr pane tty" \
-        "bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
-         [ \"\$(cat '$CCL_TMP/tty-capture' 2>/dev/null)\" = \"\$(printf '\\033]52;c;%s\\a' '$CCL_B64')\" ]"
+    CCL_ENV="PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects'"
 
-    # Concurrent agents in ONE project dir: picking the newest file by
-    # mtime copies whichever session wrote last, not the pane you
-    # pressed in — observed live with two Claude panes both in $HOME.
-    # herdr knows each pane's Claude session id and transcripts are
-    # named <session-id>.jsonl, so the id must win over mtime. Fixture
-    # makes the OTHER session newer, so mtime-selection fails this.
-    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"MY PANE"}]}}\n' \
+    # Selection is "newest transcript for this directory", deliberately.
+    # It used to resolve which session a herdr PANE held — marker files,
+    # process-tree checks, screen matching — and that existed only to
+    # serve the keybinding. The keybinding now drives Claude Code's own
+    # `/copy`, which runs inside the pane's conversation and never has to
+    # ask. Run from a shell, newest-here is what you meant.
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"OLDER SESSION"}]}}\n' \
         > "$CCL_TMP/projects/$CCL_SLUG/11111111-1111-1111-1111-111111111111.jsonl"
     sleep 1
-    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"OTHER PANE"}]}}\n' \
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"NEWER SESSION"}]}}\n' \
         > "$CCL_TMP/projects/$CCL_SLUG/22222222-2222-2222-2222-222222222222.jsonl"
-    # Stub reports a pane session only when the fixture asks for one, so
-    # the later tests still exercise the mtime path.
-    cat > "$CCL_TMP/bin/herdr" <<CCL_HERDR2
-#!/usr/bin/env bash
-case "\$1 \$2" in
-    'pane get')
-        sid=\$(cat "$CCL_TMP/stub-session" 2>/dev/null)
-        [ -n "\$sid" ] || exit 0
-        printf '{"result":{"pane":{"agent_session":{"value":"%s"}}}}' "\$sid" ;;
-    'pane process-info')
-        : > "$CCL_TMP/tty-capture"
-        printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture" ;;
-    'notification show')
-        shift 2; printf '%s\n' "\$*" >> "$CCL_TMP/notify-log" ;;
-esac
-CCL_HERDR2
-    chmod +x "$CCL_TMP/bin/herdr"
-    printf '11111111-1111-1111-1111-111111111111' > "$CCL_TMP/stub-session"
-    run_test "claude-copy-last picks the pane's own session, not newest file" \
-        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'MY PANE' ]"
-    rm -f "$CCL_TMP/stub-session"
-    # Without a pane (plain shell / tmux) it must still fall back to mtime
-    run_test "claude-copy-last falls back to newest file without a pane id" \
-        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' '$HOME/.local/bin/claude-copy-last'\")\" = 'OTHER PANE' ]"
+    run_test "claude-copy-last reads the newest transcript for the directory" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'NEWER SESSION' ]"
+    rm -f "$CCL_TMP/projects/$CCL_SLUG/11111111-1111-1111-1111-111111111111.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/22222222-2222-2222-2222-222222222222.jsonl"
 
     # Entry present + hook script gone = exit 127 every session. Warn,
     # never auto-repair: regenerating means running herdr's installer,
@@ -725,27 +693,29 @@ CCL_HERDR2
          [ \"\$(jq -r '[.. | .command? // empty] | map(select(test(\"herdr\"))) | length' '$CCL_TMP/orphan.json')\" -eq 1 ]"
     fi
 
-    # herdr silently DROPS clipboard writes over 192 KiB decoded
-    # (ghostty MAX_CLIPBOARD_BYTES) — oversize must skip OSC 52 and
-    # toast instead of vanishing.
+    # OSC 52's spec caps the whole sequence at 100,000 bytes; base64
+    # expands 4/3, so the real INPUT limit is ~74,994. Over that, every
+    # layer drops the write SILENTLY, which reads as "the copy worked but
+    # the paste is empty". The guard used to sit at 190 KiB — 2.6x too
+    # high — so this asserts the number, not merely that a guard exists.
     mkdir -p "$CCL_TMP/big"
     CCL_BIG_SLUG=$(printf '%s' "$CCL_TMP/big" | sed 's/[^A-Za-z0-9]/-/g')
     mkdir -p "$CCL_TMP/projects/$CCL_BIG_SLUG"
     head -c 200000 /dev/zero | tr '\0' 'a' |
         jq -Rc '{type:"assistant",message:{content:[{type:"text",text:.}]}}' \
         > "$CCL_TMP/projects/$CCL_BIG_SLUG/fixture.jsonl"
-    run_test "claude-copy-last -c toasts instead of oversize OSC 52" \
-        "rm -f '$CCL_TMP/tty-capture' '$CCL_TMP/notify-log' &&
-         bash -c \"cd '$CCL_TMP/big' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
-         [ ! -e '$CCL_TMP/tty-capture' ] && grep -q 'too large' '$CCL_TMP/notify-log'"
+    run_test "claude-copy-last refuses an oversize OSC 52 write out loud" \
+        "grep -q 'osc52_cap=74994' '$HOME/.local/bin/claude-copy-last' &&
+         bash -c \"cd '$CCL_TMP/big' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\" >/dev/null 2>&1"
 
-    # Failure in -c mode must toast, not exit silently — stdio is
-    # null'd, so stderr goes nowhere.
+    # No transcript must fail loudly, not exit 0 with an empty clipboard.
     mkdir -p "$CCL_TMP/empty-projects" "$CCL_TMP/nowhere"
-    run_test "claude-copy-last -c toasts when no transcript exists" \
-        "rm -f '$CCL_TMP/notify-log' &&
-         ! bash -c \"cd '$CCL_TMP/nowhere' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/empty-projects' HERDR_ACTIVE_PANE_ID=w1:p1 HERDR_BIN_PATH='$CCL_TMP/bin/herdr' '$HOME/.local/bin/claude-copy-last' -c\" 2>/dev/null &&
-         grep -q 'no Claude transcripts' '$CCL_TMP/notify-log'"
+    # Both halves matter: a non-zero exit AND the reason on stderr. `!`
+    # in front of a pipeline negates the WHOLE pipeline, so the exit
+    # status has to be captured separately or the assertion inverts.
+    run_test "claude-copy-last errors when no transcript exists" \
+        "out=\$(bash -c \"cd '$CCL_TMP/nowhere' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/empty-projects' '$HOME/.local/bin/claude-copy-last'\" 2>&1); rc=\$?;
+         [ \"\$rc\" -ne 0 ] && printf '%s' \"\$out\" | grep -q 'no Claude transcripts'"
     rm -rf "$CCL_TMP"
 fi
 

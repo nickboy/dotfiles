@@ -96,32 +96,162 @@ if [ -z "$proj" ]; then
     exit 1
 fi
 
-# Which transcript belongs to the pane you pressed the key in?
-# Concurrent agents in one directory share a slug dir, so "newest file"
-# copies whichever session wrote last — with two Claude panes both in
-# $HOME, pressing in one reliably pasted the other's reply.
-# herdr answers this directly: it tracks each pane's Claude session id
-# and transcripts are named <session-id>.jsonl. Ask it first, fall back
-# to mtime for plain shells, tmux, or panes whose agent never reported
-# an identity (herdr leaves agent_session unset there).
+# Which transcript belongs to the pane you pressed the key in? Three
+# tiers, most authoritative first. Each falls through to the next, so a
+# missing tier degrades to the previous behaviour rather than to a wrong
+# answer.
+#
+# 1. PANE MEMBERSHIP + LAST USER TURN. The statusline records one marker
+#    per (pane, session), so this can enumerate EVERY session in the
+#    pane — which herdr cannot: it keeps at most one and refuses to
+#    replace it for a newly started session, so a background job (which
+#    inherits HERDR_PANE_ID) is invisible to it. Among a pane's
+#    sessions, the conversation you are in is the one you spoke to most
+#    recently. See .local/lib/claude-pane-marker.sh for the measurements.
+# 2. HERDR'S REGISTRATION. Correct whenever a pane holds a single
+#    session, which is the common case, and it is the only tier that
+#    works for a session whose statusline never ran.
+# 3. MTIME. Plain shells, tmux, and panes with neither of the above.
+#    Copies whichever session in this directory wrote last — which is
+#    exactly the failure tiers 1 and 2 exist to prevent.
+if [ -r "$HOME/.local/lib/claude-pane-marker.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.local/lib/claude-pane-marker.sh"
+    have_markers=1
+else
+    have_markers=0
+fi
+
+resolve_transcript() {   # $1 session id -> path on stdout, or nothing
+    [ -n "${1:-}" ] || return 0
+    if [ -f "$proj/$1.jsonl" ]; then
+        printf '%s' "$proj/$1.jsonl"
+    else
+        # cwd walk landed on a different project dir than the one claude
+        # was launched from — the id is authoritative, take it wherever
+        # it lives
+        find "$projects_root" -maxdepth 2 -name "$1.jsonl" -print -quit 2>/dev/null
+    fi
+}
+
 transcript=""
-if [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
-    sid=$("$herdr_bin" pane get "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
-        jq -r '.result.pane.agent_session.value // empty' 2>/dev/null) || sid=""
-    if [ -n "$sid" ]; then
-        if [ -f "$proj/$sid.jsonl" ]; then
-            transcript="$proj/$sid.jsonl"
+picked_by=""
+last_turn=""
+cand_count=0
+foreign_count=0
+no_turn=0
+noturn=""
+
+if [ "$have_markers" = 1 ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+    best_ts=""
+    # The pane's shell is used below as an INDEPENDENT witness that a
+    # marker is telling the truth — see the lib for why nothing else can
+    # be. Resolved LAZILY: a pane with no markers, or with none carrying a
+    # pid, must make no herdr call at all. (The suite caught this: an
+    # unconditional call here tripped a test asserting that the oversize
+    # path touches no pane tty.)
+    pane_shell=""
+    pane_shell_resolved=0
+    while IFS= read -r cand; do
+        [ -n "$cand" ] || continue
+        cand_file=$(resolve_transcript "$cand")
+        if [ -z "$cand_file" ]; then
+            # Janitor: the session's transcript is gone, so its marker is
+            # dead weight. Reaping only what we look at keeps this
+            # O(candidates) rather than a directory sweep on every copy;
+            # another pane's stale markers are reaped by its own copies.
+            rm -f "$(claude_pane_marker_file "$HERDR_ACTIVE_PANE_ID" "$cand")" 2>/dev/null || true
+            continue
+        fi
+        # Drop a candidate only on a CONTRADICTION: its pid is alive and
+        # demonstrably not in this pane's process tree. A dead pid, an
+        # unrecorded pid, or an unresolvable pane shell all prove nothing,
+        # so the candidate is kept — this can only ever remove a claim
+        # that is provably false, never one that is merely unverified.
+        cand_pid=$(claude_pane_marker_pid "$HERDR_ACTIVE_PANE_ID" "$cand")
+        if [ -n "$cand_pid" ] && kill -0 "$cand_pid" 2>/dev/null; then
+            if [ "$pane_shell_resolved" = 0 ]; then
+                pane_shell=$("$herdr_bin" pane process-info --pane "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
+                    jq -r '.result.process_info.shell_pid // empty' 2>/dev/null) || pane_shell=""
+                pane_shell_resolved=1
+            fi
+            if [ -n "$pane_shell" ] &&
+               ! claude_pane_pid_descends_from "$cand_pid" "$pane_shell"; then
+                foreign_count=$((foreign_count + 1))
+                continue
+            fi
+        fi
+        cand_count=$((cand_count + 1))
+        cand_ts=$(claude_pane_last_user_turn "$cand_file")
+        # ISO-8601 UTC sorts correctly as a plain string, so no date
+        # parsing is needed to rank candidates.
+        if [ -n "$cand_ts" ]; then
+            if [ -z "$best_ts" ] || [ "$cand_ts" \> "$best_ts" ]; then
+                best_ts="$cand_ts"
+                transcript="$cand_file"
+                picked_by=pane
+            fi
         else
-            # cwd walk landed on a different project dir than the one
-            # claude was launched from — the id is authoritative, so
-            # take it wherever it lives
-            transcript=$(find "$projects_root" -maxdepth 2 -name "$sid.jsonl" -print -quit 2>/dev/null)
+            # A session nobody has ever spoken to — driven only by
+            # automation, or newly started in a reused pane. Held aside:
+            # ANY candidate with a human turn is strictly more evidence
+            # and must win, so these are only consulted if none has one.
+            noturn="$noturn$cand_file
+"
+        fi
+    done <<MARKERS
+$(claude_pane_marker_sessions "$HERDR_ACTIVE_PANE_ID")
+MARKERS
+
+    if [ -z "$transcript" ] && [ -n "$noturn" ]; then
+        # Every candidate is unspoken-to, so there is no evidence to rank
+        # on. Do NOT let glob order decide: it is UUID-lexicographic,
+        # which is arbitrary AND stable — it would pick the same wrong one
+        # every time with nothing indicating a choice was made, which is
+        # the silent-arbitrary pattern this whole mechanism exists to
+        # remove. Consult herdr instead: its registration is real evidence
+        # (first agent detected in the pane), and it is already tier 2, so
+        # this reuses the ladder rather than inventing a fourth rule.
+        no_turn=1
+        picked_by=pane
+        sid=$("$herdr_bin" pane get "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
+            jq -r '.result.pane.agent_session.value // empty' 2>/dev/null) || sid=""
+        if [ -n "$sid" ]; then
+            while IFS= read -r nf; do
+                [ -n "$nf" ] || continue
+                case "$nf" in */"$sid".jsonl) transcript="$nf" ;; esac
+            done <<NOTURN
+$noturn
+NOTURN
+        fi
+        if [ -z "$transcript" ]; then
+            # herdr names none of them. Fall back to "the one that is at
+            # least doing something" — still arbitrary in principle, but
+            # tied to activity rather than to filename entropy.
+            # shellcheck disable=SC2012  # uuid names, no odd characters
+            transcript=$(printf '%s' "$noturn" | sed '/^$/d' | tr '\n' '\0' |
+                xargs -0 ls -t 2>/dev/null | head -1)
         fi
     fi
 fi
+
+if [ -z "$transcript" ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
+    sid=$("$herdr_bin" pane get "$HERDR_ACTIVE_PANE_ID" 2>/dev/null |
+        jq -r '.result.pane.agent_session.value // empty' 2>/dev/null) || sid=""
+    transcript=$(resolve_transcript "$sid")
+    if [ -n "$transcript" ]; then
+        picked_by=herdr
+    fi
+fi
+
 if [ -z "$transcript" ]; then
     # shellcheck disable=SC2012  # slug dirs + uuid names, no odd characters
     transcript=$(ls -t "$proj"/*.jsonl | head -1)
+    picked_by=mtime
+fi
+
+if [ "$have_markers" = 1 ]; then
+    last_turn=$(claude_pane_last_user_turn "$transcript")
 fi
 
 # Sidechain entries are subagent traffic, not the conversation. One turn
@@ -202,11 +332,75 @@ osc52_to_pane() {
     fi
 }
 
+# Say what was actually copied. Every failure this tool has had cost an
+# hour for the same reason: the copy SUCCEEDED and reported nothing, so
+# there was no way to see it had used the wrong keymap, the wrong
+# machine's clipboard, or the wrong session. The tier matters too —
+# `mtime` has already served one pane another pane's conversation
+# silently, so it is worth naming when it is the one that decided.
+human_age() {   # $1 ISO-8601 -> "45s" / "12m" / "3h07m" / "2d", or nothing
+    [ -n "${1:-}" ] || return 0
+    local secs
+    secs=$(jq -rn --arg ts "$1" '
+        ($ts | sub("\\.[0-9]+Z$"; "Z") | fromdateiso8601) as $t
+        | (now - $t) | floor' 2>/dev/null) || return 0
+    case "$secs" in '' | *[!0-9-]*) return 0 ;; esac
+    if [ "$secs" -lt 0 ]; then secs=0; fi
+    if [ "$secs" -lt 60 ]; then printf '%ss' "$secs"
+    elif [ "$secs" -lt 3600 ]; then printf '%sm' "$((secs / 60))"
+    elif [ "$secs" -lt 86400 ]; then printf '%sh%02dm' "$((secs / 3600))" "$(((secs % 3600) / 60))"
+    else printf '%sd' "$((secs / 86400))"
+    fi
+}
+
+provenance() {
+    local sid_short age extra
+    sid_short=${transcript##*/}
+    sid_short=${sid_short%.jsonl}
+    sid_short=${sid_short%%-*}
+    extra="$picked_by"
+    # Candidate count is instrumentation, not decoration: if this bug
+    # ever recurs it says immediately whether the pane's membership set
+    # was wrong or its ranking was.
+    if [ "$picked_by" = pane ]; then
+        extra="$picked_by, $cand_count in pane"
+        # A marker that named this pane but whose process lives elsewhere.
+        # Worth saying out loud: it means something is claiming a pane it
+        # does not occupy, which is the one failure the candidate count
+        # would otherwise corroborate rather than expose.
+        if [ "$foreign_count" -gt 0 ]; then
+            extra="$extra, $foreign_count rejected"
+        fi
+    fi
+    # A pane holds a session whose transcript lives under a different
+    # project directory whenever something was launched from it with
+    # another cwd — a background job, most often. That is genuinely this
+    # pane's conversation, so it is the right answer, but it is the one
+    # case where "this pane's conversation" and "the project I am in"
+    # disagree, and you should be able to see which one you got.
+    if [ "${transcript%/*}" != "$proj" ]; then
+        extra="$extra, from ${transcript%/*}"
+    fi
+    age=$(human_age "$last_turn")
+    if [ "$no_turn" = 1 ]; then
+        # Say it outright: nothing in this pane has ever been spoken to,
+        # so the choice below was made on weaker evidence than usual.
+        printf '%s (%s) · no human turn in this pane' "$sid_short" "$extra"
+    elif [ -n "$age" ]; then
+        printf '%s (%s) · you last spoke %s ago' "$sid_short" "$extra" "$age"
+    else
+        printf '%s (%s)' "$sid_short" "$extra"
+    fi
+}
+
 if [ "$copy" = always ]; then
     # clip failure must not gate OSC 52 (stdio is nulled — toast it):
     # on a clipboard-tool-less server the pane delivery still works
     printf '%s' "$msg" | clip || notify "server clipboard tool failed — pane OSC 52 only"
     osc52_to_pane
+    # Success toast: under a keybinding this is the ONLY channel, and a
+    # silent success is what let a wrong-session copy go unnoticed.
+    notify "copied ${#msg} chars — $(provenance)"
 elif [ -t 1 ]; then
     printf '%s' "$msg" | clip
     # Also OSC 52 through the controlling terminal: reaches the LOCAL
@@ -216,7 +410,7 @@ elif [ -t 1 ]; then
         osc52_seq > /dev/tty || true
     fi
     first_line=$(printf '%s' "$msg" | head -n 1)
-    printf 'copied %s chars from %s\n' "${#msg}" "${transcript##*/}"
+    printf 'copied %s chars from %s\n' "${#msg}" "$(provenance)"
     printf '%.100s…\n' "$first_line"
 else
     printf '%s\n' "$msg"

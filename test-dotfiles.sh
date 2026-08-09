@@ -668,7 +668,13 @@ CCL_HERDR
     chmod +x "$CCL_TMP/bin/pbcopy"
     # Fixed PATH: the ambient one may contain spaces (Application Support)
     # which cannot survive unquoted expansion inside the inner bash -c
-    CCL_ENV="PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' HERDR_ACTIVE_PANE_ID=w1:p1 HERDR_BIN_PATH='$CCL_TMP/bin/herdr'"
+    # CLAUDE_PANE_MARKER_DIR is not optional hygiene: without it every ccl
+    # test below would read the DEVELOPER'S live markers out of
+    # ~/.cache/claude-pane and pass or fail depending on which panes
+    # happened to be open. Point it at an empty temp dir so each test
+    # states its own membership.
+    mkdir -p "$CCL_TMP/markers"
+    CCL_ENV="PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' CLAUDE_PANE_MARKER_DIR='$CCL_TMP/markers' HERDR_ACTIVE_PANE_ID=w1:p1 HERDR_BIN_PATH='$CCL_TMP/bin/herdr'"
     CCL_B64=$(printf '%s' 'final answer' | base64 | tr -d '\n')
     run_test "claude-copy-last -c writes OSC 52 to the herdr pane tty" \
         "bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
@@ -696,7 +702,13 @@ case "\$1 \$2" in
         printf '{"result":{"pane":{"agent_session":{"value":"%s"}}}}' "\$sid" ;;
     'pane process-info')
         : > "$CCL_TMP/tty-capture"
-        printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture" ;;
+        shell_pid=\$(cat "$CCL_TMP/stub-shell-pid" 2>/dev/null)
+        if [ -n "\$shell_pid" ]; then
+            printf '{"result":{"process_info":{"tty":"%s","shell_pid":%s}}}' \\
+                "$CCL_TMP/tty-capture" "\$shell_pid"
+        else
+            printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture"
+        fi ;;
     'notification show')
         shift 2; printf '%s\n' "\$*" >> "$CCL_TMP/notify-log" ;;
 esac
@@ -708,7 +720,226 @@ CCL_HERDR2
     rm -f "$CCL_TMP/stub-session"
     # Without a pane (plain shell / tmux) it must still fall back to mtime
     run_test "claude-copy-last falls back to newest file without a pane id" \
-        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' '$HOME/.local/bin/claude-copy-last'\")\" = 'OTHER PANE' ]"
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' CLAUDE_PANE_MARKER_DIR='$CCL_TMP/markers' '$HOME/.local/bin/claude-copy-last'\")\" = 'OTHER PANE' ]"
+
+    # ------------------------------------------------------------------
+    # TWO SESSIONS IN ONE PANE. The bug this whole mechanism exists for:
+    # a background job inherits HERDR_PANE_ID from the pane it was
+    # launched in, so a pane holds two sessions — but herdr keeps only
+    # ONE registration and refuses to replace it when a new session
+    # reports session_start_source "startup" (verified against a running
+    # 0.8.0 server; resume/compact/clear are accepted, startup is not,
+    # and a rejected write still answers {"type":"ok"}). ccl therefore
+    # asked the pane, got the FIRST session, and copied it perfectly:
+    # the wrong conversation.
+    #
+    # Ranking is by LAST HUMAN TURN, not mtime. Measured on live panes,
+    # a foreground session's transcript was written three hours after
+    # its last human turn while a background job in the same pane had
+    # one 44 minutes old — mtime picked the stale one. So the fixture
+    # gives the STALE session the NEWER file, and mtime-ranking fails it.
+    CCL_STALE=aaaaaaaa-0000-0000-0000-00000000aaaa
+    CCL_LIVE=bbbbbbbb-0000-0000-0000-00000000bbbb
+    CCL_FOREIGN=cccccccc-0000-0000-0000-00000000cccc
+    {
+        printf '{"type":"user","timestamp":"2020-01-01T00:00:00.000Z","message":{"content":"old question"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"STALE REPLY"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_LIVE.jsonl.tmp"
+    # LIVE has the OLDER file but the NEWER human turn
+    {
+        printf '{"type":"user","timestamp":"2030-01-01T00:00:00.000Z","message":{"content":"recent question"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"LIVE REPLY"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_LIVE.jsonl"
+    rm -f "$CCL_TMP/projects/$CCL_SLUG/$CCL_LIVE.jsonl.tmp"
+    sleep 1
+    {
+        printf '{"type":"user","timestamp":"2020-01-01T00:00:00.000Z","message":{"content":"old question"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"STALE REPLY"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_STALE.jsonl"
+    # herdr's registration points at the STALE session, as it does live
+    printf '%s' "$CCL_STALE" > "$CCL_TMP/stub-session"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_STALE"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_LIVE"
+    run_test "claude-copy-last: two sessions in one pane, newest human turn wins" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+
+    # Control 1 — the markers must be what did it. Remove them and the
+    # answer must revert to herdr's (stale) registration. Without this,
+    # the assertion above could pass for the wrong reason.
+    run_test "claude-copy-last: without markers it falls back to herdr's registration" \
+        "rm -f '$CCL_TMP/markers/w1-p1--$CCL_STALE' '$CCL_TMP/markers/w1-p1--$CCL_LIVE' &&
+         [ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'STALE REPLY' ]"
+
+    # Control 2 — LOAD-BEARING, not belt-and-braces. A membership error is
+    # the one failure mode that expresses itself as a WRONG answer rather
+    # than a fallback: a marker naming the wrong pane admits a foreign
+    # session to this pane's candidate set, and ranking will happily put it
+    # first if its human turn is newer. That is exactly the cross-pane
+    # bleed an earlier attempt at this shipped and had to be reverted.
+    {
+        printf '{"type":"user","timestamp":"2031-01-01T00:00:00.000Z","message":{"content":"newest of all"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"FOREIGN PANE"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl"
+    run_test "claude-copy-last: a marker for another pane is never selected" \
+        ": > '$CCL_TMP/markers/w1-p1--$CCL_STALE' &&
+         : > '$CCL_TMP/markers/w1-p1--$CCL_LIVE' &&
+         : > '$CCL_TMP/markers/w1-p9--$CCL_FOREIGN' &&
+         [ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+
+    # Control 3 — the janitor. A marker whose transcript is gone must be
+    # removed as it is passed over, or the cache grows without bound.
+    run_test "claude-copy-last reaps a marker whose transcript no longer exists" \
+        ": > '$CCL_TMP/markers/w1-p1--dddddddd-0000-0000-0000-00000000dddd' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\" >/dev/null &&
+         [ ! -e '$CCL_TMP/markers/w1-p1--dddddddd-0000-0000-0000-00000000dddd' ]"
+    rm -f "$CCL_TMP/markers/w1-p9--$CCL_FOREIGN"
+
+    # A marker's pane key comes from the writing session's own inherited
+    # HERDR_PANE_ID, so a session running elsewhere can name THIS pane.
+    # Filtering cannot catch that — the marker names the pane being read,
+    # so it is admitted correctly — and the candidate count corroborates
+    # it, since "2 in pane" is what a legitimate co-resident pair looks
+    # like. The process tree is the only independent witness. Here the
+    # pane's shell is a live process that is nobody's ancestor, so the
+    # marker's pid provably does not run in this pane.
+    sleep 30 &
+    CCL_SLEEPER=$!
+    printf '%s' "$CCL_SLEEPER" > "$CCL_TMP/stub-shell-pid"
+    printf 'pid=%s\n' "$$" > "$CCL_TMP/markers/w1-p1--$CCL_LIVE"
+    run_test "claude-copy-last rejects a marker whose process is not in the pane" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'STALE REPLY' ]"
+
+    # Fail-open is the other half and matters more: the check may only
+    # remove a claim that is PROVABLY false, never one that is merely
+    # unverified. An unrecorded pid must keep the candidate.
+    : > "$CCL_TMP/markers/w1-p1--$CCL_LIVE"
+    run_test "…but an unverifiable marker is kept, not rejected" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+    kill "$CCL_SLEEPER" 2>/dev/null || true
+    rm -f "$CCL_TMP/stub-shell-pid"
+
+    # Ancestry itself, asserted directly and in both directions, since the
+    # rejection above depends entirely on it being right.
+    sleep 30 &
+    CCL_CHILD=$!
+    run_test "pid ancestry: a child is recognised, an unrelated process is not" \
+        ". '$HOME/.local/lib/claude-pane-marker.sh' &&
+         claude_pane_pid_descends_from '$CCL_CHILD' '$$' &&
+         ! claude_pane_pid_descends_from '$$' '$CCL_CHILD'"
+    kill "$CCL_CHILD" 2>/dev/null || true
+
+    # CROSS-PROJECT MEMBERSHIP. A pane holds a session whose transcript
+    # lives under a DIFFERENT project directory whenever something was
+    # launched from it with another cwd — a background job, most often.
+    # That is genuinely this pane's conversation, so it must be reachable;
+    # it also widens the blast radius of a membership bug, which is why
+    # both directions are asserted rather than just the happy one.
+    CCL_ELSEWHERE=eeeeeeee-0000-0000-0000-00000000eeee
+    mkdir -p "$CCL_TMP/projects/-some-other-project"
+    {
+        printf '{"type":"user","timestamp":"2032-01-01T00:00:00.000Z","message":{"content":"newest anywhere"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"ELSEWHERE REPLY"}]}}\n'
+    } > "$CCL_TMP/projects/-some-other-project/$CCL_ELSEWHERE.jsonl"
+    run_test "claude-copy-last finds this pane's session in another project dir" \
+        ": > '$CCL_TMP/markers/w1-p1--$CCL_ELSEWHERE' &&
+         [ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'ELSEWHERE REPLY' ]"
+    run_test "…and without its marker that session is unreachable" \
+        "rm -f '$CCL_TMP/markers/w1-p1--$CCL_ELSEWHERE' &&
+         [ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+
+    # NOBODY HAS EVER SPOKEN IN THIS PANE — every candidate lacks a human
+    # turn, so there is no evidence to rank on. Glob order must NOT decide:
+    # it is UUID-lexicographic, arbitrary AND stable, so it would pick the
+    # same wrong session every time with nothing indicating a guess was
+    # made. herdr's registration is real evidence and is consulted first.
+    rm -f "$CCL_TMP/markers/w1-p1--$CCL_STALE" "$CCL_TMP/markers/w1-p1--$CCL_LIVE"
+    # THREE candidates, not two: two cannot tell three rules apart, and a
+    # fixture that cannot distinguish the rule it tests is the "check that
+    # passes without looking" this repo keeps catching. Arranged so each
+    # rule names a DIFFERENT session —
+    #   glob order (lexicographic) -> MUTE_A   the rule being rejected
+    #   file mtime                 -> MUTE_B   the documented last resort
+    #   herdr's registration       -> MUTE_C   the rule being asserted
+    CCL_MUTE_A=11111111-0000-0000-0000-0000000000a1
+    CCL_MUTE_C=22222222-0000-0000-0000-0000000000c3
+    CCL_MUTE_B=33333333-0000-0000-0000-0000000000b2
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"MUTE A"}]}}\n' \
+        > "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_A.jsonl"
+    sleep 1
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"MUTE C"}]}}\n' \
+        > "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_C.jsonl"
+    sleep 1
+    printf '{"type":"assistant","message":{"content":[{"type":"text","text":"MUTE B"}]}}\n' \
+        > "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_B.jsonl"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_MUTE_A"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_MUTE_B"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_MUTE_C"
+    printf '%s' "$CCL_MUTE_C" > "$CCL_TMP/stub-session"
+    run_test "claude-copy-last: with no human turn anywhere, herdr's registration decides" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'MUTE C' ]"
+    # …and it must SAY it guessed. Under a keybinding the toast is the only
+    # channel, so that is where the provenance is asserted.
+    run_test "…and says 'no human turn in this pane' rather than guessing silently" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         grep -q 'no human turn in this pane' '$CCL_TMP/notify-log'"
+    # herdr names none of them: fall back to activity, not to filename
+    # entropy. MUTE_B is the newest file; MUTE_A is the one glob order
+    # would pick, so this cannot pass under the rule being rejected.
+    rm -f "$CCL_TMP/stub-session"
+    run_test "…and with herdr silent it falls back to activity, not glob order" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'MUTE B' ]"
+
+    rm -f "$CCL_TMP/stub-session" "$CCL_TMP/markers"/w1-p1--*
+    rm -f "$CCL_TMP/projects/$CCL_SLUG/$CCL_STALE.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_LIVE.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_A.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_B.jsonl" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_C.jsonl"
+    rm -rf "$CCL_TMP/projects/-some-other-project"
+
+    # The ranking predicate itself. Three entry kinds are type "user"
+    # without being a human speaking, and each was a real defect caught in
+    # review rather than a hypothetical:
+    #   tool_result      dominates the type — 728 of 802 array-content user
+    #                    entries in one measured transcript. Ranking on it
+    #                    tracks AGENT activity, i.e. mtime with extra steps.
+    #   isCompactSummary /compact writes a type:"user" entry whose content
+    #                    is a STRING and whose isMeta is null, so it passes
+    #                    both a shape filter and an isMeta filter. AUTO
+    #                    compaction fires unpredictably, so counting it
+    #                    hands the pane over at a random moment.
+    #   array-with-text  a real human turn can arrive as an array, so
+    #                    "string content only" misses genuine turns. Shape
+    #                    is the wrong discriminator in BOTH directions.
+    if [ -r "$HOME/.local/lib/claude-pane-marker.sh" ]; then
+        cat > "$CCL_TMP/rank.jsonl" <<'CCL_RANK'
+{"type":"user","timestamp":"2021-01-01T00:00:00.000Z","message":{"content":[{"type":"text","text":"a real turn, as an array"}]}}
+{"type":"user","timestamp":"2022-01-01T00:00:00.000Z","message":{"content":[{"type":"tool_result","content":"ls output"}]}}
+{"type":"user","timestamp":"2023-01-01T00:00:00.000Z","isCompactSummary":true,"isMeta":null,"message":{"content":"This session is being continued from a previous conversation"}}
+{"type":"user","timestamp":"2024-01-01T00:00:00.000Z","isSidechain":true,"message":{"content":"subagent turn"}}
+{"type":"user","timestamp":"2025-01-01T00:00:00.000Z","isMeta":true,"message":{"content":"system notice"}}
+CCL_RANK
+        run_test "last-human-turn ignores tool_result, compaction, sidechain and meta" \
+            "[ \"\$(. '$HOME/.local/lib/claude-pane-marker.sh' &&
+                   claude_pane_last_user_turn '$CCL_TMP/rank.jsonl')\" = '2021-01-01T00:00:00.000Z' ]"
+        # Deliberately-broken twin: if the predicate ever loosens to "any
+        # type==user", this fixture reports 2025 and the test above turns
+        # red. Assert the naive reading really does differ, so the test
+        # cannot pass by the fixture being toothless.
+        run_test "…and the naive reading of that fixture would differ" \
+            "[ \"\$(jq -rs '[.[]|select(.type==\"user\")|.timestamp]|last' '$CCL_TMP/rank.jsonl')\" = '2025-01-01T00:00:00.000Z' ]"
+        # Writer and reader must agree on the path. A divergence here does
+        # not error — it looks like "there are no markers", which is the
+        # silent shape of the failure this design replaced.
+        run_test "statusline writes a marker where claude-copy-last looks for it" \
+            "CLAUDE_PANE_MARKER_DIR='$CCL_TMP/agree' bash -c '
+                 . \"$HOME/.local/lib/claude-pane-marker.sh\"
+                 claude_pane_marker_write w1:p7 sess-123 &&
+                 [ \"\$(claude_pane_marker_sessions w1:p7)\" = sess-123 ]' &&
+             [ \"\$(stat -f '%Lp' '$CCL_TMP/agree')\" = 700 ]"
+    fi
 
     # Entry present + hook script gone = exit 127 every session. Warn,
     # never auto-repair: regenerating means running herdr's installer,
@@ -775,8 +1006,17 @@ CS_STUB
     cs_payload() {
         printf '{"session_id":"utcs","session_name":"%s","model":{"display_name":"O"},"workspace":{"current_dir":"%s"},"context_window":{"used_percentage":5},"cost":{"total_cost_usd":0,"total_duration_ms":0},"rate_limits":{}}' "$1" "$HOME"
     }
+    # HERDR_PANE_ID and CLAUDE_PANE_MARKER_DIR are pinned, not inherited.
+    # These tests run the REAL statusline, which writes its membership
+    # marker unconditionally — deliberately, since gating it behind
+    # SHOW_HERDR or the drift throttle was a suspect in an earlier failure.
+    # Unpinned, it inherited the developer's live pane and deposited a
+    # phantom candidate named after this fixture into a REAL pane's
+    # membership set. Making the ccl tests hermetic did not cover this: the
+    # containment was built for the reader, and the writer escaped it.
     cs_run() {
         cs_payload "$1" | env PATH="$CS_TMP/bin:$PATH" HERDR_TAB_ID=w1:t9 \
+            HERDR_PANE_ID=w1:p9 CLAUDE_PANE_MARKER_DIR="$CS_TMP/markers" \
             "$HOME/.local/bin/claude-statusline" >/dev/null 2>&1
         sleep 0.4
     }
@@ -861,6 +1101,19 @@ CS_STUB
     cs_run beta
     run_test "claude-statusline: drift check is throttled to once a minute" \
         "[ ! -s '$CS_TMP/calls.log' ]"
+    # A check on the TESTS rather than on the code, which is the only kind
+    # that catches this class. It is asserted AFTER every writer in the
+    # suite has run, and it names the fixture ids explicitly so a new
+    # fixture that escapes containment fails here instead of silently
+    # joining a real pane's candidate set.
+    #
+    # This is the same shape as the bug the whole mechanism exists for: a
+    # writer running in a context nobody accounted for, producing a
+    # plausible artifact, silently.
+    run_test "the suite leaves no fixture markers in the real marker directory" \
+        "! find \"\${XDG_CACHE_HOME:-\$HOME/.cache}/claude-pane\" -maxdepth 1 -type f 2>/dev/null |
+           grep -qE -- '--(utcs|sess-123|[abcd]{8}-0000-)'"
+
     rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs /tmp/claude-tabname-w1-t9
 fi
 

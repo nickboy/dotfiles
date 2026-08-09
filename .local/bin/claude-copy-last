@@ -303,10 +303,17 @@ fi
 # identified the displayed session uniquely, 5 matched nothing (box-drawing
 # rows and reflowed fragments), and NONE matched the wrong session.
 #
-# STRICTLY A VERIFIER. It cannot change the selection, only describe it, so
-# a bad needle costs a missing warning rather than a wrong answer. The fast
-# path is a plain grep over the selected transcript; the stricter and more
-# expensive search runs only when that fails.
+# STRICTLY A VERIFIER, AND THIS IS THE PROPERTY THAT MAKES IT SAFE TO SHIP:
+# `screen_shows` is written in exactly one place (here) and read in exactly
+# one place (the provenance line). Nothing below touches $transcript,
+# $picked_by, $msg or $last_turn, every exit is a bare `return 0`, and the
+# call site is `|| true` after selection is already complete. It can append
+# a sentence to what is PRINTED and nothing else. If a future edit ever
+# gives it a say in which transcript is chosen, that guarantee is gone and
+# a bad needle becomes a bad copy — so don't.
+#
+# The fast path is a plain grep over the selected transcript; the stricter
+# and more expensive search runs only when that fails.
 screen_shows=""
 verify_against_screen() {
     [ -n "${HERDR_ACTIVE_PANE_ID:-}" ] || return 0
@@ -332,15 +339,21 @@ verify_against_screen() {
     local nf
     nf=$(mktemp "${TMPDIR:-/tmp}/ccl-needles.XXXXXX") || return 0
     printf '%s\n' "$needles" > "$nf"
+    # THE TWO SIDES ARE DELIBERATELY ASYMMETRIC — do not "tidy" them into
+    # agreement. CONFIRMING greps the selected transcript whole-file with no
+    # type restriction, so a reply that arrived here by relay (as a user
+    # entry, a paste, a tool result) still counts as "the pane shows what we
+    # copied" and we stay quiet. ATTRIBUTING to a DIFFERENT session insists
+    # on an assistant text block, because relayed text appears in every
+    # transcript along the chain and a whole-file match would name the
+    # relayer instead of the author. Loose to stay silent, strict to accuse.
     if grep -qFf "$nf" "$transcript" 2>/dev/null; then
         rm -f "$nf"
         return 0   # confirmed: the pane shows what we copied. Say nothing.
     fi
     # Nothing on screen appears in what we selected. Find what it does
-    # belong to. grep shortlists cheaply; jq then insists on an ASSISTANT
-    # TEXT BLOCK, because agents relay each other's replies inside tool
-    # arguments, and a whole-file match names every session in the relay
-    # rather than the one that wrote it.
+    # belong to. grep shortlists cheaply; jq then applies the strict test.
+    local matches=""
     while IFS= read -r hit; do
         [ -n "$hit" ] || continue
         [ "$hit" = "$transcript" ] && continue
@@ -355,14 +368,23 @@ verify_against_screen() {
                    | join(" ")]
                 | map(select(. as $t | $ns | any(. as $n | $t | index($n) != null)))
                 | length' "$hit" 2>/dev/null)" -gt 0 ] 2>/dev/null; then
-            screen_shows=${hit##*/}
-            screen_shows=${screen_shows%.jsonl}
-            break
+            hit=${hit##*/}
+            matches="$matches${hit%.jsonl} "
         fi
     done <<HITS
 $(grep -lFf "$nf" "$projects_root"/*/*.jsonl 2>/dev/null)
 HITS
     rm -f "$nf"
+    # Report ONLY when the evidence names exactly one session. Breaking on
+    # the first match would have let glob order decide an ambiguity and
+    # present it as definite — silent, arbitrary and stable, which is the
+    # precise pattern the rest of this file exists to remove. Two matches
+    # means the screen does not identify anything, so say nothing.
+    # shellcheck disable=SC2086  # session ids are uuids; word splitting is the point
+    set -- $matches
+    if [ $# -eq 1 ]; then
+        screen_shows=$1
+    fi
     return 0
 }
 verify_against_screen || true
@@ -503,8 +525,16 @@ provenance() {
     # The loudest thing this line can say: you are looking at one
     # conversation and you copied a different one. Nothing else in the
     # system can notice that, so it goes first and it is not subtle.
+    #
+    # It says "on-screen text belongs to X", not "this pane is showing X",
+    # because that is what was actually established. The two coincide for
+    # the agent view this was built for, but a pane that merely renders
+    # another session's reply — a cat, a pager, a paste — would make the
+    # stronger claim false while the narrower one stays true. A warning
+    # that overstates gets distrusted, and this one has to be believed on
+    # the day it fires.
     if [ -n "$screen_shows" ]; then
-        printf '%s (%s) — WARNING: this pane is showing %s' \
+        printf '%s (%s) — WARNING: on-screen text belongs to %s' \
             "$sid_short" "$extra" "${screen_shows%%-*}"
         return 0
     fi

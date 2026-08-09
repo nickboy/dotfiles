@@ -999,7 +999,7 @@ CCL_HERDR2
     run_test "claude-copy-last warns when the pane is showing a different conversation" \
         "rm -f '$CCL_TMP/notify-log' &&
          bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
-         grep -q 'WARNING: this pane is showing cccccccc' '$CCL_TMP/notify-log'"
+         grep -q 'WARNING: on-screen text belongs to cccccccc' '$CCL_TMP/notify-log'"
 
     # A relay must NOT trigger it: agents quote each other's replies
     # inside tool arguments, and a whole-file match would name every
@@ -1010,8 +1010,23 @@ CCL_HERDR2
     run_test "…and a relayed quotation of that text does not implicate the relayer" \
         "rm -f '$CCL_TMP/notify-log' &&
          bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
-         grep -q 'showing cccccccc' '$CCL_TMP/notify-log' &&
-         ! grep -q 'showing 11111111' '$CCL_TMP/notify-log'"
+         grep -q 'belongs to cccccccc' '$CCL_TMP/notify-log' &&
+         ! grep -q 'belongs to 11111111' '$CCL_TMP/notify-log'"
+
+    # AMBIGUITY MUST BE SILENCE, NOT THE FIRST GLOB HIT. If two sessions
+    # both emitted the on-screen text as their own assistant output, the
+    # screen identifies nothing — and reporting the alphabetically-first
+    # one as definite would be silent, arbitrary and stable, the exact
+    # pattern the rest of this mechanism exists to remove.
+    {
+        printf '{"type":"user","timestamp":"2031-01-01T00:00:00.000Z","message":{"content":"q"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"this line belongs to the session on screen and nowhere else"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_B.jsonl"
+    run_test "…and two sessions claiming the same on-screen text produce silence" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         ! grep -q 'WARNING' '$CCL_TMP/notify-log'"
+    rm -f "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_B.jsonl"
 
     # No screen, no conclusion. A pane running a shell, a cleared screen
     # or a scrolled viewport must produce silence, not a guess.

@@ -330,10 +330,27 @@ if [ -f "$HOME/.config/starship.toml" ]; then
     # address the FOCUSED pane — HERDR_ACTIVE_PANE_ID is injected at
     # keypress and never inherited, unlike HERDR_PANE_ID.
     if [ -f "$HOME/.config/herdr/config.toml##template" ]; then
+        # Assert the COMMAND LINE, not "does this string appear somewhere
+        # in the file" — the comment above the binding names `pane run`
+        # in order to explain why it is wrong, so a file-wide grep passes
+        # on the very prose warning against it.
+        #
+        # `agent prompt` over `pane run` is a safety property, not a
+        # style choice: this binding TYPES into the focused pane, and
+        # `pane run` would send "/copy" and a newline into a shell, an
+        # editor or a y/N prompt. `agent prompt` refuses with
+        # agent_not_found instead.
         run_test "herdr copy-last-reply binding present in template" \
-            "grep -qF \"pane run\" '$HOME/.config/herdr/config.toml##template' &&
-             grep -qF 'HERDR_ACTIVE_PANE_ID' '$HOME/.config/herdr/config.toml##template' &&
-             grep -qF \"'/copy'\" '$HOME/.config/herdr/config.toml##template'"
+            "cmd=\$(grep -E '^command = .*copy' '$HOME/.config/herdr/config.toml##template');
+             printf '%s' \"\$cmd\" | grep -qF 'agent prompt' &&
+             printf '%s' \"\$cmd\" | grep -qF 'HERDR_ACTIVE_PANE_ID' &&
+             printf '%s' \"\$cmd\" | grep -qF \"'/copy'\" &&
+             ! printf '%s' \"\$cmd\" | grep -qF 'pane run'"
+        # The tmux side needs its own guard, since if-shell is what
+        # stops the keystrokes reaching a non-Claude pane.
+        run_test "tmux copy binding is guarded, not unconditional" \
+            "grep -qF 'pane_current_command' $HOME/.tmux.conf &&
+             grep -qF 'not a Claude pane' $HOME/.tmux.conf"
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
@@ -704,9 +721,23 @@ CCL_EOF
     head -c 200000 /dev/zero | tr '\0' 'a' |
         jq -Rc '{type:"assistant",message:{content:[{type:"text",text:.}]}}' \
         > "$CCL_TMP/projects/$CCL_BIG_SLUG/fixture.jsonl"
+    # Assert the MESSAGE, not the source text. Grepping the script for
+    # `osc52_cap=74994` is a spelling check — it passes if the variable
+    # is assigned and never read — and discarding stderr while asserting
+    # exit 0 verifies neither the refusal nor the "out loud". This test
+    # guards the one bug fixed on the way out, so it must not be the
+    # thing this repo keeps catching: a check that passes without
+    # looking. Needs a tty, since the size guard is on the interactive
+    # branch; `script` supplies one.
+    # Read script(1)'s OWN transcript file rather than piping its stdout:
+    # script can exit before the pty is drained, so the pipe drops output
+    # intermittently — this test passed, then failed, then passed with no
+    # code change, which is the one failure mode worse than a red test.
     run_test "claude-copy-last refuses an oversize OSC 52 write out loud" \
-        "grep -q 'osc52_cap=74994' '$HOME/.local/bin/claude-copy-last' &&
-         bash -c \"cd '$CCL_TMP/big' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\" >/dev/null 2>&1"
+        "rm -f '$CCL_TMP/typescript' &&
+         (cd '$CCL_TMP/big' && script -q '$CCL_TMP/typescript' env $CCL_ENV '$HOME/.local/bin/claude-copy-last' >/dev/null 2>&1);
+         tr -d '\\r' < '$CCL_TMP/typescript' | grep -q 'exceeds the 74994-byte OSC 52 limit' &&
+         tr -d '\\r' < '$CCL_TMP/typescript' | grep -q 'copied 200000 chars'"
 
     # No transcript must fail loudly, not exit 0 with an empty clipboard.
     mkdir -p "$CCL_TMP/empty-projects" "$CCL_TMP/nowhere"

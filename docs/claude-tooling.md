@@ -54,10 +54,12 @@ ccl | glow       # piped: raw markdown on stdout
 ccl > notes.md
 ```
 
-It reads the newest transcript for the current directory, walking up
-from `$PWD`. Run from a shell that is what you meant; it makes no
-attempt to work out which pane you are in, because nothing needs it to
-any more.
+It answers **"the newest transcript for this directory"**, not "this
+pane's conversation" — it makes no attempt to work out which pane you
+are in, because only the old keybinding ever needed that. Say two
+sessions share `$HOME`: it will sometimes hand you the other one. The
+interactive run prints which session it read, so you can see when that
+happens; the piped form stays silent, because you asked for raw data.
 
 `/copy` also leaves its text in `/tmp/claude-501/response.md` on the
 machine running Claude, which covers most scripting without `ccl`.

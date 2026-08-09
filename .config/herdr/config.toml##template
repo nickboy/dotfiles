@@ -88,12 +88,21 @@ height = "70%"
 # from client-supplied keymaps (parse_client_keybindings clears
 # keys.command; deliberate policy, see docs/herdr-setup.md).
 #
+# `agent prompt`, NOT `pane run`. This binding TYPES into a pane, where
+# the old one only read a file out of band, so it must not fire at a
+# pane that is not an agent: HERDR_ACTIVE_PANE_ID is the focused pane,
+# and pressing this while looking at a shell, an editor or a y/N prompt
+# is an ordinary mistake to make. `pane run` would send "/copy" and a
+# newline into any of them — in vim that is a search, at a confirmation
+# prompt that is an answer. `agent prompt` refuses with agent_not_found
+# and types nothing (verified against a shell pane).
+#
 # Needs an idle Claude prompt in that pane. To copy while a turn is
 # still streaming, run `ccl` in a shell instead.
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"
-command = "herdr pane run \"$HERDR_ACTIVE_PANE_ID\" '/copy'"
+command = "herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy'"
 description = "copy last Claude message"
 
 # ── Plugin bindings ────────────────────────────────────────────────

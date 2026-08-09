@@ -206,11 +206,28 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
                     # also the rule every tab-rename plugin in the
                     # ecosystem independently arrived at.
                     #
+                    # DO NOT "improve" the all-digits test into a
+                    # comparison against this tab's `number` field, even
+                    # though it sits in the same JSON. They are different
+                    # things: the default label is `tab_idx + 1`
+                    # (positional), while `number` comes from
+                    # next_public_tab_number and is never reused. Close
+                    # one tab and an unnamed tab can display "4" while
+                    # the API reports number=5 — so that comparison would
+                    # stop recognising the default exactly on a
+                    # long-lived session, which is when it matters.
+                    # Costs one real edge: someone naming a tab "2024"
+                    # is read as unnamed and reclaimed once.
+                    #
                     # KNOWN LIMIT: two sessions that both believe they
                     # own one tab still alternate, once a minute each.
-                    # No local signal resolves that — it needs real
-                    # ownership, i.e. matching this process's tty
-                    # against the pane's. Follow-up.
+                    # The root fix is to verify the inherited
+                    # HERDR_TAB_ID rather than trust it — walk this
+                    # process's ancestry and intersect it with each
+                    # pane's shell_pid/foreground pids from
+                    # `pane process-info`, which identifies the pane
+                    # genuinely containing us. Buildable on 0.8.0 today;
+                    # cache it once per session, not per tick. Follow-up.
                     _mark=$(cat "$TAB_MARK" 2>/dev/null || printf '')
                     if [ "$_actual" = "$_mark" ]; then
                         claim_tab

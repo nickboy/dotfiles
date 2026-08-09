@@ -45,9 +45,20 @@ emit() {  # $1 = title
 # Inside a herdr pane, mirror the title onto the herdr TAB — the
 # equivalent of the tmux window rename that set-titles forwards.
 # Best-effort and stdout-silent: hook output must stay pure JSON.
+#
+# herdr has no provenance on tab names: `tab rename` is a bare string
+# setter with no source field, so nothing downstream can tell a name a
+# script wrote from one a person typed (verified against 0.8.0 —
+# Tab holds only `custom_name: Option<String>`). Every writer therefore
+# records what it set, keyed by TAB so other sessions can see it, and
+# claude-statusline reclaims only values that appear in that record.
+# Without this line a name written here is indistinguishable from a
+# hand-typed one and can never be repaired. Same convention as the
+# ecosystem's tab-rename plugins, which all converged on it.
 herdr_tab_name() {  # $1 = title
     [ -n "${HERDR_TAB_ID:-}" ] || return 0
     have herdr || return 0
+    printf '%s' "$1" > "/tmp/claude-tabname-${HERDR_TAB_ID//:/-}" 2>/dev/null || true
     herdr tab rename "$HERDR_TAB_ID" "$1" >/dev/null 2>&1 || true
 }
 

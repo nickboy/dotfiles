@@ -133,11 +133,41 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
    [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
     NAME_CACHE="/tmp/claude-statusline-name-${SESSION_ID}"
     PREV_NAME=$(cat "$NAME_CACHE" 2>/dev/null || printf '')
+    NEEDS_RENAME=0
+
     if [ "$PREV_NAME" != "$SESSION_NAME" ]; then
         printf '%s' "$SESSION_NAME" > "$NAME_CACHE" 2>/dev/null
-        [ -n "$PREV_NAME" ] &&
-            herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1 &
+        # Never on first sighting — see above.
+        [ -n "$PREV_NAME" ] && NEEDS_RENAME=1
+    else
+        # The cache says we are up to date, but it records what this
+        # SESSION was last called, not what the TAB is actually labelled.
+        # HERDR_TAB_ID is inherited from the launching pane, so a session
+        # started from one pane while working in another directory renames
+        # a tab it does not own — observed live: this tab was relabelled
+        # "herddeck/feat/per-model-weekly" by a session in another repo.
+        # Comparing names alone can never recover from that: renaming back
+        # to the same value looks like "no change" and does nothing.
+        # So re-read the real label periodically. Bounded to once a minute
+        # because the statusline runs every refreshInterval (5s) and this
+        # costs a socket round-trip; drift is cosmetic, so healing within
+        # a minute is ample.
+        TAB_STAMP="/tmp/claude-statusline-tabcheck-${SESSION_ID}"
+        _now=$(date +%s)
+        _last=$(stat -f %m "$TAB_STAMP" 2>/dev/null || printf '0')
+        if [ $(( _now - _last )) -ge 60 ]; then
+            : > "$TAB_STAMP" 2>/dev/null
+            ACTUAL_LABEL=$(herdr tab list 2>/dev/null |
+                jq -r --arg id "$HERDR_TAB_ID" \
+                    '.result.tabs[]? | select(.tab_id == $id) | .label // empty' \
+                2>/dev/null)
+            [ -n "$ACTUAL_LABEL" ] && [ "$ACTUAL_LABEL" != "$SESSION_NAME" ] &&
+                NEEDS_RENAME=1
+        fi
     fi
+
+    [ "$NEEDS_RENAME" = 1 ] &&
+        herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1 &
 fi
 
 # -----------------------------------------------------------------------------

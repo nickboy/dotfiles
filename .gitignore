@@ -69,6 +69,13 @@ Library/LaunchAgents/com.daily-maintenance.plist
 # machines restores everything from it)
 .config/yazi/plugins/*/
 .config/yazi/flavors/*/
+# ya pkg's LOCKFILE (rev + hash per plugin). `ya pkg upgrade` runs from
+# daily maintenance on every machine, so tracking this made the same file
+# go dirty everywhere and the machines drift apart. The tracked thing is
+# .config/yazi/plugins.list — the NAMES — which bootstrap replays with
+# `ya pkg add`. No pinning by design: every machine takes what upstream
+# has at install time.
+.config/yazi/package.toml
 
 # Zellij WASM plugins (binary, install separately)
 .config/zellij/plugins/*.wasm

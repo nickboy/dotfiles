@@ -162,10 +162,34 @@ run_test "Retired zinit plugins stay retired (zsh-eza)" \
 # yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
 # declaration must be yadm-tracked and every declared plugin installed,
 # or new machines silently lose the plugin set (the pre-2026-08 state)
+if [ -f "$HOME/.config/yazi/plugins.list" ]; then
+    # The NAME LIST is tracked; package.toml (ya pkg's lockfile) is NOT.
+    # `ya pkg upgrade` runs from daily maintenance on every machine, so a
+    # tracked lockfile went dirty everywhere and the machines drifted —
+    # one had 3 of 13 pins moved, another had all 13. Both halves are
+    # asserted, because tracking the wrong one of the two is the failure:
+    # tracking the lockfile brings the churn back, and untracking the list
+    # leaves bootstrap with nothing to install (the pre-2026-08 state,
+    # where a new machine's keymap referenced plugins that did not exist).
+    run_test "yazi plugins.list is tracked" \
+        "{ yadm ls-files .config/yazi/plugins.list 2>/dev/null || git ls-files .config/yazi/plugins.list 2>/dev/null; } | grep -q plugins.list"
+    run_test "yazi package.toml (the lockfile) is NOT tracked" \
+        "! { yadm ls-files .config/yazi/package.toml 2>/dev/null || git ls-files .config/yazi/package.toml 2>/dev/null; } | grep -q package.toml"
+    # bootstrap must replay the list, or a fresh machine installs nothing
+    run_test "bootstrap installs from the tracked plugin list" \
+        "grep -q 'plugins.list' '$HOME/.config/yadm/bootstrap' &&
+         grep -q 'ya pkg add' '$HOME/.config/yadm/bootstrap'"
+    # Every listed plugin must actually be declared, or the list has
+    # silently drifted from what the machine really has.
+    if [ -f "$HOME/.config/yazi/package.toml" ]; then
+        run_test "every listed yazi plugin is declared in package.toml" \
+            "! (while IFS= read -r p; do
+                  case \"\$p\" in ''|\\#*) continue ;; esac
+                  grep -qF \"use = \\\"\$p\\\"\" '$HOME/.config/yazi/package.toml' || echo \"missing \$p\"
+                done < '$HOME/.config/yazi/plugins.list' | grep -q .)"
+    fi
+fi
 if [ -f "$HOME/.config/yazi/package.toml" ]; then
-    # Tracked check works under yadm (real machines) or git (CI checkout)
-    run_test "yazi package.toml is tracked" \
-        "{ yadm ls-files .config/yazi/package.toml 2>/dev/null || git ls-files .config/yazi/package.toml 2>/dev/null; } | grep -q package.toml"
     # Plugin presence only where ya pkg has actually run (CI checkouts
     # have no plugins/ — contents are ignored build artifacts)
     if [ -d "$HOME/.config/yazi/plugins" ]; then

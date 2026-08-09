@@ -67,23 +67,55 @@ width = "80%"
 height = "70%"
 
 # Copy Claude's latest reply — same physical keystroke as tmux's
-# prefix+O (tmux "O" = shift+o; herdr spells the shift out). "shell"
-# type runs detached IN THE SERVER PROCESS with the FOCUSED PANE's cwd
-# (source-verified: navigate.rs custom_command_env sets cwd =
-# pane_cwd), so the script's pane-cwd session disambiguation carries
-# over, and the script delivers to the attached client's clipboard via
-# OSC 52 to the pane's pty (pbcopy alone would set the SERVER
-# clipboard). REMOTE ATTACH: this binding only fires with
+# prefix+O (tmux "O" = shift+o; herdr spells the shift out).
+#
+# This drives Claude Code's OWN `/copy` (shipped; verified in 2.1.220)
+# instead of reading the transcript ourselves. The difference that
+# matters is not the copying, it is WHOSE conversation gets copied:
+# `/copy` runs inside the pane's own session, so it never has to answer
+# "which of this pane's sessions did the user mean" — a question with no
+# reliable answer, since HERDR_PANE_ID is inherited by background jobs
+# and herdr keeps only one session per pane. It also gets the reply to
+# the CLIENT's clipboard over a remote attach, via OSC 52 through
+# herdr's pane pipeline, where a server-side pbcopy would not.
+#
+# HERDR_ACTIVE_PANE_ID is the focused pane at keypress — injected by
+# herdr, never inherited — so this always addresses the pane you are
+# looking at.
+#
+# REMOTE ATTACH: this binding only fires with
 # `--remote-keybindings=server` — the server strips [[keys.command]]
 # from client-supplied keymaps (parse_client_keybindings clears
-# keys.command; deliberate policy, see docs/herdr-setup.md). Silent on
-# success — just paste; failures toast via `herdr notification show`.
-# A native copy_last_agent_message action is in the upstream FR draft;
-# this is the workaround until then.
+# keys.command; deliberate policy, see docs/herdr-setup.md).
+#
+# `agent prompt`, NOT `pane run`. This binding TYPES into a pane, where
+# the old one only read a file out of band, so it must not fire at a
+# pane that is not an agent: HERDR_ACTIVE_PANE_ID is the focused pane,
+# and pressing this while looking at a shell, an editor or a y/N prompt
+# is an ordinary mistake to make. `pane run` would send "/copy" and a
+# newline into any of them — in vim that is a search, at a confirmation
+# prompt that is an answer. The `|| notification show` is not
+# decoration either: this spawns detached with stdio nulled, so a
+# refusal is otherwise INVISIBLE — tmux says "not a Claude pane" and
+# this side would say nothing, which is the silent-failure shape the
+# whole tool exists to avoid.
+# `agent prompt` refuses with agent_not_found
+# and types nothing (verified against a shell pane).
+#
+# NOT ALWAYS ONE KEYSTROKE. When the reply contains a code block,
+# `/copy` opens a selector and waits — so the pane goes modal until you
+# press Enter or Esc. Answer that picker with "3. Always copy full
+# response" ONCE per machine and it copies directly from then on
+# (revert via `/config`). The setting is `copyFullResponse` and it does
+# not live in ~/.claude/settings.json, so claude-settings-sync cannot
+# install it; docs/work-machine-checklist.md carries it instead.
+#
+# Needs an idle Claude prompt in that pane. To copy while a turn is
+# still streaming, run `ccl` in a shell instead.
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"
-command = "$HOME/.local/bin/claude-copy-last -c"
+command = "herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy' || herdr notification show 'copy' --body 'not a Claude pane'"
 description = "copy last Claude message"
 
 # ── Plugin bindings ────────────────────────────────────────────────

@@ -24,10 +24,26 @@ fi
 
 # Run the test suite if it exists
 if [ -f "$HOME/test-dotfiles.sh" ]; then
-    if ! bash "$HOME/test-dotfiles.sh"; then
+    # Tee to a file. A hook failure is the hardest kind to diagnose —
+    # it scrolls past, the commit aborts, and re-running the suite by
+    # hand often passes, which destroys the evidence. One suite run
+    # here failed and then passed six times standalone; without a
+    # transcript there was no way to know which test it was.
+    #
+    # PIPESTATUS, not the pipeline's status: `cmd | tee` returns TEE's
+    # exit code, which is 0 whenever the write succeeds. Writing this as
+    # `if ! bash … | tee …` would have silently disabled the gate — a
+    # check that passes without looking, added while fixing one.
+    _pc_log="${TMPDIR:-/tmp}/yadm-pre-commit-$$.log"
+    bash "$HOME/test-dotfiles.sh" 2>&1 | tee "$_pc_log"
+    _pc_rc=${PIPESTATUS[0]}
+    if [ "$_pc_rc" -ne 0 ]; then
         echo "❌ Pre-commit tests failed. Please fix issues before committing."
+        echo "   Full output: $_pc_log"
+        grep -E '✗' "$_pc_log" | head -20
         exit 1
     fi
+    rm -f "$_pc_log"
 else
     # Fallback to basic checks
     echo "Running basic syntax checks..."

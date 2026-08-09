@@ -66,16 +66,30 @@ maintenance.
    copy into silent nothing. The suite's fixture test
    ("claude-copy-last extracts latest message from fixture") is the
    canary — it fails the day the schema drifts.
-   The herdr delivery path (`-c` from `prefix+shift+o`) additionally
-   pins three herdr internals (all verified 0.8.0, watched by the
-   suite's stub-herdr OSC 52 tests): custom commands are stripped
-   from client keymaps (`parse_client_keybindings` —
-   `--remote-keybindings=server` is load-bearing), clipboard writes
-   over 192 KiB decoded are silently dropped (`MAX_CLIPBOARD_BYTES`,
-   script guards at 190 KiB), and `pane process-info` omits `tty` on
-   macOS so the script falls back to `/bin/ps -o tty=`. If an
-   upgrade changes any of these, the keybinding goes dark or the
-   toast fallback stops firing.
+   **MANUAL PROBE — the one thing here CI cannot check.** The copy
+   keybinding's behaviour lives inside Claude Code's TUI, which CI does
+   not have, and every automated assertion anyone proposed for it
+   reduced to grepping our own documentation. So this is a probe with a
+   trigger and an expected result rather than a fact to re-read:
+
+   > Press `prefix+shift+O` on a reply that **contains a code block**.
+   > Expected: one keypress, content on the clipboard. If a picker
+   > appears instead, either `copyFullResponse` is unset on this machine
+   > (see work-machine-checklist.md) or upstream changed the default —
+   > check `/config` before assuming the binding broke.
+
+   The `prefix+shift+o` keybinding now drives Claude Code's own
+   `/copy` rather than reading the transcript itself, which removed
+   most of what used to be pinned here. Two herdr behaviours still
+   matter: custom commands are stripped from client keymaps
+   (`parse_client_keybindings` — `--remote-keybindings=server` stays
+   load-bearing, since the binding is still a custom command), and
+   clipboard writes over 192 KiB decoded are dropped silently
+   (`MAX_CLIPBOARD_BYTES`) — which now applies to `/copy`'s OSC 52
+   too, not just ours. The tighter constraint is OSC 52's own: the
+   sequence caps at 100,000 bytes and base64 expands 4/3, so the real
+   limit on a reply is ~74,994 bytes; `ccl` guards at that number and
+   refuses out loud rather than letting the write vanish.
    **Open follow-ups on the herdr tab/identity work** (2026-08-08, all
    deliberately deferred, none urgent):
    - *Verify the tab, don't trust it.* `HERDR_TAB_ID` is injected at

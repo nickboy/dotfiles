@@ -565,7 +565,7 @@ if command -v herdr &> /dev/null; then
     # default is local, which makes the SERVER strip every custom
     # command out of the client's keymap (deliberate upstream: a client
     # config must not inject shell onto the server host). Every custom
-    # binding — prefix+shift+o (claude-copy-last), sessionizer,
+    # binding — prefix+shift+o (sends Claude Code's /copy), sessionizer,
     # termscope — then does nothing at all, with no error. Keybindings
     # are read ONCE at attach, so a client already running cannot be
     # fixed; it has to reattach. This cost a full debugging session.

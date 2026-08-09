@@ -6,7 +6,7 @@ inside a multiplexer. Everything here is bash + `jq`, installed by
 
 | Tool | What you get |
 | --- | --- |
-| [`ccl`](#ccl--copy-a-reply) | Copy a Claude reply as raw markdown |
+| [copying a reply](#copying-a-reply) | `/copy`, on the same keystroke |
 | [`claude-settings-sync`](#claude-settings-sync) | Shared settings without shared secrets |
 | [`hbox`](#hbox--remote-attach) | Remote attach that keeps your keybindings |
 | [pull hooks](#pull-hooks) | A pull leaves the machine ready |
@@ -14,12 +14,70 @@ inside a multiplexer. Everything here is bash + `jq`, installed by
 
 ---
 
-## `ccl` — copy a reply
+## Copying a reply
 
-The Claude app has a per-message copy button; a terminal has a screen.
-`ccl` reads the reply out of the session transcript instead, so you get
-the **original markdown** — unaffected by scrollback, line wrapping,
-colour or which terminal you are in.
+**Use Claude Code's own `/copy`.** It ships with Claude Code (verified
+in 2.1.220), copies the original markdown, and reaches your **client's**
+clipboard over a remote attach — it emits OSC 52, which herdr forwards
+to the attached client, so a Mac mini running the server does not end up
+with your text on its own pasteboard.
+
+The keybindings just drive it, so the keystroke is the same as before:
+
+| where | binding | what it does |
+| --- | --- | --- |
+| tmux | `prefix+O` | `send-keys '/copy' Enter` |
+| herdr | `prefix+shift+O` | `herdr pane run "$HERDR_ACTIVE_PANE_ID" '/copy'` |
+
+`HERDR_ACTIVE_PANE_ID` is the focused pane at keypress — injected by
+herdr, never inherited — so it always addresses the pane you are looking
+at.
+
+**One-time setup, per machine.** When the reply contains a code block,
+`/copy` opens a selector instead of copying:
+
+```text
+Select content to copy:
+❯ 1. Full response
+  2. <the code block>
+  3. Always copy full response   Skip this picker in the future
+```
+
+So the keystroke is *not* always one keystroke — it depends on the
+content of the reply, and for work in this repo most replies contain
+code. **Choose option 3 once** and it copies directly from then on
+(revert with `/config`).
+
+This is deliberately not installed by `claude-settings-sync`. Choosing
+option 3 writes `"copyFullResponse": true` into **`~/.claude.json`** —
+measured, by selecting it and diffing, then reverting — and that file is
+untracked, machine-local Claude Code state that the sync script never
+touches. `/config` options are split across two files in this build
+(`theme` goes to `settings.json`, `autoUpdates` to `~/.claude.json`), so
+the destination cannot be guessed from the category. It is a checklist
+item because the repo genuinely cannot ship it, not because we did not
+look.
+
+**Why this replaced a much larger thing.** Reading the transcript
+ourselves meant answering "which conversation does this pane mean?", and
+that question has no reliable answer: `HERDR_PANE_ID` is inherited by
+background jobs, herdr keeps only one session per pane and refuses to
+replace it for a newly started one, and Claude Code's agent view can
+render a session hosted by a *different* pane. `/copy` runs inside the
+pane's own conversation, so it never asks. Marker files, process-tree
+checks and screen matching all went away with the question.
+
+### `ccl` — for the one thing `/copy` structurally cannot do
+
+`/copy N` reaches back N replies, so that is not the reason. `/copy` is
+declared `requires: {ink: true}`: it needs the interactive TUI and only
+ever writes to the **clipboard**. `ccl` exists for **stdout** — piping,
+redirection, scripting. That is a data path, not a convenience.
+
+A secondary use: `/copy` typed mid-turn *queues* rather than failing, so
+what is genuinely unavailable is "copy the previous reply right now,
+without waiting for this one to finish". `ccl` reads from disk, so it
+can.
 
 ```bash
 ccl              # latest reply → clipboard
@@ -28,21 +86,21 @@ ccl | glow       # piped: raw markdown on stdout
 ccl > notes.md
 ```
 
-Bound to `prefix+O` in tmux and `prefix+shift+O` in herdr.
+It answers **"the newest transcript for this directory"**, not "this
+pane's conversation" — it makes no attempt to work out which pane you
+are in, because only the old keybinding ever needed that. Say two
+sessions share `$HOME`: it will sometimes hand you the other one. The
+interactive run prints which session it read, so you can see when that
+happens; the piped form stays silent, because you asked for raw data.
 
-**How it picks the transcript.** Inside herdr it asks which Claude
-session that pane holds and reads exactly that one. This matters when
-several agents share a directory: choosing "the most recently written
-file" pastes the neighbouring pane's reply, which is a confusing way to
-find out your tooling is guessing.
+`/copy` also leaves its text in `/tmp/claude-501/response.md` on the
+machine running Claude, which covers most scripting without `ccl`.
 
-Outside herdr it falls back to the newest transcript for the current
-directory, walking up from `$PWD` to find it.
-
-**When nothing happens.** Under a keybinding the script has no stdout,
-so failures surface as a herdr notification: no transcript for this
-directory, no message that far back, or a reply too large for the
-clipboard (herdr silently drops writes over 192 KiB).
+**Size limit.** OSC 52 caps the whole sequence at 100,000 bytes, and
+base64 expands by 4/3, so the real limit on the reply is **~74,994
+bytes**. Above that every layer drops the write silently — which reads
+as "the copy worked but the paste is empty" — so `ccl` refuses and says
+so instead.
 
 ---
 

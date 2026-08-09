@@ -709,6 +709,8 @@ case "\$1 \$2" in
         else
             printf '{"result":{"process_info":{"tty":"%s"}}}' "$CCL_TMP/tty-capture"
         fi ;;
+    'pane read')
+        cat "$CCL_TMP/stub-screen" 2>/dev/null ;;
     'notification show')
         shift 2; printf '%s\n' "\$*" >> "$CCL_TMP/notify-log" ;;
 esac
@@ -960,6 +962,65 @@ CCL_HERDR2
              claude_pane_marker_sweep \"$CCL_TMP/projects\"' &&
          [ -e '$CCL_TMP/sweep/w1-p8--eeee0000-0000-0000-0000-00000000eeee' ]"
     rm -rf "$CCL_TMP/sweep"
+
+    # WHAT THE PANE DISPLAYS vs WHERE THE SESSION RUNS. Claude Code's
+    # agent view renders a session hosted by ANOTHER pane's process, so
+    # the inherited pane id, the process tree and herdr's registration all
+    # agree with each other and all three are wrong about what the user is
+    # looking at. Observed live: the Herddeck pane displayed a background
+    # job launched from a different pane, and ccl copied the pane's own
+    # (six-hour-stale) session, correctly by every rule it had.
+    #
+    # The rendered screen is the only signal derived from the user's
+    # attention. This is STRICTLY A VERIFIER — it cannot change the
+    # selection, so a bad needle costs a missing warning, never a wrong
+    # answer.
+    rm -f "$CCL_TMP/markers"/w1-p1--* "$CCL_TMP/stub-session"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_STALE"
+    printf 'a distinctive sentence that only the stale session ever said\n' \
+        > "$CCL_TMP/stub-screen"
+    {
+        printf '{"type":"user","timestamp":"2020-01-01T00:00:00.000Z","message":{"content":"q"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"a distinctive sentence that only the stale session ever said"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_STALE.jsonl"
+    run_test "claude-copy-last stays silent when the pane shows what it copied" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         ! grep -q 'WARNING' '$CCL_TMP/notify-log'"
+
+    # Now the screen shows text belonging to a session that is NOT a
+    # candidate for this pane at all — the live failure, reduced.
+    {
+        printf '{"type":"user","timestamp":"2031-01-01T00:00:00.000Z","message":{"content":"q"}}\n'
+        printf '{"type":"assistant","message":{"content":[{"type":"text","text":"this line belongs to the session on screen and nowhere else"}]}}\n'
+    } > "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl"
+    printf 'this line belongs to the session on screen and nowhere else\n' \
+        > "$CCL_TMP/stub-screen"
+    run_test "claude-copy-last warns when the pane is showing a different conversation" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         grep -q 'WARNING: this pane is showing cccccccc' '$CCL_TMP/notify-log'"
+
+    # A relay must NOT trigger it: agents quote each other's replies
+    # inside tool arguments, and a whole-file match would name every
+    # session in the relay rather than the one that wrote it. Only an
+    # ASSISTANT TEXT BLOCK counts.
+    printf '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","input":{"command":"this line belongs to the session on screen and nowhere else"}}]}}\n' \
+        >> "$CCL_TMP/projects/$CCL_SLUG/$CCL_MUTE_A.jsonl"
+    run_test "…and a relayed quotation of that text does not implicate the relayer" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         grep -q 'showing cccccccc' '$CCL_TMP/notify-log' &&
+         ! grep -q 'showing 11111111' '$CCL_TMP/notify-log'"
+
+    # No screen, no conclusion. A pane running a shell, a cleared screen
+    # or a scrolled viewport must produce silence, not a guess.
+    : > "$CCL_TMP/stub-screen"
+    run_test "…and an empty screen produces no verdict at all" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         ! grep -q 'WARNING' '$CCL_TMP/notify-log'"
+    rm -f "$CCL_TMP/stub-screen" "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl"
 
     rm -f "$CCL_TMP/stub-session" "$CCL_TMP/markers"/w1-p1--*
     rm -f "$CCL_TMP/projects/$CCL_SLUG/$CCL_STALE.jsonl" \

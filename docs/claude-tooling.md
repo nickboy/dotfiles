@@ -55,6 +55,26 @@ live pane: the foreground session's transcript was the more recently
 written, while its last human turn was eleven hours older than the
 background job's sitting beside it. mtime picked the stale one.
 
+**One thing it cannot know, and says so.** `ccl` answers "which
+conversation belongs to this pane". Claude Code's agent view can render a
+conversation that belongs to *another* pane — a background job launched
+elsewhere — and then the inherited pane id, the process tree and herdr's
+registration all agree with each other and all three are wrong about what
+you are looking at.
+
+So after choosing, `ccl` checks the pane's rendered screen against what it
+picked. If they disagree it says so:
+
+```text
+copied 333 chars from 3bcaa0fe — WARNING: this pane is showing 8f485a02
+```
+
+This is a verifier, never a selector: it cannot change the answer, only
+describe it, so a screen it cannot read costs a missing warning rather than
+a wrong copy. Matching is restricted to **assistant text blocks**, because
+agents relay each other's replies inside tool arguments and a whole-file
+search names everyone in the relay instead of the author.
+
 **It tells you what it did.** Every copy reports the session, how it
 was chosen, and how long ago you last spoke there:
 

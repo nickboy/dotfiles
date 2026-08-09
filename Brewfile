@@ -171,6 +171,11 @@ brew "wget"
 brew "xh"
 # An extremely fast Python package installer and resolver, written in Rust
 brew "uv"
+# Image preview backend for yazi. Declared because without it yazi still
+# starts, still loads every plugin, and simply shows no images — a silent
+# degradation with nothing to read. It was installed by hand here and
+# missing from this file, so a fresh machine got exactly that.
+brew "jstkdng/programs/ueberzugpp"
 # Yet Another Dotfiles Manager
 brew "yadm"
 # Blazing fast terminal file manager written in Rust

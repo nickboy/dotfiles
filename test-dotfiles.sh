@@ -768,7 +768,7 @@ CS_STUB
     # Both caches must be cleared: the drift check is throttled by the
     # mtime of its own stamp file, so a leftover one makes these tests
     # pass or fail depending on how recently the suite last ran.
-    rm -f /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs
+    rm -f /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs /tmp/claude-tabname-w1-t9
     cs_label alpha
     cs_run alpha
     run_test "claude-statusline: first sighting seeds without renaming the tab" \
@@ -784,41 +784,58 @@ CS_STUB
     run_test "claude-statusline: a /rename propagates to the herdr tab" \
         "[ \"\$(grep -c 'tab rename w1:t9 beta' '$CS_TMP/calls.log')\" -eq 1 ]"
 
-    # Drift repair: HERDR_TAB_ID is inherited from the launching pane, so
-    # a session working elsewhere can rename a tab it does not own. The
-    # session name has NOT changed here, so name-comparison alone can
-    # never notice — only re-reading the tab's real label can. A slash
-    # marks the "project/branch" shape claude-name-session produces.
+    # Drift repair. HERDR_TAB_ID is inherited from the launching pane, so
+    # a session working elsewhere can rename a tab it does not own; the
+    # session name has NOT changed, so only re-reading the real label can
+    # notice. A label is reclaimable when some writer RECORDED it —
+    # herdr's tab.rename carries no source field, so that record is the
+    # only provenance available.
     : > "$CS_TMP/calls.log"
-    cs_label "herddeck/feat/some-branch"
+    cs_label "home"                              # slash-free ON PURPOSE:
+    printf 'home' > /tmp/claude-tabname-w1-t9    # the shape rule missed this
     rm -f /tmp/claude-statusline-tabcheck-utcs   # force the check to be due
     cs_run beta
-    run_test "claude-statusline: repairs a tab renamed by another session" \
+    run_test "claude-statusline: reclaims a label another writer recorded" \
         "[ \"\$(grep -c 'tab rename w1:t9 beta' '$CS_TMP/calls.log')\" -eq 1 ]"
 
-    # THE LIMIT ON THAT REPAIR. A hand-named tab has no slash and must
-    # survive, or mirroring makes manual names impossible to keep — this
-    # regressed live, clobbering a tab named "Reviewer" back to its
-    # session's "home".
+    # herdr renders an unnamed tab as its bare NUMBER (tab_display_name
+    # falls back to the index when custom_name is unset), so a numeric
+    # label means nobody has claimed it.
+    : > "$CS_TMP/calls.log"
+    cs_label "9"
+    rm -f /tmp/claude-tabname-w1-t9 /tmp/claude-statusline-tabcheck-utcs
+    cs_run beta
+    run_test "claude-statusline: claims an unnamed (numeric) tab" \
+        "[ \"\$(grep -c 'tab rename w1:t9 beta' '$CS_TMP/calls.log')\" -eq 1 ]"
+
+    # THE LIMIT, and the regression that motivated it: a label nobody
+    # recorded was typed by a person and must survive. This clobbered a
+    # tab named "Reviewer" back to its session's "home" in real use.
     : > "$CS_TMP/calls.log"
     cs_label "Reviewer"
-    rm -f /tmp/claude-statusline-tabcheck-utcs
+    rm -f /tmp/claude-tabname-w1-t9 /tmp/claude-statusline-tabcheck-utcs
     cs_run beta
     run_test "claude-statusline: leaves a hand-named tab alone" \
         "! grep -q 'tab rename' '$CS_TMP/calls.log'"
 
-    # THE KNOWN LIMIT, pinned deliberately rather than left to be
-    # rediscovered: claude-name-session omits "/branch" on main, master,
-    # trunk and outside git, so a machine name from a default branch is
-    # slash-free and indistinguishable from a hand-typed one. It is NOT
-    # reclaimed. Under-reclaiming leaves a stale label — the behaviour
-    # that predates this feature — which is the safe direction.
+    # A human name is safe even when it LOOKS machine-made — the old
+    # shape rule reclaimed anything containing a slash.
     : > "$CS_TMP/calls.log"
-    cs_label "herddeck"
-    rm -f /tmp/claude-statusline-tabcheck-utcs
+    cs_label "notes/todo"
+    rm -f /tmp/claude-tabname-w1-t9 /tmp/claude-statusline-tabcheck-utcs
     cs_run beta
-    run_test "claude-statusline: a slash-free machine name is left alone (known limit)" \
+    run_test "claude-statusline: a hand-named tab with a slash is still safe" \
         "! grep -q 'tab rename' '$CS_TMP/calls.log'"
+
+    # A rename must RECORD what it set, or the next session sees an
+    # unrecorded label and treats this session's own name as hand-typed.
+    # Own scenario: the test above deliberately suppresses the rename.
+    : > "$CS_TMP/calls.log"
+    cs_label "9"
+    rm -f /tmp/claude-tabname-w1-t9 /tmp/claude-statusline-tabcheck-utcs
+    cs_run beta
+    run_test "claude-statusline: a rename records the label it set" \
+        "[ \"\$(cat /tmp/claude-tabname-w1-t9 2>/dev/null)\" = beta ]"
 
     # ...and the check runs at most once a minute, or it degrades into a
     # socket call every 5s. touch (not elapsed wall-clock) decides
@@ -829,7 +846,7 @@ CS_STUB
     cs_run beta
     run_test "claude-statusline: drift check is throttled to once a minute" \
         "[ ! -s '$CS_TMP/calls.log' ]"
-    rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs
+    rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs /tmp/claude-tabname-w1-t9
 fi
 
 # gitleaks pre-commit engine: same invocation the yadm hook uses, against

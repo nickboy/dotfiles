@@ -133,12 +133,30 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
    [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
     NAME_CACHE="/tmp/claude-statusline-name-${SESSION_ID}"
     PREV_NAME=$(cat "$NAME_CACHE" 2>/dev/null || printf '')
+    # Keyed by TAB, not session: a tab stolen by another session has to
+    # be recognisable to the session it was stolen from.
+    TAB_MARK="/tmp/claude-tabname-${HERDR_TAB_ID//:/-}"
+
+    # Claim the tab AND record that a machine set this label. herdr's
+    # tab.rename carries no source field, so this record is the only way
+    # anything can later tell a scripted name from a typed one.
+    claim_tab() {
+        printf '%s' "$SESSION_NAME" > "$TAB_MARK" 2>/dev/null
+        herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1
+    }
 
     if [ "$PREV_NAME" != "$SESSION_NAME" ]; then
         printf '%s' "$SESSION_NAME" > "$NAME_CACHE" 2>/dev/null
+        # The OFFICIAL channel for agent identity: pane metadata is
+        # per-source, so several sessions sharing a pane each get their
+        # own slot instead of overwriting one string. Unlike the tab
+        # name this cannot collide, so it is reported even on first
+        # sighting. herdr's own docs point hooks here.
+        ( herdr pane report-metadata "${HERDR_PANE_ID:-}" \
+            --source "claude-${SESSION_ID}" \
+            --display-agent "$SESSION_NAME" >/dev/null 2>&1 ) &
         # Never on first sighting — see above.
-        [ -n "$PREV_NAME" ] &&
-            herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1 &
+        [ -n "$PREV_NAME" ] && claim_tab &
     else
         # The cache says we are up to date, but it records what this
         # SESSION was last called, not what the TAB is actually labelled.
@@ -171,31 +189,37 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
                         '.result.tabs[]? | select(.tab_id == $id) | .label // empty' \
                     2>/dev/null)
                 if [ -n "$_actual" ] && [ "$_actual" != "$SESSION_NAME" ]; then
-                    # A hand-named tab and a stolen one look identical
-                    # here — label != session name is the only signal —
-                    # and clobbering a human's choice is far worse than
-                    # leaving a stale label. So reclaim ONLY names that
-                    # are provably machine-made, and accept missing some.
+                    # Reclaim only what a machine provably wrote. Two
+                    # such labels exist: one some writer recorded in
+                    # TAB_MARK, and herdr's own default, which
+                    # tab_display_name renders as the bare tab NUMBER
+                    # when custom_name is unset. Anything else was typed
+                    # by a person and is left alone permanently — a
+                    # hand-named tab and a stolen one are otherwise
+                    # identical, and overwriting someone's choice is far
+                    # worse than leaving a stale label.
                     #
-                    # A slash is that proof: claude-name-session appends
-                    # "/branch" only for a NON-default branch. On main,
-                    # master, trunk, a detached head, or a non-git
-                    # directory it emits a bare project name with no
-                    # slash — "Herddeck", "home" — which this rule
-                    # cannot tell from a person typing "Reviewer", so a
-                    # tab stolen by a session on a default branch stays
-                    # stolen. Under-reclaiming leaves a stale label,
-                    # which is what happened before any of this existed.
-                    # Rename the SESSION if you want the tab to follow.
+                    # This replaces guessing at the name's SHAPE. That
+                    # guess (a slash means machine-made) missed every
+                    # session on main/master/trunk, since
+                    # claude-name-session omits "/branch" there. It is
+                    # also the rule every tab-rename plugin in the
+                    # ecosystem independently arrived at.
                     #
-                    # The real fix is to stop inferring: have every
-                    # machine writer record the label it set, keyed by
-                    # tab, and reclaim only recorded values. Then shape
-                    # stops mattering. Follow-up.
-                    case "$_actual" in
-                        */*) herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" \
-                                >/dev/null 2>&1 ;;
-                    esac
+                    # KNOWN LIMIT: two sessions that both believe they
+                    # own one tab still alternate, once a minute each.
+                    # No local signal resolves that — it needs real
+                    # ownership, i.e. matching this process's tty
+                    # against the pane's. Follow-up.
+                    _mark=$(cat "$TAB_MARK" 2>/dev/null || printf '')
+                    if [ "$_actual" = "$_mark" ]; then
+                        claim_tab
+                    else
+                        case "$_actual" in
+                            *[!0-9]*) ;;          # a person named this
+                            *) claim_tab ;;       # bare number: unnamed
+                        esac
+                    fi
                 fi
             ) &
         fi

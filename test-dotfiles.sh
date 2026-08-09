@@ -890,6 +890,77 @@ CCL_HERDR2
     run_test "…and with herdr silent it falls back to activity, not glob order" \
         "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'MUTE B' ]"
 
+    # PARTIAL MEMBERSHIP. Markers can be INCOMPLETE — a session whose
+    # statusline is not ticking leaves none — and a pane with one marked
+    # and one unmarked session is indistinguishable from a healthy
+    # single-session pane: one candidate, ranked against nothing,
+    # selected, reported as "1 in pane", every guard passing. Observed
+    # live on w1:p1. herdr knows the unmarked session independently, so
+    # its registration JOINS the candidate set rather than waiting behind
+    # it as a fallback tier.
+    rm -f "$CCL_TMP/markers"/w1-p1--*
+    : > "$CCL_TMP/markers/w1-p1--$CCL_STALE"
+    printf '%s' "$CCL_LIVE" > "$CCL_TMP/stub-session"
+    run_test "claude-copy-last: herdr's session joins the candidate set, not just the fallback" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+
+    # AN UNREADABLE TRANSCRIPT IS NOT "NOBODY SPOKE HERE". Collapsing the
+    # two lets a candidate that might hold the most recent human turn lose
+    # silently to a readable one, and the tool then prints a confident age
+    # for the wrong session. It must be counted and said out loud.
+    printf 'not json at all\n' > "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_LIVE"
+    : > "$CCL_TMP/markers/w1-p1--$CCL_FOREIGN"
+    rm -f "$CCL_TMP/stub-session"
+    run_test "claude-copy-last reports an unreadable candidate instead of ranking it" \
+        "rm -f '$CCL_TMP/notify-log' &&
+         bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last' -c\" &&
+         grep -q '1 unreadable' '$CCL_TMP/notify-log'"
+    # …and the readable candidate is still the one selected: the broken
+    # one is skipped, not silently ranked as "never spoken to".
+    run_test "…and still selects the candidate it could read" \
+        "[ \"\$(bash -c \"cd '$CCL_TMP/work' && $CCL_ENV '$HOME/.local/bin/claude-copy-last'\")\" = 'LIVE REPLY' ]"
+    rm -f "$CCL_TMP/markers/w1-p1--$CCL_FOREIGN" \
+          "$CCL_TMP/projects/$CCL_SLUG/$CCL_FOREIGN.jsonl"
+
+    # A SESSION ID OUT OF A FILENAME IS UNVALIDATED INPUT, and it is used
+    # in two glob contexts downstream. A marker named `w1-p1--*` yields
+    # the id `*`, and `find -name "*.jsonl"` then matches the first
+    # transcript anywhere under the projects root. Only the same user can
+    # create that file — and the same user has already left a phantom
+    # marker in a live pane once this week.
+    : > "$CCL_TMP/markers/w1-p1--*"
+    run_test "a marker with a glob metacharacter is not accepted as a session id" \
+        "[ -z \"\$(CLAUDE_PANE_MARKER_DIR='$CCL_TMP/markers' bash -c '
+             . \"$HOME/.local/lib/claude-pane-marker.sh\"
+             claude_pane_marker_sessions w1:p1' | grep -Fx '*')\" ]"
+    rm -f "$CCL_TMP/markers/w1-p1--*"
+
+    # THE SWEEP. The per-copy janitor only ever visits its own pane's key,
+    # so a CLOSED pane's markers are never looked at again. Reaping needs
+    # both conditions: a dead session whose transcript survives is still
+    # the right answer for its pane until someone speaks there again.
+    mkdir -p "$CCL_TMP/sweep"
+    : > "$CCL_TMP/sweep/.swept"
+    printf 'pid=999999\n' > "$CCL_TMP/sweep/w1-p8--$CCL_STALE"
+    printf 'pid=999999\n' > "$CCL_TMP/sweep/w1-p8--ffffffff-0000-0000-0000-00000000ffff"
+    run_test "the sweep reaps a dead marker with no transcript, and keeps one with" \
+        "rm -f '$CCL_TMP/sweep/.swept' &&
+         CLAUDE_PANE_MARKER_DIR='$CCL_TMP/sweep' bash -c '
+             . \"$HOME/.local/lib/claude-pane-marker.sh\"
+             claude_pane_marker_sweep \"$CCL_TMP/projects\"' &&
+         [ -e '$CCL_TMP/sweep/w1-p8--$CCL_STALE' ] &&
+         [ ! -e '$CCL_TMP/sweep/w1-p8--ffffffff-0000-0000-0000-00000000ffff' ]"
+    # …and it must not run twice within the hour, or every live session's
+    # statusline would walk the directory every few seconds.
+    run_test "…and is throttled after it has run" \
+        "printf 'pid=999999\\n' > '$CCL_TMP/sweep/w1-p8--eeee0000-0000-0000-0000-00000000eeee' &&
+         CLAUDE_PANE_MARKER_DIR='$CCL_TMP/sweep' bash -c '
+             . \"$HOME/.local/lib/claude-pane-marker.sh\"
+             claude_pane_marker_sweep \"$CCL_TMP/projects\"' &&
+         [ -e '$CCL_TMP/sweep/w1-p8--eeee0000-0000-0000-0000-00000000eeee' ]"
+    rm -rf "$CCL_TMP/sweep"
+
     rm -f "$CCL_TMP/stub-session" "$CCL_TMP/markers"/w1-p1--*
     rm -f "$CCL_TMP/projects/$CCL_SLUG/$CCL_STALE.jsonl" \
           "$CCL_TMP/projects/$CCL_SLUG/$CCL_LIVE.jsonl" \

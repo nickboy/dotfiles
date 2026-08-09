@@ -113,6 +113,13 @@ if [ -n "${HERDR_PANE_ID:-}" ] && [ -r "$HOME/.local/lib/claude-pane-marker.sh" 
     # shellcheck source=/dev/null
     . "$HOME/.local/lib/claude-pane-marker.sh"
     claude_pane_marker_write "$HERDR_PANE_ID" "$SESSION_ID" || true
+    # Reap markers for panes that no longer exist. claude-copy-last's
+    # janitor only ever visits its own pane's key, so a closed pane's
+    # markers are never looked at again and would accumulate forever.
+    # Self-throttled to once an hour inside the function; backgrounded so
+    # a slow directory walk can never delay the prompt.
+    ( claude_pane_marker_sweep "${CLAUDE_PROJECTS_DIR:-$HOME/.claude/projects}" \
+        >/dev/null 2>&1 || true ) &
 fi
 
 # Feed HerdDeck's Stream Deck context donut with the percentage we just

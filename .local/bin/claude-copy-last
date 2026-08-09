@@ -287,6 +287,86 @@ if [ "$have_markers" = 1 ]; then
     last_turn=$(claude_pane_last_user_turn "$transcript")
 fi
 
+# Does the pane actually SHOW the conversation we just selected?
+#
+# Every signal used above answers "where does this session RUN" — the
+# inherited pane id, the process tree, herdr's registration. Claude Code's
+# agent view decouples that from "what does this pane DISPLAY": a
+# background job launched from one pane can be rendered in another, and
+# then all three signals agree with each other and all three are wrong
+# about what you are looking at. Observed live, and it is why this exists.
+#
+# The rendered screen is the one signal derived from the user's attention
+# rather than from process lineage, and HERDR_ACTIVE_PANE_ID — injected by
+# herdr at keypress from the FOCUSED pane, never inherited — is what names
+# it. Measured on the failure that motivated this: of 12 screen lines, 7
+# identified the displayed session uniquely, 5 matched nothing (box-drawing
+# rows and reflowed fragments), and NONE matched the wrong session.
+#
+# STRICTLY A VERIFIER. It cannot change the selection, only describe it, so
+# a bad needle costs a missing warning rather than a wrong answer. The fast
+# path is a plain grep over the selected transcript; the stricter and more
+# expensive search runs only when that fails.
+screen_shows=""
+verify_against_screen() {
+    [ -n "${HERDR_ACTIVE_PANE_ID:-}" ] || return 0
+    local screen needles hit
+    # 40 lines, not 200: measured on a live pane, `recent-unwrapped` with
+    # --lines 200 took 6.8 SECONDS while --lines 40 took 16ms — a
+    # keypress cannot pay the former, and the extra scrollback adds
+    # nothing, since the reply you are looking at is at the bottom.
+    screen=$("$herdr_bin" pane read "$HERDR_ACTIVE_PANE_ID" \
+        --source recent-unwrapped --lines 40 --format text 2>/dev/null) || return 0
+    [ -n "$screen" ] || return 0
+    # Medium-length plain lines only. NOT the longest: a long line is the
+    # one the terminal truncated at the pane width, so it appears nowhere
+    # on disk — picking it was the mistake that made this look unworkable.
+    needles=$(printf '%s\n' "$screen" |
+        sed 's/\033\[[0-9;]*m//g; s/^[[:space:]⏺✻❯│┌└├─]*//; s/[[:space:]]*$//' |
+        grep -vE '^[─━│┌└├┤┬┴┼╭╮╯╰[:space:]]*$' |
+        awk 'length($0) >= 15 && length($0) <= 70' | sort -u | head -8)
+    [ -n "$needles" ] || return 0
+    # All needles in ONE grep pass per file, not one pass per needle:
+    # transcripts run to several MB and the naive loop cost 7.6 seconds on
+    # a keypress. -f turns eight passes into one.
+    local nf
+    nf=$(mktemp "${TMPDIR:-/tmp}/ccl-needles.XXXXXX") || return 0
+    printf '%s\n' "$needles" > "$nf"
+    if grep -qFf "$nf" "$transcript" 2>/dev/null; then
+        rm -f "$nf"
+        return 0   # confirmed: the pane shows what we copied. Say nothing.
+    fi
+    # Nothing on screen appears in what we selected. Find what it does
+    # belong to. grep shortlists cheaply; jq then insists on an ASSISTANT
+    # TEXT BLOCK, because agents relay each other's replies inside tool
+    # arguments, and a whole-file match names every session in the relay
+    # rather than the one that wrote it.
+    while IFS= read -r hit; do
+        [ -n "$hit" ] || continue
+        [ "$hit" = "$transcript" ] && continue
+        # `. as $n` is load-bearing: writing `any($t | index(.))` rebinds
+        # `.` to $t through the pipe, so index() searches the text for
+        # ITSELF and every block matches. That bug named the relayer
+        # instead of the author, and only the relay test caught it.
+        if [ "$(jq -rs --rawfile needles "$nf" '
+                ($needles | split("\n") | map(select(length > 0))) as $ns
+                | [.[] | select(.type == "assistant")
+                   | [.message.content[]? | select(.type == "text") | .text]
+                   | join(" ")]
+                | map(select(. as $t | $ns | any(. as $n | $t | index($n) != null)))
+                | length' "$hit" 2>/dev/null)" -gt 0 ] 2>/dev/null; then
+            screen_shows=${hit##*/}
+            screen_shows=${screen_shows%.jsonl}
+            break
+        fi
+    done <<HITS
+$(grep -lFf "$nf" "$projects_root"/*/*.jsonl 2>/dev/null)
+HITS
+    rm -f "$nf"
+    return 0
+}
+verify_against_screen || true
+
 # Sidechain entries are subagent traffic, not the conversation. One turn
 # can hold several text blocks (status notes between tool calls); each
 # counts as one step of -n, latest first. tail bounds the jq parse.
@@ -419,6 +499,14 @@ provenance() {
     # disagree, and you should be able to see which one you got.
     if [ "${transcript%/*}" != "$proj" ]; then
         extra="$extra, from ${transcript%/*}"
+    fi
+    # The loudest thing this line can say: you are looking at one
+    # conversation and you copied a different one. Nothing else in the
+    # system can notice that, so it goes first and it is not subtle.
+    if [ -n "$screen_shows" ]; then
+        printf '%s (%s) — WARNING: this pane is showing %s' \
+            "$sid_short" "$extra" "${screen_shows%%-*}"
+        return 0
     fi
     age=$(human_age "$last_turn")
     if [ "$no_turn" = 1 ]; then

@@ -89,10 +89,16 @@ Copying a whole block comes in two flavours. `prefix+P` grabs the
 previous command's complete output by walking the OSC 133 prompt
 marks that Ghostty's zsh shell integration emits (they survive into
 tmux panes), so it covers shell commands only. Claude Code's TUI
-emits no OSC 133 marks at all, which is why `prefix+O` — and the
-`ccl` alias for `~/.local/bin/claude-copy-last` — skips the screen
-entirely and reads the session transcript JSONL instead, returning
-the original markdown rather than the rendered, wrapped text.
+emits no OSC 133 marks at all, which is why `prefix+O` does not touch
+the screen: it types Claude Code's own `/copy` into the pane, and
+that returns the original markdown rather than the rendered, wrapped
+text. Note it is one keystroke only after you have answered `/copy`'s
+selector with "Always copy full response" — until then a reply
+containing a code block opens a picker and waits, which is a
+content-dependent behaviour worth knowing about before you conclude
+the binding is broken. `ccl` remains for the one case `/copy` cannot serve — copying
+while a turn is still streaming, which needs the transcript on disk
+rather than an idle prompt.
 
 Notes on divergences:
 
@@ -103,11 +109,14 @@ Notes on divergences:
 - `prefix+P` has no herdr equivalent yet (copy mode lacks prompt
   jumps; drafted as an upstream feature request). `prefix+O` works in
   both: tmux binds `O`, herdr spells it `prefix+shift+o` — the same
-  physical keystroke — as a `type = "shell"` custom command that runs
-  `claude-copy-last -c` with the focused pane's cwd. herdr keybinds
-  are read at client attach, so after config changes reload the
-  server AND re-attach the client. A native
-  `copy_last_agent_message` action remains in the FR draft.
+  physical keystroke. Both send `/copy` to the pane; herdr does it
+  through a `type = "shell"` custom command targeting
+  `$HERDR_ACTIVE_PANE_ID`, the focused pane at keypress. herdr
+  keybinds are read at client attach, so after config changes reload
+  the server AND re-attach the client. The FR for a native
+  `copy_last_agent_message` action is withdrawn — Claude Code shipping
+  `/copy` makes a multiplexer-side action unnecessary, since `/copy`
+  already runs inside the pane's own conversation.
 - jj workspace removal is unbound on purpose (destructive action).
 
 ## Layer 3: Seamless navigation (bare ctrl+h/j/k/l)

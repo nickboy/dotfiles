@@ -458,11 +458,20 @@ Claude Code 本身已內建跨專案的工作階段探索 — 關鍵在於替工
 
 ### 複製 Claude 的上一則回覆
 
-`~/.local/bin/claude-copy-last`(別名 `ccl`,tmux `prefix+O`)直接從
-工作階段的 transcript JSONL 取出 Claude 最新的回覆並複製到剪貼簿,拿到
-的是**原始 markdown**,而不是螢幕上折行後的文字 — 在 tmux、herdr 或
-純 Ghostty 裡行為完全相同。`ccl -n 2` 可往回撈一則;接管線時輸出原始
-markdown(`ccl | glow`、`ccl > notes.md`)。
+`prefix+O`(tmux)與 `prefix+shift+O`(herdr)會把 Claude Code 內建的
+`/copy` 送進該 pane,拿到的是**原始 markdown**,而不是螢幕上折行後的
+文字;透過 OSC 52,回覆會送到**用戶端**的剪貼簿,而不是遠端 attach 時
+伺服器那台。`/copy` 在 pane **自己的對話裡**執行,所以不需要判斷「這個
+pane 指的是哪個 session」—— 那個問題沒有可靠答案,因為 background job
+會繼承 pane id,而 Claude Code 的 agent 檢視還會渲染別的 pane 的
+session。兩邊都有防護:tmux 檢查 `pane_current_command`,herdr 用
+`agent prompt`,遇到非 agent 的 pane 會拒絕而不是把字打進你的編輯器。
+
+`/copy N` 可往回撈第 N 則。`/copy` 標記為 `requires: {ink: true}` ——
+它需要互動式 TUI,而且只寫剪貼簿。所以
+`~/.local/bin/claude-copy-last`(別名 `ccl`)只為一件事存在:**stdout**
+—— 管線、重導向、寫腳本(`ccl | glow`、`ccl > notes.md`),那是 `/copy`
+在結構上無法提供的資料路徑。
 
 ## 遠端開發
 

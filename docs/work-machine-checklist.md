@@ -31,14 +31,30 @@ this repo — most common) or **fresh clone**. Update path first.
   ```
 
 - [ ] Post-pull migration (delta since mid-2026 versions):
-  - Keyboard copy (2026-08-06, PRs #76–#78): after this pull you have
-    `claude-copy-last` (`ccl`) — copies Claude's latest reply from the
-    session transcript to the clipboard; `ccl -n 2` reaches back. To
-    activate: open a new shell (alias), `tmux source ~/.tmux.conf`
-    (`prefix+P` = last shell output, `prefix+O` = last Claude reply,
-    vi copy mode with `v`/`C-v`/`(`/`)`), and if herdr is installed,
-    detach + re-attach the client (`prefix+shift+o`, keys are read at
-    attach). Uses `pbcopy` on macOS; jq required (Brewfile has it).
+  - Keyboard copy (2026-08-06, PRs #76–#78; reworked 2026-08-09):
+    `prefix+O` sends Claude Code's own `/copy` to the pane, which is
+    what puts the reply on **your** clipboard rather than the server's.
+    It only fires at a pane actually running Claude — tmux checks
+    `pane_current_command`, herdr uses `agent prompt`, which refuses a
+    non-agent pane rather than typing into your editor.
+    **Do this once per machine:** press `prefix+O` on a reply that
+    contains a code block. `/copy` will open a selector; choose
+    **"3. Always copy full response"**. Without it the key sometimes
+    copies and sometimes opens a picker needing a second keypress, with
+    no indication why — the trigger is whether the reply happens to
+    contain code. **If you skip this step the binding still works — it
+    will just need a second keypress on replies containing code blocks.
+    That is not a bug in the binding.** The setting writes
+    `"copyFullResponse": true` into `~/.claude.json`, which is
+    untracked machine-local state, so `claude-settings-sync` cannot
+    install it for you; revert any time with `/config`.
+    `claude-copy-last` (`ccl`) survives for the one thing `/copy`
+    structurally cannot do — write to **stdout**, for piping and
+    scripting (`ccl | glow`, `ccl > notes.md`); jq required (Brewfile
+    has it). To activate: open a new shell (alias), `tmux source
+    ~/.tmux.conf` (`prefix+P` = last shell output, `prefix+O` = last
+    Claude reply, vi copy mode with `v`/`C-v`/`(`/`)`), and if herdr is
+    installed, detach + re-attach the client (keys are read at attach).
   - `yadm bootstrap` — idempotent; installs TPM/pay-respects/etc.
   - `brew bundle --file=~/Brewfile` selectively (`gitleaks` matters:
     the pre-commit hook uses it; it skips with a warning if absent)

@@ -20,7 +20,28 @@ maintenance.
 
 ## Notes
 
-1. **Yazi** — 26.x renamed the fetcher key `id` to `group`. A parse
+1. **Yazi** — plugins are declared by NAME in the tracked
+   `.config/yazi/plugins.list`; `package.toml` is `ya pkg`'s lockfile and
+   is deliberately **untracked**. `ya pkg upgrade` runs from daily
+   maintenance on every machine, so tracking the lockfile made the same
+   file go dirty everywhere and the machines drifted — one had 3 of 13
+   pins moved, another all 13, with neither able to see why. The
+   trade-off is accepted, not overlooked: **there is no pinning**, so a
+   bad upstream release reaches every machine and cannot be rolled back
+   to a known-good rev from this repo.
+
+   Two upstream behaviours this now depends on. `ya pkg upgrade`
+   **aborts partway** when an installed plugin's contents differ from its
+   recorded hash, keeping the pins it already moved — which is how the
+   mixed state above arose. And `ya pkg add` stores those hashes IN
+   `package.toml`, so with the lockfile absent every existing plugin dir
+   looks modified and every `add` aborts: measured, 0 of 13 added with
+   the dirs present, 13 of 13 after clearing them. `add` has no
+   `--discard`, so `yadm bootstrap` clears `.config/yazi/plugins/`
+   whenever the lockfile is missing. If upstream ever makes `add`
+   reconcile existing dirs, that clearing step becomes unnecessary.
+
+   Separately, 26.x renamed the fetcher key `id` to `group`. A parse
    failure is silent: yazi falls back to its preset config, which cost
    weeks before anyone noticed. The next release changes `theme.toml`
    `[help]` keys (`on` → `chord`, `run`/`desc` → `action`, `footer`

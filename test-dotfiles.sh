@@ -778,26 +778,41 @@ CS_STUB
     # it is allowed to happen here.
     run_test "claude-statusline: an unchanged session name renames nothing" \
         "! grep -q 'tab rename' '$CS_TMP/calls.log'"
+    # Count, not presence: over-firing is the exact thing these tests
+    # exist to catch, and grep -q passes just as happily on five renames.
     cs_run beta
     run_test "claude-statusline: a /rename propagates to the herdr tab" \
-        "grep -q 'tab rename w1:t9 beta' '$CS_TMP/calls.log'"
+        "[ \"\$(grep -c 'tab rename w1:t9 beta' '$CS_TMP/calls.log')\" -eq 1 ]"
 
     # Drift repair: HERDR_TAB_ID is inherited from the launching pane, so
     # a session working elsewhere can rename a tab it does not own. The
     # session name has NOT changed here, so name-comparison alone can
-    # never notice — only re-reading the tab's real label can.
+    # never notice — only re-reading the tab's real label can. A slash
+    # marks the "project/branch" shape claude-name-session produces.
     : > "$CS_TMP/calls.log"
-    cs_label "stolen-by-another-agent"
+    cs_label "herddeck/feat/some-branch"
     rm -f /tmp/claude-statusline-tabcheck-utcs   # force the check to be due
     cs_run beta
-    run_test "claude-statusline: repairs a tab renamed by someone else" \
-        "grep -q 'tab rename w1:t9 beta' '$CS_TMP/calls.log'"
+    run_test "claude-statusline: repairs a tab renamed by another session" \
+        "[ \"\$(grep -c 'tab rename w1:t9 beta' '$CS_TMP/calls.log')\" -eq 1 ]"
 
-    # ...but only once a minute. The stamp is fresh from the run above,
-    # so a second hijack inside the window must NOT trigger another
-    # query — otherwise the check degrades into a socket call every 5s.
+    # THE LIMIT ON THAT REPAIR. A hand-named tab has no slash and must
+    # survive, or mirroring makes manual names impossible to keep — this
+    # regressed live, clobbering a tab named "Reviewer" back to its
+    # session's "home".
     : > "$CS_TMP/calls.log"
-    cs_label "stolen-again"
+    cs_label "Reviewer"
+    rm -f /tmp/claude-statusline-tabcheck-utcs
+    cs_run beta
+    run_test "claude-statusline: leaves a hand-named tab alone" \
+        "! grep -q 'tab rename' '$CS_TMP/calls.log'"
+
+    # ...and the check runs at most once a minute, or it degrades into a
+    # socket call every 5s. touch (not elapsed wall-clock) decides
+    # "not due", so a slow or suspended suite cannot flake this.
+    : > "$CS_TMP/calls.log"
+    cs_label "herddeck/feat/some-branch"
+    touch /tmp/claude-statusline-tabcheck-utcs
     cs_run beta
     run_test "claude-statusline: drift check is throttled to once a minute" \
         "[ ! -s '$CS_TMP/calls.log' ]"

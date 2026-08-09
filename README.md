@@ -103,6 +103,8 @@ Focused guides live in `docs/`:
   across terminal, multiplexer, and editor
 - [docs/troubleshooting.md](docs/troubleshooting.md) — common failures
   and how to fix them
+- [docs/claude-tooling.md](docs/claude-tooling.md) — the Claude Code
+  tools: `ccl`, settings sync, `hbox`, pull hooks, statusline switches
 - [docs/herdr.md](docs/herdr.md) — herdr trial notes, plugin install,
   known limits
 - [docs/herdr-setup.md](docs/herdr-setup.md) — dual-machine herdr setup

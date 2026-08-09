@@ -104,3 +104,31 @@ maintenance.
    degrades to the old newest-file guess, which is wrong whenever two
    agents share a directory — silently pasting the other pane's
    reply. The suite asserts session-id selection beats mtime.
+
+   **Why that field alone is not enough (measured 2026-08-08, 0.8.0).**
+   herdr keeps at most ONE session per pane and will not replace it when
+   a report arrives with `session_start_source: "startup"` — which is
+   what every newly started session sends. In `state.rs`,
+   `session_report_allows_session_replacement` lists
+   `("herdr:claude", "claude", Some("clear" | "resume" | "compact"))`;
+   `startup` is present for codex, omp and hermes but deliberately
+   absent for claude. So the SECOND session in a pane — most often a
+   background job, which inherits `HERDR_PANE_ID` — can never claim it,
+   and `ccl` copied the first session's transcript perfectly: the wrong
+   conversation. It appeared to fix itself because `/compact` re-fires
+   `SessionStart` with an accepted source.
+
+   Three properties of that API make any change to it silent, so none of
+   them may be relied on as a signal:
+
+   - a REJECTED write still answers `{"type":"ok"}`;
+   - the pane `revision` counter moves neither on accept nor on reject;
+   - a report from any `source` other than the one holding the slot is
+     ignored, even with an accepted `session_start_source`.
+
+   The fix does not depend on any of this — pane membership comes from
+   `.local/lib/claude-pane-marker.sh` markers written by the statusline,
+   and ranking comes from each transcript's last human turn, neither of
+   which touches herdr. This is recorded because it is the reason the
+   mechanism exists, and because a future herdr that accepts `startup`
+   would make tier 2 correct again without making tier 1 wrong.

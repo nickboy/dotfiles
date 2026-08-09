@@ -30,14 +30,43 @@ ccl > notes.md
 
 Bound to `prefix+O` in tmux and `prefix+shift+O` in herdr.
 
-**How it picks the transcript.** Inside herdr it asks which Claude
-session that pane holds and reads exactly that one. This matters when
-several agents share a directory: choosing "the most recently written
-file" pastes the neighbouring pane's reply, which is a confusing way to
-find out your tooling is guessing.
+**How it picks the transcript.** Three tiers, each falling through to
+the next, so a missing tier degrades to the previous behaviour rather
+than to a wrong answer:
 
-Outside herdr it falls back to the newest transcript for the current
-directory, walking up from `$PWD` to find it.
+1. **The sessions in this pane, ranked by who you spoke to last.** The
+   statusline records one marker per (pane, session) under
+   `~/.cache/claude-pane/`, and `ccl` ranks them by the last *human*
+   turn in each transcript.
+2. **herdr's own registration**, which is right whenever a pane holds a
+   single session.
+3. **The newest transcript** for the current directory, walking up from
+   `$PWD` — for plain shells and tmux.
+
+Tier 1 exists because herdr keeps only ONE session per pane and will
+not replace it when a second one starts, so a background job — which
+inherits the pane from wherever it was launched — is invisible to it.
+Without tier 1, `ccl` copied that pane's *first* session perfectly, and
+the wrong conversation arrived in your clipboard.
+
+Ranking is by last human turn rather than by file mtime because a
+session can write for hours with nobody speaking to it. Measured on a
+live pane: the foreground session's transcript was the more recently
+written, while its last human turn was eleven hours older than the
+background job's sitting beside it. mtime picked the stale one.
+
+**It tells you what it did.** Every copy reports the session, how it
+was chosen, and how long ago you last spoke there:
+
+```text
+copied 2805 chars from 319ca5df (pane, 1 in pane) · you last spoke 7m ago
+```
+
+Under the keybinding this arrives as a notification, because that is
+the only channel a detached command has. It also says `no human turn in
+this pane` when nothing there has ever been spoken to and the choice
+had to be made on weaker evidence, and names the project directory when
+the conversation comes from one you are not currently in.
 
 **When nothing happens.** Under a keybinding the script has no stdout,
 so failures surface as a herdr notification: no transcript for this

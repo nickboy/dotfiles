@@ -97,6 +97,24 @@ PCT=${PCT_RAW%.*}
 FIVE_H_INT=${FIVE_H%.*}
 SEVEN_D_INT=${SEVEN_D%.*}
 
+# Record that this session lives in this pane, so claude-copy-last can
+# enumerate a pane's sessions. herdr tracks only ONE per pane and will not
+# replace it for a newly started one, so a background job — which inherits
+# HERDR_PANE_ID — is invisible to it; see .local/lib/claude-pane-marker.sh
+# for the measurements. The statusline is the right writer precisely because
+# it runs for EVERY live session, which is useless for deciding which
+# session you are talking to but is exactly the enumeration we need.
+#
+# Deliberately NOT behind SHOW_HERDR — that gates herdr API traffic and this
+# is a local file with no herdr call in it — and NOT behind the tab-drift
+# throttle below. A writer hidden behind either was among the suspects when
+# an earlier attempt at this failed for reasons never diagnosed.
+if [ -n "${HERDR_PANE_ID:-}" ] && [ -r "$HOME/.local/lib/claude-pane-marker.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/.local/lib/claude-pane-marker.sh"
+    claude_pane_marker_write "$HERDR_PANE_ID" "$SESSION_ID" || true
+fi
+
 # Feed HerdDeck's Stream Deck context donut with the percentage we just
 # parsed. Claude Code is the only thing that knows it, and the
 # statusline is the only place it surfaces — so the donut has to be fed

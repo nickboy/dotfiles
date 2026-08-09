@@ -128,7 +128,18 @@ maintenance.
 
    The fix does not depend on any of this — pane membership comes from
    `.local/lib/claude-pane-marker.sh` markers written by the statusline,
-   and ranking comes from each transcript's last human turn, neither of
-   which touches herdr. This is recorded because it is the reason the
-   mechanism exists, and because a future herdr that accepts `startup`
-   would make tier 2 correct again without making tier 1 wrong.
+   plus herdr's registration as a second, independent membership source,
+   and ranking comes from each transcript's last human turn. This is
+   recorded because it is the reason the mechanism exists, and because a
+   future herdr that accepts `startup` would make tier 2 correct again
+   without making tier 1 wrong.
+
+   **A fourth Claude Code format assumption**, alongside `.type`,
+   `.isSidechain` and `.message.content` above: ranking compares
+   `.timestamp` values as STRINGS, which is only correct while they share
+   one format. Both `…:41Z` and `…:41.090Z` occur, and at the same second
+   they sort backwards (`.` is below `Z` in ASCII), so the library
+   normalises every timestamp to carry a fractional part before
+   comparing. If Claude Code ever emits an offset other than `Z`, string
+   comparison stops being safe and the ranking needs a real date parse.
+   The suite's ranking fixture is the canary.

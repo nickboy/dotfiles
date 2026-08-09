@@ -143,13 +143,67 @@ claude_pane_marker_pid() {   # $1 pane id, $2 session id -> pid, or nothing
     sed -n 's/^pid=\([0-9][0-9]*\)$/\1/p' "$_cpm_file" 2>/dev/null | head -n 1 || true
 }
 
+# A session id read out of a filename is UNVALIDATED INPUT, and it is used
+# downstream in two glob contexts (`find -name "$id.jsonl"` and a `case`
+# pattern). A marker named `w1-p3--*` would yield the id `*`, and
+# `-name "*.jsonl"` then matches the first transcript found anywhere under
+# the projects root — a wrong answer, silently, from a file this design has
+# declared trusted.
+#
+# Only the same user can create such a file, so this is not a privilege
+# boundary. It is worth the line anyway: the test suite writes into this
+# directory, and "same user" has already left a phantom marker in a live
+# pane once. Trusting the directory's PERMISSIONS says nothing about its
+# CONTENTS.
 claude_pane_marker_sessions() {   # $1 pane id -> session ids, one per line
     _cpm_dir=$(claude_pane_marker_dir)
     _cpm_key=$(claude_pane_marker_key "${1:-}")
     [ -n "$_cpm_key" ] || return 0
     for _cpm_f in "$_cpm_dir/$_cpm_key"--*; do
         [ -e "$_cpm_f" ] || continue
-        printf '%s\n' "${_cpm_f##*--}"
+        _cpm_sid=${_cpm_f##*--}
+        case "$_cpm_sid" in
+            '' | *[!0-9A-Za-z_-]*) continue ;;
+        esac
+        printf '%s\n' "$_cpm_sid"
+    done
+}
+
+# Reap markers for panes that no longer exist. The per-copy janitor in
+# claude-copy-last only ever visits its OWN pane's key, so when a pane is
+# closed nothing reads those markers again and they persist forever — with
+# no TTL by design, the directory would grow monotonically with every
+# (pane, session) pair the machine has ever seen. Tiny files, so this is
+# hygiene rather than a bug, but it is unbounded and nothing would notice.
+#
+# The condition is deliberately BOTH: pid dead AND transcript gone. A dead
+# session whose transcript survives is still the correct answer for its pane
+# until someone speaks there again, so its membership must not be reaped.
+claude_pane_marker_sweep() {   # $1 projects root
+    _cpm_dir=$(claude_pane_marker_dir)
+    [ -d "$_cpm_dir" ] || return 0
+    _cpm_root="${1:-$HOME/.claude/projects}"
+    # Once an hour at most: this walks the directory, and the statusline
+    # that calls it runs every few seconds for every live session.
+    _cpm_stamp="$_cpm_dir/.swept"
+    if [ -e "$_cpm_stamp" ] && [ -z "$(find "$_cpm_stamp" -mmin +60 2>/dev/null)" ]; then
+        return 0
+    fi
+    : > "$_cpm_stamp" 2>/dev/null || return 0
+    for _cpm_f in "$_cpm_dir"/*--*; do
+        [ -e "$_cpm_f" ] || continue
+        _cpm_sid=${_cpm_f##*--}
+        case "$_cpm_sid" in
+            '' | *[!0-9A-Za-z_-]*) continue ;;
+        esac
+        _cpm_pid=$(sed -n 's/^pid=\([0-9][0-9]*\)$/\1/p' "$_cpm_f" 2>/dev/null | head -n 1)
+        if [ -n "$_cpm_pid" ] && kill -0 "$_cpm_pid" 2>/dev/null; then
+            continue
+        fi
+        if [ -n "$(find "$_cpm_root" -maxdepth 2 -name "$_cpm_sid.jsonl" -print -quit 2>/dev/null)" ]; then
+            continue
+        fi
+        rm -f "$_cpm_f" 2>/dev/null || true
     done
 }
 
@@ -188,16 +242,35 @@ claude_pane_marker_sessions() {   # $1 pane id -> session ids, one per line
 # silently, and wrongly.
 #
 # Emits an ISO-8601 UTC timestamp, which sorts correctly as a plain string,
-# so callers need no date parsing. Emits NOTHING when there is no human turn
-# — callers must treat that as "unknown", never as epoch zero.
+# so callers need no date parsing.
+#
+# THE RETURN CODE IS PART OF THE CONTRACT. Empty output means "this session
+# has no human turn". A NON-ZERO RETURN means "I could not read this
+# transcript", which is a different thing and must not be ranked as though
+# it were the first. Collapsing the two would let an unreadable candidate —
+# possibly the one with the most recent human turn — lose silently to a
+# readable one, and the caller would print a confident age for the wrong
+# session. Ranking on "unknown" is exactly as wrong as ranking on epoch
+# zero; it merely fails in the other direction.
+#
+# Timestamps are normalised to always carry a fractional part, because the
+# comparison is a string comparison: '2026-01-01T00:00:00Z' and
+# '2026-01-01T00:00:00.500Z' at the same second would otherwise sort
+# backwards ('.' is below 'Z' in ASCII). Both forms are known to occur.
+# Normalising keeps the value a valid ISO-8601 instant, so callers can still
+# hand it to a date parser.
 claude_pane_last_user_turn() {   # $1 transcript path
-    [ -f "${1:-}" ] || return 0
-    jq -r '
+    [ -f "${1:-}" ] || return 2
+    _cpm_turns=$(jq -r '
         select(.type == "user"
                and (.isMeta != true)
                and (.isSidechain != true)
                and (.isCompactSummary != true))
         | select(((.message.content | type) == "string")
                  or ([.message.content[]?.type] | any(. != "tool_result")))
-        | .timestamp // empty' "$1" 2>/dev/null | tail -n 1 || true
+        | (.timestamp // empty)
+        | if test("\\.[0-9]+Z$") then . else sub("Z$"; ".000Z") end' \
+        "$1" 2>/dev/null) || return 2
+    printf '%s\n' "$_cpm_turns" | tail -n 1
+    return 0
 }

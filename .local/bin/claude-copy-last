@@ -134,13 +134,34 @@ resolve_transcript() {   # $1 session id -> path on stdout, or nothing
     fi
 }
 
+# Membership has a SECOND source, and leaving it behind tier 1 as a
+# fallback was a real hole: markers can be INCOMPLETE. A session whose
+# statusline is not ticking leaves no marker, so a pane holding one
+# marked and one unmarked session looks exactly like a healthy
+# single-session pane — tier 1 ranks its single candidate against
+# nothing, selects it, reports "1 in pane", and every guard passes while
+# the answer is wrong. Observed live: pane w1:p1 held a herdr-registered
+# session with no marker at all.
+#
+# herdr knows that session independently, so its registration JOINS the
+# candidate set instead of waiting behind it. A stale registration costs
+# nothing here: it is ranked like any other candidate, and an old human
+# turn loses.
+herdr_member() {   # $1 pane id -> the session herdr believes is there
+    [ -n "${1:-}" ] || return 0
+    "$herdr_bin" pane get "$1" 2>/dev/null |
+        jq -r '.result.pane.agent_session.value // empty' 2>/dev/null || true
+}
+
 transcript=""
 picked_by=""
 last_turn=""
 cand_count=0
 foreign_count=0
+unreadable_count=0
 no_turn=0
 noturn=""
+seen="|"
 
 if [ "$have_markers" = 1 ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
     best_ts=""
@@ -154,6 +175,10 @@ if [ "$have_markers" = 1 ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
     pane_shell_resolved=0
     while IFS= read -r cand; do
         [ -n "$cand" ] || continue
+        # The two membership sources overlap in the common case; a session
+        # named by both must not be counted twice.
+        case "$seen" in *"|$cand|"*) continue ;; esac
+        seen="$seen$cand|"
         cand_file=$(resolve_transcript "$cand")
         if [ -z "$cand_file" ]; then
             # Janitor: the session's transcript is gone, so its marker is
@@ -182,7 +207,15 @@ if [ "$have_markers" = 1 ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
             fi
         fi
         cand_count=$((cand_count + 1))
-        cand_ts=$(claude_pane_last_user_turn "$cand_file")
+        # A non-zero return means the transcript could not be read, which
+        # is NOT the same as "nobody has spoken here". Ranking the two
+        # alike would let an unreadable candidate lose silently to a
+        # readable one and still print a confident age for the wrong
+        # session, so it is counted and surfaced instead.
+        if ! cand_ts=$(claude_pane_last_user_turn "$cand_file"); then
+            unreadable_count=$((unreadable_count + 1))
+            continue
+        fi
         # ISO-8601 UTC sorts correctly as a plain string, so no date
         # parsing is needed to rank candidates.
         if [ -n "$cand_ts" ]; then
@@ -200,7 +233,7 @@ if [ "$have_markers" = 1 ] && [ -n "${HERDR_ACTIVE_PANE_ID:-}" ]; then
 "
         fi
     done <<MARKERS
-$(claude_pane_marker_sessions "$HERDR_ACTIVE_PANE_ID")
+$(claude_pane_marker_sessions "$HERDR_ACTIVE_PANE_ID" ; herdr_member "$HERDR_ACTIVE_PANE_ID")
 MARKERS
 
     if [ -z "$transcript" ] && [ -n "$noturn" ]; then
@@ -370,6 +403,12 @@ provenance() {
         # would otherwise corroborate rather than expose.
         if [ "$foreign_count" -gt 0 ]; then
             extra="$extra, $foreign_count rejected"
+        fi
+        # A candidate that could not be read was not ranked, so the
+        # selection below was made on an incomplete comparison. Saying so
+        # is the difference between a confident answer and an honest one.
+        if [ "$unreadable_count" -gt 0 ]; then
+            extra="$extra, $unreadable_count unreadable"
         fi
     fi
     # A pane holds a session whose transcript lives under a different

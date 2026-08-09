@@ -743,9 +743,20 @@ fi
 if [ -x "$HOME/.local/bin/claude-statusline" ] && command -v jq >/dev/null 2>&1; then
     CS_TMP=$(mktemp -d)
     mkdir -p "$CS_TMP/bin"
-    printf '#!/bin/sh\necho "$*" >> "%s/calls.log"\n' "$CS_TMP" > "$CS_TMP/bin/herdr"
+    # Stub logs argv AND answers `tab list` from a fixture, so a test can
+    # say what the tab is currently labelled and assert the drift repair.
+    cat > "$CS_TMP/bin/herdr" <<CS_STUB
+#!/bin/sh
+echo "\$*" >> "$CS_TMP/calls.log"
+[ "\$1 \$2" = 'tab list' ] && cat "$CS_TMP/tablabel.json" 2>/dev/null
+exit 0
+CS_STUB
     chmod +x "$CS_TMP/bin/herdr"
     : > "$CS_TMP/calls.log"
+    cs_label() {
+        printf '{"result":{"tabs":[{"tab_id":"w1:t9","label":"%s"}]}}' "$1" \
+            > "$CS_TMP/tablabel.json"
+    }
     cs_payload() {
         printf '{"session_id":"utcs","session_name":"%s","model":{"display_name":"O"},"workspace":{"current_dir":"%s"},"context_window":{"used_percentage":5},"cost":{"total_cost_usd":0,"total_duration_ms":0},"rate_limits":{}}' "$1" "$HOME"
     }
@@ -754,17 +765,43 @@ if [ -x "$HOME/.local/bin/claude-statusline" ] && command -v jq >/dev/null 2>&1;
             "$HOME/.local/bin/claude-statusline" >/dev/null 2>&1
         sleep 0.4
     }
-    rm -f /tmp/claude-statusline-name-utcs
+    # Both caches must be cleared: the drift check is throttled by the
+    # mtime of its own stamp file, so a leftover one makes these tests
+    # pass or fail depending on how recently the suite last ran.
+    rm -f /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs
+    cs_label alpha
     cs_run alpha
     run_test "claude-statusline: first sighting seeds without renaming the tab" \
-        "[ ! -s '$CS_TMP/calls.log' ] && [ \"\$(cat /tmp/claude-statusline-name-utcs)\" = alpha ]"
+        "! grep -q 'tab rename' '$CS_TMP/calls.log' && [ \"\$(cat /tmp/claude-statusline-name-utcs)\" = alpha ]"
     cs_run alpha
+    # Asserts no WRITE, not no call: the drift check below is a read, and
+    # it is allowed to happen here.
     run_test "claude-statusline: an unchanged session name renames nothing" \
-        "[ ! -s '$CS_TMP/calls.log' ]"
+        "! grep -q 'tab rename' '$CS_TMP/calls.log'"
     cs_run beta
     run_test "claude-statusline: a /rename propagates to the herdr tab" \
-        "[ \"\$(cat '$CS_TMP/calls.log')\" = 'tab rename w1:t9 beta' ]"
-    rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs
+        "grep -q 'tab rename w1:t9 beta' '$CS_TMP/calls.log'"
+
+    # Drift repair: HERDR_TAB_ID is inherited from the launching pane, so
+    # a session working elsewhere can rename a tab it does not own. The
+    # session name has NOT changed here, so name-comparison alone can
+    # never notice — only re-reading the tab's real label can.
+    : > "$CS_TMP/calls.log"
+    cs_label "stolen-by-another-agent"
+    rm -f /tmp/claude-statusline-tabcheck-utcs   # force the check to be due
+    cs_run beta
+    run_test "claude-statusline: repairs a tab renamed by someone else" \
+        "grep -q 'tab rename w1:t9 beta' '$CS_TMP/calls.log'"
+
+    # ...but only once a minute. The stamp is fresh from the run above,
+    # so a second hijack inside the window must NOT trigger another
+    # query — otherwise the check degrades into a socket call every 5s.
+    : > "$CS_TMP/calls.log"
+    cs_label "stolen-again"
+    cs_run beta
+    run_test "claude-statusline: drift check is throttled to once a minute" \
+        "[ ! -s '$CS_TMP/calls.log' ]"
+    rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs
 fi
 
 # gitleaks pre-commit engine: same invocation the yadm hook uses, against

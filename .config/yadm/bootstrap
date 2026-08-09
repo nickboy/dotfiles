@@ -99,6 +99,33 @@ if ! command -v brew &> /dev/null; then
     fi
 fi
 
+# Trust third-party formulae BEFORE bundling, or brew SKIPS them.
+#
+# Homebrew refuses to load a formula from an untrusted tap: it prints
+# "Cannot check whether X is outdated because its tap is not trusted" and
+# moves on, so `brew bundle` reports success while quietly installing
+# nothing for those lines. Trust lives in ~/.homebrew/trust.json, which is
+# machine-local and untracked — so every new machine starts untrusting,
+# and the Brewfile's trust comments were documentation nobody executed.
+#
+# Derived from the Brewfile rather than hard-coded: it is already the list
+# of what gets installed, so "trusted" and "about to be installed" cannot
+# drift apart. Trusting what you are installing anyway adds no exposure.
+#
+# Per-formula, NOT per-tap, deliberately — `brew trust <tap>` also covers
+# every formula that tap adds in future, which is standing permission this
+# repo has decided against (see the header of ~/Brewfile).
+if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
+    echo "🔐 Trusting third-party formulae declared in the Brewfile..."
+    grep -E '^brew "[^/]+/[^/]+/' "$HOME/Brewfile" \
+        | sed 's/^brew "\([^"]*\)".*/\1/' \
+        | while IFS= read -r formula; do
+            [ -n "$formula" ] || continue
+            brew trust --formula "$formula" >/dev/null 2>&1 \
+                || echo "  ⚠️  could not trust $formula"
+        done
+fi
+
 # Install Brewfile packages
 if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
     echo "📦 Installing Brewfile packages..."

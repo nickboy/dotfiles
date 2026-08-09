@@ -179,6 +179,25 @@ if [ -f "$HOME/.config/yazi/plugins.list" ]; then
     run_test "bootstrap installs from the tracked plugin list" \
         "grep -q 'plugins.list' '$HOME/.config/yadm/bootstrap' &&
          grep -q 'ya pkg add' '$HOME/.config/yadm/bootstrap'"
+fi
+
+# Third-party formulae must be TRUSTED BEFORE `brew bundle`, or Homebrew
+# skips them and bundle reports success having installed nothing. Trust
+# lives in ~/.homebrew/trust.json, which is machine-local and untracked,
+# so a fresh machine starts untrusting and the Brewfile's trust comments
+# are documentation nobody executes.
+#
+# ORDER is the whole point, so the assertion is on the order — a `grep -q`
+# for both strings would pass with them the wrong way round, which is
+# exactly the bug that leaves a machine with silently-missing packages.
+if [ -f "$HOME/.config/yadm/bootstrap" ] && [ -f "$HOME/Brewfile" ]; then
+    run_test "bootstrap trusts third-party formulae BEFORE brew bundle" \
+        "awk '/brew trust --formula/{t=NR} /brew bundle --file/{b=NR} END{exit !(t && b && t < b)}' '$HOME/.config/yadm/bootstrap'"
+    # …and derives them from the Brewfile, so "trusted" cannot drift from
+    # "installed" the way a hard-coded list would.
+    run_test "…derived from the Brewfile, not a hard-coded list" \
+        "grep -q 'HOME/Brewfile' '$HOME/.config/yadm/bootstrap' &&
+         grep -qE 'grep -E .\\^brew ' '$HOME/.config/yadm/bootstrap'"
     # Every listed plugin must actually be declared, or the list has
     # silently drifted from what the machine really has.
     if [ -f "$HOME/.config/yazi/package.toml" ]; then

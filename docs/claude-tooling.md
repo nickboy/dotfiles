@@ -57,6 +57,11 @@ the half that is genuinely shared.
 | --- | --- |
 | `statusLine`, `theme`, our hooks | `model`, `effortLevel`, plugins, `tui` |
 
+`theme` is *seeded*, not asserted: it is written only on a machine
+that has none, so a theme you chose yourself is left alone. The rest
+are re-applied every run, because a stale `statusLine` or hook path
+actually breaks something.
+
 The rule: **does this repo ship the thing the key points at?** Your
 model choice, effort level and plugin set stay yours, per machine. Two
 machines can want different models — that is the normal case, not a
@@ -120,6 +125,12 @@ grep -oE 'client (connected|disconnected) client_id=[0-9]+' \
 
 More than one id and the bug is live.
 
+**One id is not proof you are fine.** A long-lived server that has seen
+clients come and go can end up with no *foreground* client while one is
+still connected, and every clipboard write is then dropped silently —
+the diagnostic above still reports a single id. If copies vanish with
+one client listed, **detach and reattach**. Delivery resumes.
+
 ---
 
 ## Pull hooks
@@ -142,6 +153,8 @@ carries the untracking change, back the file up by hand:
 cp ~/.claude/settings.json ~/.claude/settings.json.bak-manual
 ```
 
+Full runbook: [work-machine-checklist.md](work-machine-checklist.md).
+
 Untracking is a deletion as far as git is concerned, so that pull
 deletes the file if it is clean, or auto-stashes it if you have local
 changes. `pre_pull` cannot help, because it arrives *in* that pull.
@@ -149,6 +162,23 @@ Every pull after it is automatic.
 
 A fresh machine needs none of this: `yadm clone` + `yadm bootstrap`,
 and the file is built from scratch.
+
+### Getting it back
+
+```bash
+ls -t ~/.claude/settings.json.bak-*            # newest first
+cp ~/.claude/settings.json.bak-<ts>-<pid> ~/.claude/settings.json
+```
+
+If the file was deleted while clean, there was no local change to lose
+— it matched the last tracked copy, so git still has it:
+
+```bash
+yadm show <sha>:.claude/settings.json > ~/.claude/settings.json
+```
+
+Use a commit from before the untracking. Then run
+`claude-settings-sync` to reinstate the shared half.
 
 ---
 
@@ -171,6 +201,10 @@ The statusline also mirrors your session name onto the herdr tab, so
 `/rename` shows up where you can see it. It will not overwrite a tab
 you named by hand: it reclaims only labels a script recorded, or
 herdr's own numeric default.
+
+**Known limit.** Two sessions sharing one pane both believe they own
+its tab, and will alternate the label about once a minute. Nothing is
+broken — rename one of the sessions, or move them into separate tabs.
 
 ---
 

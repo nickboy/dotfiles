@@ -121,6 +121,24 @@ ensure_herdr_integration() {
     command -v herdr >/dev/null 2>&1 || return 0
     if jq -e '[.. | .command? // empty] | any(test("herdr-agent-state"))' \
         "$settings" >/dev/null 2>&1; then
+        # Entry present but its script gone — Claude Code then runs a
+        # SessionStart hook pointing at nothing and exits 127 every
+        # session. Reachable by restoring a settings backup onto a
+        # machine that has not run the integration, or by clearing
+        # ~/.claude/hooks.
+        # Deliberately NOT auto-repaired: regenerating the script means
+        # running the installer, and if the entry was hand-edited (the
+        # $HOME rewrite this repo's checklist prescribes) the installer
+        # does not recognise it and appends a DUPLICATE, so the hook
+        # fires twice per session. There is no automatic action that is
+        # both correct and non-destructive here, so say so and stop.
+        # Relative to the settings file, not $HOME: everything else here
+        # honours CLAUDE_SETTINGS, and a hardcoded path made this check
+        # silently inspect the real machine while testing a sandbox.
+        if [ ! -f "$(dirname "$settings")/hooks/herdr-agent-state.sh" ]; then
+            echo "claude-settings-sync: settings reference herdr-agent-state.sh but the script is missing." >&2
+            echo "  Run: herdr integration install claude   (then check for a DUPLICATE SessionStart entry)" >&2
+        fi
         return 0
     fi
     local err

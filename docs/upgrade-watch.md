@@ -76,6 +76,28 @@ maintenance.
    macOS so the script falls back to `/bin/ps -o tty=`. If an
    upgrade changes any of these, the keybinding goes dark or the
    toast fallback stops firing.
+   **Open follow-ups on the herdr tab/identity work** (2026-08-08, all
+   deliberately deferred, none urgent):
+   - *Verify the tab, don't trust it.* `HERDR_TAB_ID` is injected at
+     pane spawn and is never updated, so it is wrong after `pane move`
+     and is inherited by anything launched from that pane. Two sessions
+     that both think they own a tab still alternate once a minute.
+     Buildable on 0.8.0: intersect this process's parent chain with each
+     pane's `shell_pid` + foreground pids from `pane process-info` —
+     exactly one pane matches. Cache per session, not per tick.
+   - *Upstream FR:* `tab.rename` takes `{tab_id, label}` with no source
+     field, so programmatic renames are indistinguishable from typed
+     ones and cannot be arbitrated. Every tab-rename plugin in the
+     ecosystem reinvents the same state file, and so do we. Ask for a
+     `source` on `tab.rename`, matching `pane.report_metadata`.
+     Second FR: for an unnamed tab, `label` (positional, `tab_idx + 1`)
+     and `number` (monotonic) in the SAME response disagree after any
+     tab close.
+   - *herdr installer idempotency* (owned by the HerdDeck session): it
+     matches its existing install on the full command string, so the
+     `$HOME` rewrite this repo prescribes reads as absent and it appends
+     a duplicate.
+
    It also reads `herdr pane get <id>` →
    `.result.pane.agent_session.value` to select the transcript
    belonging to the pane you pressed in. Renaming that field only

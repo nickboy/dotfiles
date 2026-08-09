@@ -133,10 +133,113 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
    [ -n "${SESSION_NAME:-}" ] && command -v herdr >/dev/null 2>&1; then
     NAME_CACHE="/tmp/claude-statusline-name-${SESSION_ID}"
     PREV_NAME=$(cat "$NAME_CACHE" 2>/dev/null || printf '')
+    # Keyed by TAB, not session: a tab stolen by another session has to
+    # be recognisable to the session it was stolen from.
+    TAB_MARK="/tmp/claude-tabname-${HERDR_TAB_ID//:/-}"
+
+    # Claim the tab AND record that a machine set this label. herdr's
+    # tab.rename carries no source field, so this record is the only way
+    # anything can later tell a scripted name from a typed one.
+    claim_tab() {
+        printf '%s' "$SESSION_NAME" > "$TAB_MARK" 2>/dev/null
+        herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1
+    }
+
     if [ "$PREV_NAME" != "$SESSION_NAME" ]; then
         printf '%s' "$SESSION_NAME" > "$NAME_CACHE" 2>/dev/null
-        [ -n "$PREV_NAME" ] &&
-            herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" >/dev/null 2>&1 &
+        # The OFFICIAL channel for agent identity: pane metadata is
+        # per-source, so several sessions sharing a pane each get their
+        # own slot instead of overwriting one string. Unlike the tab
+        # name this cannot collide, so it is reported even on first
+        # sighting. herdr's own docs point hooks here.
+        ( herdr pane report-metadata "${HERDR_PANE_ID:-}" \
+            --source "claude-${SESSION_ID}" \
+            --display-agent "$SESSION_NAME" >/dev/null 2>&1 ) &
+        # Never on first sighting — see above.
+        [ -n "$PREV_NAME" ] && claim_tab &
+    else
+        # The cache says we are up to date, but it records what this
+        # SESSION was last called, not what the TAB is actually labelled.
+        # HERDR_TAB_ID is inherited from the launching pane, so a session
+        # started from one pane while working in another directory renames
+        # a tab it does not own — observed live: this tab was relabelled
+        # "herddeck/feat/per-model-weekly" by a session in another repo.
+        # Comparing names alone can never recover from that: renaming back
+        # to the same value looks like "no change" and does nothing.
+        # So re-read the real label periodically. Bounded to once a minute
+        # because the statusline runs every refreshInterval (5s) and this
+        # costs a socket round-trip; drift is cosmetic, so healing within
+        # a minute is ample.
+        TAB_STAMP="/tmp/claude-statusline-tabcheck-${SESSION_ID}"
+        _now=$(date +%s)
+        # BSD stat here, GNU stat on a Linux herdr server. Without the
+        # fallback _last stays 0 there and the check fires every tick.
+        _last=$(stat -f %m "$TAB_STAMP" 2>/dev/null ||
+                stat -c %Y "$TAB_STAMP" 2>/dev/null || printf '0')
+        if [ $(( _now - _last )) -ge 60 ]; then
+            # Stamp BEFORE the query so backgrounded checks cannot pile
+            # up: the next tick sees it fresh and skips.
+            : > "$TAB_STAMP" 2>/dev/null
+            # Backgrounded like the rename above, and for the same
+            # reason: this contributes nothing to the rendered line, and
+            # a restarting server is exactly when a socket read blocks.
+            (
+                _actual=$(herdr tab list 2>/dev/null |
+                    jq -r --arg id "$HERDR_TAB_ID" \
+                        '.result.tabs[]? | select(.tab_id == $id) | .label // empty' \
+                    2>/dev/null)
+                if [ -n "$_actual" ] && [ "$_actual" != "$SESSION_NAME" ]; then
+                    # Reclaim only what a machine provably wrote. Two
+                    # such labels exist: one some writer recorded in
+                    # TAB_MARK, and herdr's own default, which
+                    # tab_display_name renders as the bare tab NUMBER
+                    # when custom_name is unset. Anything else was typed
+                    # by a person and is left alone permanently — a
+                    # hand-named tab and a stolen one are otherwise
+                    # identical, and overwriting someone's choice is far
+                    # worse than leaving a stale label.
+                    #
+                    # This replaces guessing at the name's SHAPE. That
+                    # guess (a slash means machine-made) missed every
+                    # session on main/master/trunk, since
+                    # claude-name-session omits "/branch" there. It is
+                    # also the rule every tab-rename plugin in the
+                    # ecosystem independently arrived at.
+                    #
+                    # DO NOT "improve" the all-digits test into a
+                    # comparison against this tab's `number` field, even
+                    # though it sits in the same JSON. They are different
+                    # things: the default label is `tab_idx + 1`
+                    # (positional), while `number` comes from
+                    # next_public_tab_number and is never reused. Close
+                    # one tab and an unnamed tab can display "4" while
+                    # the API reports number=5 — so that comparison would
+                    # stop recognising the default exactly on a
+                    # long-lived session, which is when it matters.
+                    # Costs one real edge: someone naming a tab "2024"
+                    # is read as unnamed and reclaimed once.
+                    #
+                    # KNOWN LIMIT: two sessions that both believe they
+                    # own one tab still alternate, once a minute each.
+                    # The root fix is to verify the inherited
+                    # HERDR_TAB_ID rather than trust it — walk this
+                    # process's ancestry and intersect it with each
+                    # pane's shell_pid/foreground pids from
+                    # `pane process-info`, which identifies the pane
+                    # genuinely containing us. Buildable on 0.8.0 today;
+                    # cache it once per session, not per tick. Follow-up.
+                    _mark=$(cat "$TAB_MARK" 2>/dev/null || printf '')
+                    if [ "$_actual" = "$_mark" ]; then
+                        claim_tab
+                    else
+                        case "$_actual" in
+                            *[!0-9]*) ;;          # a person named this
+                            *) claim_tab ;;       # bare number: unnamed
+                        esac
+                    fi
+                fi
+            ) &
+        fi
     fi
 fi
 

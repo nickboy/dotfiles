@@ -63,10 +63,11 @@ registration all agree with each other and all three are wrong about what
 you are looking at.
 
 So after choosing, `ccl` checks the pane's rendered screen against what it
-picked. If they disagree it says so:
+picked. If they disagree it says so — narrowly, in the terms it actually
+established, and only when the evidence names exactly one session:
 
 ```text
-copied 333 chars from 3bcaa0fe — WARNING: this pane is showing 8f485a02
+copied 333 chars from 3bcaa0fe — WARNING: on-screen text belongs to 8f485a02
 ```
 
 This is a verifier, never a selector: it cannot change the answer, only

@@ -716,10 +716,14 @@ CCL_HERDR2
     # DUPLICATE. Assert the warning fires AND that nothing was written.
     printf '{"hooks":{"SessionStart":[{"matcher":"*","hooks":[{"command":"bash \\"$HOME/.claude/hooks/herdr-agent-state.sh\\" session","type":"command"}]}]},"statusLine":{"command":"~/.local/bin/claude-statusline","refreshInterval":5,"type":"command"},"theme":"custom:my-theme"}' \
         > "$CCL_TMP/orphan.json"
+    # Needs herdr: the check sits behind `command -v herdr`, since the
+    # remedy it prints is a herdr command. CI has no herdr.
+    if command -v herdr >/dev/null 2>&1; then
     run_test "claude-settings-sync warns on an orphaned herdr hook entry" \
         "CLAUDE_SETTINGS='$CCL_TMP/orphan.json' '$HOME/.local/bin/claude-settings-sync' 2>&1 |
          grep -q 'script is missing' &&
          [ \"\$(jq -r '[.. | .command? // empty] | map(select(test(\"herdr\"))) | length' '$CCL_TMP/orphan.json')\" -eq 1 ]"
+    fi
 
     # herdr silently DROPS clipboard writes over 192 KiB decoded
     # (ghostty MAX_CLIPBOARD_BYTES) — oversize must skip OSC 52 and

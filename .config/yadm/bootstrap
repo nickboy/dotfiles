@@ -337,6 +337,18 @@ fi
 mkdir -p "$HOME/.ssh/sockets" && chmod 700 "$HOME/.ssh/sockets"
 echo "  ✓ ~/.ssh/sockets ready (ControlMaster)"
 
+# Claude Code settings: the file is deliberately UNTRACKED (Claude Code
+# rewrites it itself, and tracking published a personal model/plugin set
+# from a public repo), so a fresh machine has no statusline, theme or
+# hooks until this runs. It merges only the shared keys and leaves
+# model/effortLevel/plugins alone.
+if command -v jq >/dev/null 2>&1; then
+    "$HOME/.local/bin/claude-settings-sync" || \
+        echo "  ⚠️  claude-settings-sync failed — run it manually"
+else
+    echo "  ⚠️  jq missing; skipping claude-settings-sync"
+fi
+
 # Final self-verification: the suite encodes every cross-machine
 # assumption (services, plugin sets, config schemas) — running it here
 # turns "bootstrap finished" into "bootstrap verified".

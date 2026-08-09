@@ -503,6 +503,7 @@ cat > "$CRED_DENY_FILE" <<'CRED_EOF'
 ^\.ssh/id_
 ^\.local/share/atuin/key$
 ^\.claude/settings\.local\.json$
+^\.claude/settings\.json
 ^\.zshrc\.local$
 ^\.zshenv\.local$
 ^\.daily-maintenance\.local$

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+# Runs after every `yadm pull`.
+#
+# Why this exists: ~/.claude/settings.json is untracked on purpose, and
+# untracking is a DELETION as far as git is concerned. So the pull that
+# first carries that change does one of two things on any other machine
+# — stashes the file if it was locally modified, or deletes it outright
+# if it was clean. .gitignore does not protect it; gitignore only
+# governs files git is not already tracking.
+#
+# Rather than rely on remembering a manual step, reinstall the shared
+# half here. claude-settings-sync is idempotent and additive: it writes
+# statusLine, theme and this repo's two hooks, unions rather than
+# replaces hook arrays, and never touches model, effortLevel,
+# enabledPlugins, extraKnownMarketplaces or tui. Running it on every
+# pull is therefore a no-op except in the one case that needs it.
+#
+# Personal keys are NOT restored here, by design. If the file was
+# deleted while clean, its contents were identical to the last tracked
+# version, so they are recoverable from history:
+#   yadm show <sha>:.claude/settings.json
+# If it was stashed instead, `yadm stash pop` brings it back.
+
+set -uo pipefail
+
+# yadm calls post hooks from error_out too, so this fires on a FAILED
+# pull as well, with YADM_HOOK_EXIT carrying git's status. Writing
+# settings.json in the middle of a conflicted rebase helps nobody.
+[ "${YADM_HOOK_EXIT:-0}" = 0 ] || exit 0
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "post_pull: jq missing; skipping claude-settings-sync" >&2
+    exit 0
+fi
+
+sync="$HOME/.local/bin/claude-settings-sync"
+[ -x "$sync" ] || exit 0
+
+if [ ! -e "$HOME/.claude/settings.json" ]; then
+    echo "post_pull: ~/.claude/settings.json is gone (expected on the pull" \
+         "that untracked it) — reinstalling the shared half"
+fi
+
+# One routine, two callers: bootstrap runs this same script, so a fresh
+# clone and a pull cannot drift apart. claude-settings-sync also
+# reinstates herdr's SessionStart entry, which it owns and which the
+# merge never writes.
+# Never fail the pull over this; a broken sync is a warning, not a stop.
+"$sync" || echo "post_pull: claude-settings-sync failed — run it by hand" >&2
+
+exit 0

@@ -1,0 +1,268 @@
+#!/usr/bin/env bash
+# claude-settings-sync — install the SHARED half of Claude Code's
+# settings without touching the personal half.
+#
+# ~/.claude/settings.json has two writers: this repo and Claude Code
+# itself (/model, /theme and /plugin rewrite it — that is where the
+# nested enabledPlugins and extraKnownMarketplaces come from). Tracking
+# the whole file therefore never held still, and it published a personal
+# model, effort level and plugin set to anyone cloning a PUBLIC repo. So
+# the file is untracked and this script installs only the parts that are
+# genuinely shared between machines:
+#
+#   statusLine, theme, hooks
+#
+# and never writes:
+#
+#   model, effortLevel, enabledPlugins, extraKnownMarketplaces, tui
+#
+# The line is "does this repo ship the thing it points at?" — statusLine
+# runs ~/.local/bin/claude-statusline, theme resolves to the tracked
+# .claude/themes/my-theme.json, and both hooks are tracked scripts.
+# `tui` points at nothing here, so it is taste, and is left alone.
+#
+# The herdr SessionStart hook is deliberately NOT here even though this
+# machine has one. herdr GENERATES ~/.claude/hooks/herdr-agent-state.sh
+# and owns its command string and timeout; writing a hardcoded copy from
+# here would recreate the two-writers problem this script exists to end,
+# and would go stale the moment herdr changes that format. The file is
+# also untracked, so a cloner without herdr would get exit 127 on every
+# SessionStart. `herdr integration install claude` owns it instead — see
+# docs/work-machine-checklist.md. Merging is additive, so a machine that
+# already has the hook keeps it.
+#
+# Idempotent: safe to re-run, and safe to run on a machine where Claude
+# Code has already written its own settings. bootstrap calls it.
+#
+# Usage: claude-settings-sync [--check]
+#   --check   report whether a sync is needed; write nothing (exit 1 if
+#             the shared keys are missing or stale)
+
+set -euo pipefail
+
+case ":$PATH:" in
+  *:/opt/homebrew/bin:*) ;;
+  *) PATH="/opt/homebrew/bin:$PATH" ;;
+esac
+
+check_only=0
+[ "${1:-}" = "--check" ] && check_only=1
+
+settings="${CLAUDE_SETTINGS:-$HOME/.claude/settings.json}"
+
+if ! command -v jq >/dev/null 2>&1; then
+    echo "claude-settings-sync: jq not found" >&2
+    exit 1
+fi
+
+# The shared half, verbatim. Paths stay in ~ / $HOME form so they work
+# for whichever user clones this — never hardcode /Users/<name>.
+shared=$(cat <<'SHARED_JSON'
+{
+  "statusLine": {
+    "command": "~/.local/bin/claude-statusline",
+    "refreshInterval": 5,
+    "type": "command"
+  },
+  "theme": "custom:my-theme",
+  "hooks": {
+    "Notification": [
+      {
+        "hooks": [
+          { "command": "~/.local/bin/claude-notify", "type": "command" }
+        ],
+        "matcher": ""
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          { "command": "~/.local/bin/claude-name-session", "type": "command" }
+        ],
+        "matcher": ""
+      }
+    ]
+  }
+}
+SHARED_JSON
+)
+
+# Claude Code rewrites this file whenever /model, /theme or /plugin is
+# used, and several sessions run at once here. Fingerprint the file so a
+# write that lands mid-merge is DETECTED rather than silently discarded
+# — a narrower version of the two-writers clobber this script exists to
+# end would be a poor thing to ship inside it.
+fingerprint() {
+    [ -e "$1" ] && stat -f '%m:%z' "$1" 2>/dev/null || printf 'absent'
+}
+
+# herdr owns its SessionStart entry, so the merge above never writes it
+# — a hardcoded copy would go stale, and herdr bakes an ABSOLUTE path
+# into the command, which is wrong on every other machine anyway (one
+# more reason this file could never have been shared). Ask herdr to
+# reinstate it instead.
+#
+# Guarded on the ENTRY, not on the hook script. The script is untracked
+# and survives a pull; the settings.json entry does not — so guarding on
+# the script would skip exactly the repair this exists to perform.
+#
+# Guarded rather than unconditional for a reason found by running it:
+# herdr's installer removes only entries whose command matches its own
+# canonical string, so it does not recognise a hand-edited one. This
+# machine's entry was deliberately rewritten from herdr's absolute path
+# to "$HOME/..." (docs/work-machine-checklist.md prescribes that fix),
+# and an unconditional install appended a SECOND entry beside it — the
+# agent-state hook would then fire twice per session. Matching on the
+# script name covers both spellings.
+#
+# This is two writers with explicit, disjoint ownership — not the
+# unowned both-claim-the-whole-file pattern this script exists to end.
+ensure_herdr_integration() {
+    command -v herdr >/dev/null 2>&1 || return 0
+    if jq -e '[.. | .command? // empty] | any(test("herdr-agent-state"))' \
+        "$settings" >/dev/null 2>&1; then
+        return 0
+    fi
+    local err
+    if ! err=$(herdr integration install claude 2>&1 >/dev/null); then
+        echo "claude-settings-sync: herdr integration install claude failed: ${err:-unknown}" >&2
+    fi
+}
+
+read_and_merge() {
+    # A missing or empty file is the fresh-machine case: start from {} so
+    # the merge produces a complete, valid settings.json.
+    current='{}'
+    if [ -s "$settings" ]; then
+        if ! current=$(jq -e . "$settings" 2>/dev/null); then
+            echo "claude-settings-sync: $settings is not valid JSON — refusing to overwrite" >&2
+            exit 1
+        fi
+    fi
+
+    # Merge, NOT overwrite. jq's `*` deep-merges objects but REPLACES
+    # arrays wholesale, so a plain `. * $shared` would delete any
+    # Notification or SessionStart hook the machine already had —
+    # precisely the "do not break other people's config" failure this
+    # change exists to prevent. Hook arrays are UNIONED per event,
+    # existing entries first, ours appended only when absent; identity
+    # is (matcher, sorted commands), so re-runs are idempotent and
+    # nobody's hooks get reordered.
+    #
+    # ASSERT infrastructure, SEED taste. statusLine and hooks point at
+    # executables this repo ships, where a stale value actually breaks
+    # something, so they are re-asserted every run. theme is
+    # presentation: a local choice (a light theme on a work machine, a
+    # contrast need) breaks nothing, so it is only written when absent
+    # rather than silently reverted on every pull.
+    merged=$(printf '%s' "$current" | jq --argjson shared "$shared" '
+        def hook_key: [(.matcher // ""), ((.hooks // []) | map(.command) | sort)];
+        def dedup: reduce .[] as $x ([];
+            if any(.[]; hook_key == ($x | hook_key)) then . else . + [$x] end);
+        . as $base
+        | ($base * ($shared | del(.hooks) | del(.theme)))
+        | (if ($base | has("theme")) then . else .theme = $shared.theme end)
+        | .hooks = (
+            reduce ($shared.hooks | keys_unsorted[]) as $ev (
+                ($base.hooks // {});
+                .[$ev] = ((.[$ev] // []) + $shared.hooks[$ev] | dedup)
+            )
+          )
+    ')
+
+    # jq builds this, so it is valid by construction — but validate
+    # anyway: the one thing worse than no settings.json is a corrupt one.
+    if ! printf '%s' "$merged" | jq -e . >/dev/null 2>&1; then
+        echo "claude-settings-sync: merge produced invalid JSON — aborting" >&2
+        exit 1
+    fi
+}
+
+before=$(fingerprint "$settings")
+read_and_merge
+
+if [ "$(printf '%s' "$current" | jq -S .)" = "$(printf '%s' "$merged" | jq -S .)" ]; then
+    [ "$check_only" = 1 ] && exit 0
+    echo "claude-settings-sync: already in sync"
+    # Still ensure herdr's entry: the merge does not carry it, so a file
+    # missing ONLY that entry compares as in-sync and would otherwise
+    # take this early exit with the repair skipped — the same
+    # wrong-signal mistake as guarding on the hook script's presence.
+    ensure_herdr_integration
+    exit 0
+fi
+
+if [ "$check_only" = 1 ]; then
+    echo "claude-settings-sync: $settings is missing shared keys (run without --check)" >&2
+    exit 1
+fi
+
+mkdir -p "$(dirname "$settings")"
+
+# Someone wrote while we were merging — redo once against the new
+# content rather than overwrite their change, and refuse if it keeps
+# moving. Silent last-writer-wins is the exact failure this script was
+# written to end; a visible one is the acceptable version.
+if [ "$(fingerprint "$settings")" != "$before" ]; then
+    echo "claude-settings-sync: $settings changed during the merge — retrying" >&2
+    before=$(fingerprint "$settings")
+    read_and_merge
+    if [ "$(fingerprint "$settings")" != "$before" ]; then
+        echo "claude-settings-sync: $settings keeps changing — aborting, nothing written" >&2
+        exit 1
+    fi
+    if [ "$(printf '%s' "$current" | jq -S .)" = "$(printf '%s' "$merged" | jq -S .)" ]; then
+        echo "claude-settings-sync: already in sync"
+        exit 0
+    fi
+fi
+
+# Only reached when the content genuinely changes, so the common no-op
+# run leaves no clutter. A backup next to the file beats "recoverable
+# from git history if you know to look" — written the day an errant
+# checkout deleted this file for real.
+# NOTE the dash: `.bak-<ts>` matches the existing `*.bak-*` ignore rule,
+# `.bak.<ts>` matches nothing. That distinction is load-bearing here —
+# status.showUntrackedFiles=no hides untracked files from `yadm status`
+# while `yadm add -A` still stages them, so an unignored backup of this
+# file is a personal model and plugin set one careless add away from a
+# PUBLIC repo.
+if [ -s "$settings" ]; then
+    # $$ disambiguates two runs inside the same second — the whole run
+    # takes ~50ms, so second granularity alone would let the later run
+    # overwrite the earlier one's backup and make "last three" mean
+    # "last three distinct seconds".
+    backup="$settings.bak-$(date +%Y%m%d%H%M%S)-$$"
+    if ! cp -p "$settings" "$backup" 2>/dev/null; then
+        # The backup IS the safety net; failing it silently and writing
+        # anyway is the one outcome worth refusing.
+        echo "claude-settings-sync: could not write $backup — aborting, nothing changed" >&2
+        exit 1
+    fi
+    # shellcheck disable=SC2012  # fixed-shape names, no odd characters
+    ls -1t "$settings".bak-* 2>/dev/null | tail -n +4 | while IFS= read -r old; do
+        rm -f "$old"
+    done
+fi
+
+# Write via a temp file in the same directory so a crash cannot leave a
+# half-written settings.json behind, and so the mv is a true atomic
+# rename rather than a copy across filesystems.
+tmp=$(mktemp "$(dirname "$settings")/.settings.json.XXXXXX")
+trap 'rm -f "$tmp"' EXIT
+printf '%s\n' "$merged" > "$tmp"
+
+# Final check, deliberately ADJACENT to the rename rather than upstream
+# of the backup and prune: those are several process spawns, and a guard
+# five commands early reopens the window it just closed. The rename
+# itself is the irreducible race and needs a real lock to close, which
+# is disproportionate for this.
+if [ "$(fingerprint "$settings")" != "$before" ]; then
+    echo "claude-settings-sync: $settings changed just before the write — aborting, nothing written" >&2
+    exit 1
+fi
+mv "$tmp" "$settings"
+trap - EXIT
+echo "claude-settings-sync: shared settings installed in $settings"
+
+ensure_herdr_integration

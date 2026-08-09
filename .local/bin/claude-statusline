@@ -171,15 +171,27 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
                         '.result.tabs[]? | select(.tab_id == $id) | .label // empty' \
                     2>/dev/null)
                 if [ -n "$_actual" ] && [ "$_actual" != "$SESSION_NAME" ]; then
-                    # ONLY reclaim a label that another session's naming
-                    # produced. claude-name-session writes "project/branch"
-                    # (or "host:project/branch"), so a slash marks a
-                    # machine-generated name. A label without one —
-                    # "Reviewer", "scratchpad" — is a human's choice and
-                    # must survive: a hand-named tab and a stolen one are
-                    # otherwise indistinguishable, and clobbering the
-                    # human is far worse than leaving a stale label.
+                    # A hand-named tab and a stolen one look identical
+                    # here — label != session name is the only signal —
+                    # and clobbering a human's choice is far worse than
+                    # leaving a stale label. So reclaim ONLY names that
+                    # are provably machine-made, and accept missing some.
+                    #
+                    # A slash is that proof: claude-name-session appends
+                    # "/branch" only for a NON-default branch. On main,
+                    # master, trunk, a detached head, or a non-git
+                    # directory it emits a bare project name with no
+                    # slash — "Herddeck", "home" — which this rule
+                    # cannot tell from a person typing "Reviewer", so a
+                    # tab stolen by a session on a default branch stays
+                    # stolen. Under-reclaiming leaves a stale label,
+                    # which is what happened before any of this existed.
                     # Rename the SESSION if you want the tab to follow.
+                    #
+                    # The real fix is to stop inferring: have every
+                    # machine writer record the label it set, keyed by
+                    # tab, and reclaim only recorded values. Then shape
+                    # stops mattering. Follow-up.
                     case "$_actual" in
                         */*) herdr tab rename "$HERDR_TAB_ID" "$SESSION_NAME" \
                                 >/dev/null 2>&1 ;;

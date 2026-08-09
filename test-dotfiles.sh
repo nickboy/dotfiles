@@ -807,6 +807,19 @@ CS_STUB
     run_test "claude-statusline: leaves a hand-named tab alone" \
         "! grep -q 'tab rename' '$CS_TMP/calls.log'"
 
+    # THE KNOWN LIMIT, pinned deliberately rather than left to be
+    # rediscovered: claude-name-session omits "/branch" on main, master,
+    # trunk and outside git, so a machine name from a default branch is
+    # slash-free and indistinguishable from a hand-typed one. It is NOT
+    # reclaimed. Under-reclaiming leaves a stale label — the behaviour
+    # that predates this feature — which is the safe direction.
+    : > "$CS_TMP/calls.log"
+    cs_label "herddeck"
+    rm -f /tmp/claude-statusline-tabcheck-utcs
+    cs_run beta
+    run_test "claude-statusline: a slash-free machine name is left alone (known limit)" \
+        "! grep -q 'tab rename' '$CS_TMP/calls.log'"
+
     # ...and the check runs at most once a minute, or it degrades into a
     # socket call every 5s. touch (not elapsed wall-clock) decides
     # "not due", so a slow or suspended suite cannot flake this.

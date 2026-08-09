@@ -33,6 +33,27 @@ The keybindings just drive it, so the keystroke is the same as before:
 herdr, never inherited — so it always addresses the pane you are looking
 at.
 
+**One-time setup, per machine.** When the reply contains a code block,
+`/copy` opens a selector instead of copying:
+
+```text
+Select content to copy:
+❯ 1. Full response
+  2. <the code block>
+  3. Always copy full response   Skip this picker in the future
+```
+
+So the keystroke is *not* always one keystroke — it depends on the
+content of the reply, and for work in this repo most replies contain
+code. **Choose option 3 once** and it copies directly from then on
+(revert with `/config`).
+
+This is deliberately not installed by `claude-settings-sync`: the
+setting (`copyFullResponse`) does not land in `~/.claude/settings.json`,
+so the repo cannot ship the thing the key points at — the same rule that
+keeps `model` and plugins out of the shared half. It is a checklist item
+instead.
+
 **Why this replaced a much larger thing.** Reading the transcript
 ourselves meant answering "which conversation does this pane mean?", and
 that question has no reliable answer: `HERDR_PANE_ID` is inherited by

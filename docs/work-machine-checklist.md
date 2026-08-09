@@ -37,10 +37,18 @@ this repo — most common) or **fresh clone**. Update path first.
     It only fires at a pane actually running Claude — tmux checks
     `pane_current_command`, herdr uses `agent prompt`, which refuses a
     non-agent pane rather than typing into your editor.
-    `claude-copy-last` (`ccl`) survives for the case `/copy` cannot
-    serve: copying while a turn is still streaming, since `/copy` needs
-    an idle prompt. `ccl -n 2` reaches back; jq required (Brewfile has
-    it). To activate: open a new shell (alias), `tmux source
+    **Do this once per machine:** press `prefix+O` on a reply that
+    contains a code block. `/copy` will open a selector; choose
+    **"3. Always copy full response"**. Without it the key sometimes
+    copies and sometimes opens a picker needing a second keypress, with
+    no indication why — the trigger is whether the reply happens to
+    contain code. The setting (`copyFullResponse`) does not live in
+    `~/.claude/settings.json`, so `claude-settings-sync` cannot install
+    it for you; revert it any time with `/config`.
+    `claude-copy-last` (`ccl`) survives for the one thing `/copy`
+    structurally cannot do — write to **stdout**, for piping and
+    scripting (`ccl | glow`, `ccl > notes.md`); jq required (Brewfile
+    has it). To activate: open a new shell (alias), `tmux source
     ~/.tmux.conf` (`prefix+P` = last shell output, `prefix+O` = last
     Claude reply, vi copy mode with `v`/`C-v`/`(`/`)`), and if herdr is
     installed, detach + re-attach the client (keys are read at attach).

@@ -92,7 +92,11 @@ tmux panes), so it covers shell commands only. Claude Code's TUI
 emits no OSC 133 marks at all, which is why `prefix+O` does not touch
 the screen: it types Claude Code's own `/copy` into the pane, and
 that returns the original markdown rather than the rendered, wrapped
-text. `ccl` remains for the one case `/copy` cannot serve — copying
+text. Note it is one keystroke only after you have answered `/copy`'s
+selector with "Always copy full response" — until then a reply
+containing a code block opens a picker and waits, which is a
+content-dependent behaviour worth knowing about before you conclude
+the binding is broken. `ccl` remains for the one case `/copy` cannot serve — copying
 while a turn is still streaming, which needs the transcript on disk
 rather than an idle prompt.
 

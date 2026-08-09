@@ -42,10 +42,17 @@ render a session hosted by a *different* pane. `/copy` runs inside the
 pane's own conversation, so it never asks. Marker files, process-tree
 checks and screen matching all went away with the question.
 
-### `ccl` — for the case `/copy` cannot cover
+### `ccl` — for the one thing `/copy` structurally cannot do
 
-`/copy` needs an idle prompt. `ccl` reads the transcript off disk, so it
-works **while a turn is still streaming**, and it pipes:
+`/copy N` reaches back N replies, so that is not the reason. `/copy` is
+declared `requires: {ink: true}`: it needs the interactive TUI and only
+ever writes to the **clipboard**. `ccl` exists for **stdout** — piping,
+redirection, scripting. That is a data path, not a convenience.
+
+A secondary use: `/copy` typed mid-turn *queues* rather than failing, so
+what is genuinely unavailable is "copy the previous reply right now,
+without waiting for this one to finish". `ccl` reads from disk, so it
+can.
 
 ```bash
 ccl              # latest reply → clipboard

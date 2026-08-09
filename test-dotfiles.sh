@@ -729,15 +729,21 @@ CCL_EOF
     # thing this repo keeps catching: a check that passes without
     # looking. Needs a tty, since the size guard is on the interactive
     # branch; `script` supplies one.
-    # Read script(1)'s OWN transcript file rather than piping its stdout:
-    # script can exit before the pty is drained, so the pipe drops output
-    # intermittently — this test passed, then failed, then passed with no
-    # code change, which is the one failure mode worse than a red test.
+    # The size guard lives on the interactive branch, so this needs a
+    # tty. It does NOT use script(1): script can exit before its pty is
+    # drained, and under a pre-commit run's load that dropped output —
+    # the test passed, failed, then passed with no code change, and only
+    # the hook's new transcript identified which test it was. Two
+    # attempts to reproduce it standalone (piped stdout, and the hook's
+    # GIT_DIR/GIT_WORK_TREE) came back clean six times each, which is
+    # exactly why guessing at a timing flake is the wrong move.
+    #
+    # pty.spawn waits for the child and drains before returning. python3
+    # is already a suite dependency and CI pins 3.11.
     run_test "claude-copy-last refuses an oversize OSC 52 write out loud" \
-        "rm -f '$CCL_TMP/typescript' &&
-         (cd '$CCL_TMP/big' && script -q '$CCL_TMP/typescript' env $CCL_ENV '$HOME/.local/bin/claude-copy-last' >/dev/null 2>&1);
-         tr -d '\\r' < '$CCL_TMP/typescript' | grep -q 'exceeds the 74994-byte OSC 52 limit' &&
-         tr -d '\\r' < '$CCL_TMP/typescript' | grep -q 'copied 200000 chars'"
+        "out=\$( (cd '$CCL_TMP/big' && $CCL_ENV python3 -c 'import pty,sys; sys.exit(pty.spawn(sys.argv[1:]))' '$HOME/.local/bin/claude-copy-last') 2>&1 | tr -d '\\r' );
+         printf '%s' \"\$out\" | grep -q 'exceeds the 74994-byte OSC 52 limit' &&
+         printf '%s' \"\$out\" | grep -q 'copied 200000 chars'"
 
     # No transcript must fail loudly, not exit 0 with an empty clipboard.
     mkdir -p "$CCL_TMP/empty-projects" "$CCL_TMP/nowhere"

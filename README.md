@@ -489,11 +489,14 @@ transcript-reading implementation could not answer reliably, since a
 background job inherits its pane id and Claude Code's agent view can
 render another pane's session.
 
-`~/.local/bin/claude-copy-last` (alias `ccl`) remains for what `/copy`
-cannot do: it reads the transcript off disk, so it works **while a turn
-is still streaming**, and it pipes (`ccl -n 2`, `ccl | glow`,
-`ccl > notes.md`). It reads the newest transcript for the current
-directory.
+`/copy N` reaches back to the Nth-latest reply, so that is not a reason
+to keep anything. `/copy` is declared `requires: {ink: true}` — it needs
+the interactive TUI and only ever writes to the **clipboard**. So
+`~/.local/bin/claude-copy-last` (alias `ccl`) survives for exactly one
+thing: **stdout**. Piping, redirection, scripting —
+`ccl | glow`, `ccl > notes.md`, `ccl -n 2 | pbcopy` — a data path
+`/copy` structurally cannot serve. It reads the newest transcript for
+the current directory.
 
 ## 🌐 Remote Development
 

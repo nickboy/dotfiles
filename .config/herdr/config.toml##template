@@ -94,7 +94,12 @@ height = "70%"
 # and pressing this while looking at a shell, an editor or a y/N prompt
 # is an ordinary mistake to make. `pane run` would send "/copy" and a
 # newline into any of them — in vim that is a search, at a confirmation
-# prompt that is an answer. `agent prompt` refuses with agent_not_found
+# prompt that is an answer. The `|| notification show` is not
+# decoration either: this spawns detached with stdio nulled, so a
+# refusal is otherwise INVISIBLE — tmux says "not a Claude pane" and
+# this side would say nothing, which is the silent-failure shape the
+# whole tool exists to avoid.
+# `agent prompt` refuses with agent_not_found
 # and types nothing (verified against a shell pane).
 #
 # Needs an idle Claude prompt in that pane. To copy while a turn is
@@ -102,7 +107,7 @@ height = "70%"
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"
-command = "herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy'"
+command = "herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy' || herdr notification show 'copy' --body 'not a Claude pane'"
 description = "copy last Claude message"
 
 # ── Plugin bindings ────────────────────────────────────────────────

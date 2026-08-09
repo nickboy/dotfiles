@@ -710,6 +710,17 @@ CCL_HERDR2
     run_test "claude-copy-last falls back to newest file without a pane id" \
         "[ \"\$(bash -c \"cd '$CCL_TMP/work' && PATH='$CCL_TMP/bin':/opt/homebrew/bin:/usr/bin:/bin CLAUDE_PROJECTS_DIR='$CCL_TMP/projects' '$HOME/.local/bin/claude-copy-last'\")\" = 'OTHER PANE' ]"
 
+    # Entry present + hook script gone = exit 127 every session. Warn,
+    # never auto-repair: regenerating means running herdr's installer,
+    # which does not recognise a hand-edited entry and would append a
+    # DUPLICATE. Assert the warning fires AND that nothing was written.
+    printf '{"hooks":{"SessionStart":[{"matcher":"*","hooks":[{"command":"bash \\"$HOME/.claude/hooks/herdr-agent-state.sh\\" session","type":"command"}]}]},"statusLine":{"command":"~/.local/bin/claude-statusline","refreshInterval":5,"type":"command"},"theme":"custom:my-theme"}' \
+        > "$CCL_TMP/orphan.json"
+    run_test "claude-settings-sync warns on an orphaned herdr hook entry" \
+        "CLAUDE_SETTINGS='$CCL_TMP/orphan.json' '$HOME/.local/bin/claude-settings-sync' 2>&1 |
+         grep -q 'script is missing' &&
+         [ \"\$(jq -r '[.. | .command? // empty] | map(select(test(\"herdr\"))) | length' '$CCL_TMP/orphan.json')\" -eq 1 ]"
+
     # herdr silently DROPS clipboard writes over 192 KiB decoded
     # (ghostty MAX_CLIPBOARD_BYTES) — oversize must skip OSC 52 and
     # toast instead of vanishing.

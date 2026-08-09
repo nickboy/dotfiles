@@ -4,11 +4,8 @@
 # `brew trust <tap>` also covers every formula the tap adds in future, which is
 # a lot of standing permission for a personal repo.
 #
-#   brew trust --formula charmbracelet/tap/mods
-#   brew trust --formula oven-sh/bun/bun
 #   brew trust --formula jstkdng/programs/ueberzugpp
 #   brew trust --formula smudge/smudge/nightlight
-#   brew trust --formula tw93/tap/mole
 #   brew trust --formula yakitrak/yakitrak/notesmd-cli
 #
 # Kept on Homebrew rather than moved to a runtime manager on purpose. A tap
@@ -37,7 +34,7 @@ brew "btop"
 # Apple Silicon power/thermal monitor, no sudo (CPU/GPU/ANE)
 brew "macmon"
 # Fast JavaScript runtime, bundler, and package manager
-brew "oven-sh/bun/bun"
+brew "bun"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
 # Human-friendly cut alternative
@@ -93,7 +90,7 @@ brew "lazygit"
 # Package manager for the Lua programming language
 brew "luarocks"
 # AI on the command-line (pipe shell output to LLMs)
-brew "charmbracelet/tap/mods"
+brew "mods"
 # Polyglot dev tool version manager (replaces asdf/nvm/pyenv)
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
@@ -103,7 +100,7 @@ brew "smudge/smudge/nightlight"
 # CLI to open, search, and manage Obsidian/NotesMD vaults
 brew "yakitrak/yakitrak/notesmd-cli"
 # Mac disk cleanup CLI (tw93)
-brew "tw93/tap/mole"
+brew "mole"
 # Node kept in brew for formula deps (ccusage, pyright);
 # userland Node is managed by mise
 brew "node"
@@ -174,6 +171,11 @@ brew "wget"
 brew "xh"
 # An extremely fast Python package installer and resolver, written in Rust
 brew "uv"
+# Image preview backend for yazi. Declared because without it yazi still
+# starts, still loads every plugin, and simply shows no images — a silent
+# degradation with nothing to read. It was installed by hand here and
+# missing from this file, so a fresh machine got exactly that.
+brew "jstkdng/programs/ueberzugpp"
 # Yet Another Dotfiles Manager
 brew "yadm"
 # Blazing fast terminal file manager written in Rust

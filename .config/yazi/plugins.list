@@ -1,0 +1,13 @@
+yazi-rs/plugins:chmod
+yazi-rs/plugins:diff
+yazi-rs/plugins:full-border
+yazi-rs/plugins:git
+yazi-rs/plugins:jump-to-char
+yazi-rs/plugins:mactag
+yazi-rs/plugins:piper
+yazi-rs/plugins:smart-enter
+yazi-rs/plugins:smart-filter
+yazi-rs/plugins:smart-paste
+yazi-rs/plugins:toggle-pane
+KKV9/compress
+Lil-Dank/lazygit

@@ -48,11 +48,15 @@ content of the reply, and for work in this repo most replies contain
 code. **Choose option 3 once** and it copies directly from then on
 (revert with `/config`).
 
-This is deliberately not installed by `claude-settings-sync`: the
-setting (`copyFullResponse`) does not land in `~/.claude/settings.json`,
-so the repo cannot ship the thing the key points at — the same rule that
-keeps `model` and plugins out of the shared half. It is a checklist item
-instead.
+This is deliberately not installed by `claude-settings-sync`. Choosing
+option 3 writes `"copyFullResponse": true` into **`~/.claude.json`** —
+measured, by selecting it and diffing, then reverting — and that file is
+untracked, machine-local Claude Code state that the sync script never
+touches. `/config` options are split across two files in this build
+(`theme` goes to `settings.json`, `autoUpdates` to `~/.claude.json`), so
+the destination cannot be guessed from the category. It is a checklist
+item because the repo genuinely cannot ship it, not because we did not
+look.
 
 **Why this replaced a much larger thing.** Reading the transcript
 ourselves meant answering "which conversation does this pane mean?", and

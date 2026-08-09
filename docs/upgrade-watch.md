@@ -66,6 +66,18 @@ maintenance.
    copy into silent nothing. The suite's fixture test
    ("claude-copy-last extracts latest message from fixture") is the
    canary — it fails the day the schema drifts.
+   **MANUAL PROBE — the one thing here CI cannot check.** The copy
+   keybinding's behaviour lives inside Claude Code's TUI, which CI does
+   not have, and every automated assertion anyone proposed for it
+   reduced to grepping our own documentation. So this is a probe with a
+   trigger and an expected result rather than a fact to re-read:
+
+   > Press `prefix+shift+O` on a reply that **contains a code block**.
+   > Expected: one keypress, content on the clipboard. If a picker
+   > appears instead, either `copyFullResponse` is unset on this machine
+   > (see work-machine-checklist.md) or upstream changed the default —
+   > check `/config` before assuming the binding broke.
+
    The `prefix+shift+o` keybinding now drives Claude Code's own
    `/copy` rather than reading the transcript itself, which removed
    most of what used to be pinned here. Two herdr behaviours still

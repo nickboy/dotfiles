@@ -42,9 +42,12 @@ this repo — most common) or **fresh clone**. Update path first.
     **"3. Always copy full response"**. Without it the key sometimes
     copies and sometimes opens a picker needing a second keypress, with
     no indication why — the trigger is whether the reply happens to
-    contain code. The setting (`copyFullResponse`) does not live in
-    `~/.claude/settings.json`, so `claude-settings-sync` cannot install
-    it for you; revert it any time with `/config`.
+    contain code. **If you skip this step the binding still works — it
+    will just need a second keypress on replies containing code blocks.
+    That is not a bug in the binding.** The setting writes
+    `"copyFullResponse": true` into `~/.claude.json`, which is
+    untracked machine-local state, so `claude-settings-sync` cannot
+    install it for you; revert any time with `/config`.
     `claude-copy-last` (`ccl`) survives for the one thing `/copy`
     structurally cannot do — write to **stdout**, for piping and
     scripting (`ccl | glow`, `ccl > notes.md`); jq required (Brewfile

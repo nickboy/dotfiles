@@ -70,6 +70,11 @@ brew "go"
 brew "hexyl"
 # Command-line benchmarking tool
 brew "hyperfine"
+# yazi preview backend for formats its Rust decoders don't cover — HEIC
+# above all, which is what an iPhone library is made of. Without it yazi
+# renders those as a blank pane with no error, the same silent degradation
+# the removed ueberzugpp note warned about (see the top of this file).
+brew "imagemagick"
 # Lightweight JSON processor (used by tmux-which-key)
 brew "jq"
 # CSV/TSV pager: aligned columns, sticky header, search ("less for CSV")
@@ -117,6 +122,9 @@ brew "pipx"
 brew "procs"
 # Static type checker for Python
 brew "pyright"
+# yazi's SVG preview backend. Small, and SVGs turn up constantly in
+# dotfiles and frontend work; without it they preview as blank.
+brew "resvg"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
 # Intuitive find & replace CLI (sed alternative)

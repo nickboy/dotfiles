@@ -313,6 +313,23 @@ if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
     run_test "Brewfile syntax" "brew bundle check --file=$HOME/Brewfile 2>&1 | head -1"
 fi
 
+# yazi's preview backends fail SILENTLY: a missing one renders a blank pane
+# with no error anywhere. ueberzugpp taught this the expensive way — it was
+# hand-installed and never declared, so a rebuilt machine just quietly lost
+# previews. Assert the DECLARATION first (that is what survives a rebuild),
+# then presence on this machine.
+if [ -f "$HOME/Brewfile" ]; then
+    for yazi_dep in imagemagick resvg; do
+        run_test "Brewfile declares yazi preview backend: $yazi_dep" \
+            "grep -q '^brew \"$yazi_dep\"' $HOME/Brewfile"
+    done
+fi
+if command -v yazi >/dev/null 2>&1; then
+    # magick is the binary imagemagick ships; resvg matches its formula name
+    run_test "yazi preview backends present (magick, resvg)" \
+        "command -v magick >/dev/null 2>&1 && command -v resvg >/dev/null 2>&1"
+fi
+
 # Validate mise config
 if command -v mise >/dev/null 2>&1 && [ -f "$HOME/.config/mise/config.toml" ]; then
     run_test "Mise config syntax" "mise config 2>&1 | head -1"

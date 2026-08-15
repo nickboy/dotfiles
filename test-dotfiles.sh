@@ -407,6 +407,19 @@ if [ -f "$HOME/.config/starship.toml" ]; then
          grep -q '^minimum-contrast = 1.1' $HOME/.config/ghostty/config && \
          grep -q '^faint-opacity = 0.7' $HOME/.config/ghostty/config && \
          grep -q '^undo-timeout = 30s' $HOME/.config/ghostty/config"
+    # Ghostty reads BOTH ~/.config/ghostty/config and the App Support path on
+    # macOS. Symlinking one to the other makes it parse the SAME file twice:
+    # scalar keys are last-wins so nothing looks wrong, but REPEATABLE keys
+    # append twice. Measured 2026-08-15: 4 custom-shader entries instead of 2,
+    # i.e. double the full-screen fragment shader work on every frame.
+    # Compare what Ghostty actually loads against what the file declares —
+    # this catches the duplication whatever its mechanism.
+    if command -v ghostty >/dev/null 2>&1; then
+        GHOSTTY_CFG_SHADERS=$(grep -c '^custom-shader = ' "$HOME/.config/ghostty/config" 2>/dev/null || true)
+        GHOSTTY_LOADED_SHADERS=$(ghostty +show-config 2>/dev/null | grep -c '^custom-shader = ' || true)
+        run_test "Ghostty config is not parsed twice (custom-shader not duplicated)" \
+            "[ -n '$GHOSTTY_LOADED_SHADERS' ] && [ '$GHOSTTY_LOADED_SHADERS' -eq '$GHOSTTY_CFG_SHADERS' ]"
+    fi
     # Daily bob-nightly + plugin churn can desync editor and plugins
     # (the neo-tree/nvim_win_resize incident: nvim frozen on a June
     # nightly while plugins assumed a newer API) — a clean headless
@@ -491,12 +504,18 @@ echo
 # Test 10: Symlink Integrity
 echo -e "${YELLOW}10. Symlink Integrity${NC}"
 
-# Ghostty config symlink
+# Ghostty App Support path must stay EMPTY — the inverse of what this file
+# asserted until 2026-08-15. bootstrap used to symlink config (and shaders)
+# here, but Ghostty already reads ~/.config/ghostty/config natively on macOS,
+# so the link only made it parse the same file twice (see the custom-shader
+# duplication test above). Unconditional on purpose: the old version was
+# wrapped in `if [ -e ] || [ -L ]`, so deleting the link made the assertion
+# silently stop running instead of failing.
 GHOSTTY_LINK="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
-if [ -e "$GHOSTTY_LINK" ] || [ -L "$GHOSTTY_LINK" ]; then
-    run_test "Ghostty config is symlink" "[ -L \"$GHOSTTY_LINK\" ]"
-    run_test "Ghostty symlink target correct" "[ \"\$(readlink \"$GHOSTTY_LINK\")\" = \"$HOME/.config/ghostty/config\" ]"
-fi
+run_test "Ghostty App Support config symlink absent (double-load fix)" \
+    "[ ! -e \"$GHOSTTY_LINK\" ] && [ ! -L \"$GHOSTTY_LINK\" ]"
+run_test "bootstrap does not recreate the Ghostty symlink" \
+    "! grep -qE 'ln -sfn .*ghostty/config' $HOME/.config/yadm/bootstrap"
 
 # Critical dotfiles exist and are non-empty
 for dotfile in ~/.zshrc ~/.tmux.conf ~/.gitconfig ~/.config/starship.toml; do

@@ -96,6 +96,34 @@ Check with `which -a <cmd>` before assuming which copy runs.
    stale) — switch the remote to SSH rather than trying to repair the
    credential.
 
+10. **A failed query is not a negative result** — confirm a query
+    reached the right place before reading "nothing found" as "nothing
+    exists". Three variants have already produced wrong conclusions
+    here:
+
+    - **yadm state**: use `yadm remote -v` / `yadm status`, never bare
+      `git` from `$HOME`. The bare repo lives in
+      `~/.local/share/yadm/repo.git`, so `git remote -v` answers
+      `fatal: not a git repository` — a query that never ran, once
+      reported as "no remotes configured". Rule 1 forbids bare `git`
+      for write correctness; this is the same rule for reads.
+    - **Branch protection**: query `/repos/{owner}/{repo}/rulesets`.
+      The older `/branches/*/protection` endpoint returns 404 for a
+      branch protected by a ruleset — wrong API, not an unprotected
+      branch.
+    - **App usage**: `mdls kMDItemLastUsedDate` is null both for an
+      app never opened AND after a Spotlight metadata reset. Judge
+      "still needed?" from user data — documents, lock files,
+      container contents — not from an index field. This one nearly
+      uninstalled an Office install holding 150 documents.
+
+    Verified state of this repo, 2026-08-15: `origin` is
+    `git@github.com:nickboy/dotfiles.git` over SSH, the repo is
+    **public**, and default branch `master` is covered by an active
+    ruleset — PR required, 4 status checks, no bypass actors, but
+    **0 required approvals and no signature requirement**. Commits are
+    signed by discipline, not by enforcement.
+
 ## Skills
 
 Detailed workflows are in `~/.claude/skills/`. Claude loads these

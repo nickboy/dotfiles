@@ -41,45 +41,40 @@ fetch_to() {
     fi
 }
 
-# Setup Ghostty configuration symlink
-echo "👻 Setting up Ghostty configuration..."
+# Ghostty: REMOVE the legacy App Support symlink, do not create it.
+#
+# Ghostty reads BOTH ~/.config/ghostty/config (XDG) and
+# ~/Library/Application Support/com.mitchellh.ghostty/config on macOS.
+# This script used to symlink the latter to the former, which made Ghostty
+# parse the SAME file twice. Scalar keys are last-wins so they looked fine,
+# but repeatable keys got appended twice — measured 2026-08-15 via
+# `ghostty +show-config`: 4 custom-shader entries instead of 2 (double the
+# full-screen fragment shader work every frame), duplicate font-feature,
+# and a redundant fallback for each font-family variant.
+#
+# ~/.config/ghostty/config is found natively, so the symlink bought nothing.
+echo "👻 Checking Ghostty configuration..."
 if [ -f "$HOME/.config/ghostty/config" ]; then
     GHOSTTY_APP_CONFIG="$HOME/Library/Application Support/com.mitchellh.ghostty"
 
-    # Create Ghostty app config directory if it doesn't exist
-    mkdir -p "$GHOSTTY_APP_CONFIG"
-
-    # Remove existing config if it's not a symlink
-    if [ -f "$GHOSTTY_APP_CONFIG/config" ] && [ ! -L "$GHOSTTY_APP_CONFIG/config" ]; then
-        echo "  Backing up existing Ghostty config..."
-        mv "$GHOSTTY_APP_CONFIG/config" "$GHOSTTY_APP_CONFIG/config.backup.$(date +%s)"
+    # Only remove links we recognise as ours. A REAL file here is a
+    # deliberate machine-local override — warn, never delete.
+    if [ -L "$GHOSTTY_APP_CONFIG/config" ]; then
+        echo "  Removing redundant App Support config symlink (double-load fix)"
+        rm -f "$GHOSTTY_APP_CONFIG/config"
+    elif [ -f "$GHOSTTY_APP_CONFIG/config" ]; then
+        echo "  Warning: a real config exists at $GHOSTTY_APP_CONFIG/config"
+        echo "           Ghostty loads it IN ADDITION to ~/.config/ghostty/config."
     fi
 
-    # Create/retarget symlink. -n so an existing symlink is replaced rather
-    # than dereferenced, and we retarget a symlink that points elsewhere
-    # instead of reporting "already exists" for a wrong link.
-    if [ "$(readlink "$GHOSTTY_APP_CONFIG/config" 2>/dev/null)" = "$HOME/.config/ghostty/config" ]; then
-        echo "  Ghostty symlink already correct"
-    else
-        echo "  Creating symlink for Ghostty config..."
-        ln -sfn "$HOME/.config/ghostty/config" "$GHOSTTY_APP_CONFIG/config"
+    # The shaders link only existed to serve the App Support config; with
+    # that gone, relative custom-shader paths resolve next to the real file.
+    if [ -L "$GHOSTTY_APP_CONFIG/shaders" ]; then
+        echo "  Removing now-unused App Support shaders symlink"
+        rm -f "$GHOSTTY_APP_CONFIG/shaders"
     fi
 
-    # Create symlink for shaders directory if it exists
-    if [ -d "$HOME/.config/ghostty/shaders" ]; then
-        if [ "$(readlink "$GHOSTTY_APP_CONFIG/shaders" 2>/dev/null)" = "$HOME/.config/ghostty/shaders" ]; then
-            echo "  Ghostty shaders symlink already correct"
-        else
-            # A REAL directory here would make `ln -s` drop the link *inside*
-            # it (…/shaders/shaders). Move it aside first, then link with -n.
-            if [ -d "$GHOSTTY_APP_CONFIG/shaders" ] && [ ! -L "$GHOSTTY_APP_CONFIG/shaders" ]; then
-                echo "  Backing up existing Ghostty shaders directory..."
-                mv "$GHOSTTY_APP_CONFIG/shaders" "$GHOSTTY_APP_CONFIG/shaders.backup.$(date +%s)"
-            fi
-            echo "  Creating symlink for Ghostty shaders..."
-            ln -sfn "$HOME/.config/ghostty/shaders" "$GHOSTTY_APP_CONFIG/shaders"
-        fi
-    fi
+    echo "  Ghostty config: ~/.config/ghostty/config (single source)"
 else
     echo "  Warning: Ghostty config not found in ~/.config/ghostty/"
 fi

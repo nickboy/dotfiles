@@ -15,6 +15,7 @@
 # verification settings are per-backend (node.verify and go checksums are on,
 # locked_verify_provenance is off) with nothing bun-specific.
 
+tap "aprilnea/tap"
 tap "charmbracelet/tap"
 tap "oven-sh/bun"
 tap "smudge/smudge"
@@ -237,6 +238,12 @@ cask "font-maple-mono-nf-cn"
 # from ghostty.org and let it update itself; do not re-add either cask.
 # Free and open-source media player
 cask "iina"
+# Logitech device control, replacing Logi Options+ (removed 2026-08 after its
+# agent was found stealing focus every 1.4s). PERSONAL-MACHINE package: skip it
+# on a machine with no Logitech mouse/keyboard. Declared because it was
+# hand-installed and missing here — the same gap that lost ueberzugpp, caught
+# by auditing installed-but-undeclared taps rather than by anything failing.
+cask "aprilnea/tap/openlogi@latest"
 # Control your tools with a few keystrokes
 cask "raycast"
 # Window snapping tool

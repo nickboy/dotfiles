@@ -79,6 +79,45 @@ this repo — most common) or **fresh clone**. Update path first.
   - Verify desktop notifications actually render on this machine (MDM
     can block them, and maintenance-failure banners matter most here):
     `terminal-notifier -title test -message ok` — a banner must appear.
+  - **Ghostty was parsing its config twice** (2026-08-16, PR #93).
+    Ghostty reads BOTH `~/.config/ghostty/config` and the macOS
+    Application Support path; bootstrap used to symlink the second to
+    the first, so every repeatable key was applied twice — 4
+    `custom-shader` entries instead of 2, two extra full-screen shader
+    passes per frame. Scalar keys are last-wins, so nothing looked
+    wrong for as long as it lasted. `yadm bootstrap` now REMOVES that
+    symlink instead of creating it, so the pull plus bootstrap fixes
+    this machine too. Verify — these two numbers must match:
+
+    ```bash
+    ghostty +show-config | grep -c '^custom-shader = '
+    grep -c '^custom-shader = ' ~/.config/ghostty/config
+    ```
+
+    A real file (not a symlink) at the Application Support path is left
+    alone with a warning: that would be a deliberate machine-local
+    override, which a work machine may legitimately have.
+  - **`ll` no longer carries `--git`; `llg` does** (2026-08-16, PR #95).
+    `--git` costs 2–5x and scales with the REPO, not the directory being
+    listed — measured 68.8ms vs 13.9ms in a 263-file repo. If work repos
+    are larger than the personal ones, the win here is bigger, not
+    smaller. Needs a **new shell**, not just a pull. The flag also came
+    out of `ls`/`l`/`lt`/`tree`, where the git column never rendered at
+    all (output verified byte-identical) — no behaviour change there.
+  - **Backup-age warning** (2026-08-16, PR #94): `daily-maintenance.sh`
+    now warns when the newest completed Time Machine backup is older
+    than `TM_WARN_DAYS` (default 30). It reads `SnapshotDates` from the
+    TimeMachine plist, so it does not need the destination mounted.
+    On a machine with **no** Time Machine destination it prints
+    "No Time Machine destination configured — nothing to check" and
+    stays silent, which is the correct behaviour where corp backup
+    handles this. Override the threshold per machine via the exported
+    `TM_WARN_DAYS` in `~/.daily-maintenance.local` if corp policy
+    differs.
+  - **`openlogi@latest` is a personal-machine cask.** It replaces Logi
+    Options+ and only matters with Logitech peripherals attached —
+    skip it here unless this machine has them, in line with the
+    Brewfile review step below.
 - [ ] Push transport for THIS machine: keep HTTPS +
   `gh auth login`, or a work SSH key — set in the machine's untracked
   `~/.gitconfig`. Do not copy the personal 1Password setup.

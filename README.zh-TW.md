@@ -808,7 +808,7 @@ sesh clone https://github.com/user/repo
 
 | 傳統工具 | 現代工具 | 說明 | 別名 |
 | --- | --- | --- | --- |
-| `ls` | **eza** | 支援 git 狀態的現代 ls | `ls`, `ll`, `lt` |
+| `ls` | **eza** | 現代 ls；git 欄位在 `llg` | `ls`, `ll`, `llg`, `lt` |
 | `cat` | **bat** | 支援語法高亮的 cat | `cat` |
 | `grep` | **ripgrep** | 更快速的 grep | `rg` |
 | `find` | **fd** | 更簡潔快速的 find | `fd` |
@@ -847,7 +847,9 @@ sesh clone https://github.com/user/repo
 
 ### Shell 增強功能
 
-- **z-shell/zsh-eza**: 智慧 eza 別名，支援 git 狀態、圖示與分組
+- **eza 別名**：手寫於 `.zshrc`（zsh-eza plugin 已於 2026-08 退休）。
+  圖示與分組全域啟用；git 狀態欄只在 `llg`，因為 `--git` 的成本是
+  2–5 倍，且隨 repo 大小而非所列目錄大小成長
 - **Atuin**: 增強 shell 歷史記錄，使用 SQLite 儲存、模糊搜尋與語法高亮
 - **Oh-My-Zsh 函式庫**（透過 Zinit）：
   - `directories` — 目錄導航（`..`、`...`、`d`、1-9 堆疊、AUTO_CD）

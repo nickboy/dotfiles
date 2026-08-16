@@ -148,15 +148,30 @@ zinit snippet OMZP::sudo
 
 # eza aliases (hand-written; retired the z-shell/zsh-eza plugin so all
 # modern-CLI aliases live here — one fewer zinit dep, one place to edit)
+# --git costs 2-5x and scales with the REPO, not the directory being listed:
+# eza has to resolve status for every tracked file to fill one column.
+# Measured 2026-08-16 in a real terminal (nickboy.github.io, 47 entries but
+# 263 tracked files): 68.8ms with --git vs 13.9ms without. Downloads, which
+# is not a repo at all, showed 49.6 vs 39.8 — so the penalty follows the
+# repo size, and the everyday alias pays it in every project directory.
+#
+# So --git is opt-in via llg, not baked into ll. It is also GONE from the
+# non-long aliases: the git column only renders in long view, and the output
+# is byte-identical with and without it there (md5-compared, same run) — it
+# was pure dead config. la and lx keep it: those are the deliberate
+# show-me-everything views, reached on purpose.
 if command -v eza &> /dev/null; then
-    alias ls='eza --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias l='eza --git-ignore --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias ll='eza --all --header --long --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias llm='eza --all --header --long --sort=modified --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias la='eza -lbhHigUmuSa --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias lx='eza -lbhHigUmuSa@ --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias lt='eza --tree --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
-    alias tree='eza --tree --git --icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    EZA_BASE='--icons --group --group-directories-first --time-style=long-iso --color-scale=all'
+    alias ls="eza $EZA_BASE"
+    alias l="eza --git-ignore $EZA_BASE"
+    alias ll="eza --all --header --long $EZA_BASE"
+    alias llg="eza --all --header --long --git $EZA_BASE"
+    alias llm="eza --all --header --long --sort=modified $EZA_BASE"
+    alias la="eza -lbhHigUmuSa --git $EZA_BASE"
+    alias lx="eza -lbhHigUmuSa@ --git $EZA_BASE"
+    alias lt="eza --tree $EZA_BASE"
+    alias tree="eza --tree $EZA_BASE"
+    unset EZA_BASE
 fi
 
 # ============================================================================

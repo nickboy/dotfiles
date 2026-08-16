@@ -159,6 +159,22 @@ run_test "Retired OMZ snippets stay retired" \
 # _EZA_PARAMS export was dead code — the plugin never read that name)
 run_test "Retired zinit plugins stay retired (zsh-eza)" \
     "! grep -qE 'zinit (light|load).*(zsh-eza)|_EZA_PARAMS' $HOME/.zshrc && { ! command -v eza >/dev/null 2>&1 || zsh -ic 'alias ll' 2>/dev/null | grep -q eza; }"
+# --git costs 2-5x and scales with the REPO, not the listed directory (eza
+# resolves status for every tracked file to fill one column). Measured
+# 2026-08-16: 68.8ms vs 13.9ms in a 263-file repo. It belongs on the opt-in
+# alias only. Asserted against the LIVE alias, not the .zshrc text, so a
+# later re-definition further down the file cannot quietly undo it.
+if command -v eza >/dev/null 2>&1; then
+    run_test "eza: ll is git-free (the everyday alias stays fast)" \
+        "! zsh -ic 'alias ll' 2>/dev/null | grep -qE '(^| )--git( |\$)'"
+    run_test "eza: llg exists and is the one carrying --git" \
+        "zsh -ic 'alias llg' 2>/dev/null | grep -qE '(^| )--git( |\$)'"
+    # The git column only renders in long view; without --long the output is
+    # byte-identical with and without the flag, so carrying it there was
+    # dead config. Keep it that way.
+    run_test "eza: non-long aliases carry no dead --git" \
+        "! zsh -ic 'alias ls; alias lt; alias tree' 2>/dev/null | grep -qE '(^| )--git( |\$)'"
+fi
 # yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
 # declaration must be yadm-tracked and every declared plugin installed,
 # or new machines silently lose the plugin set (the pre-2026-08 state)

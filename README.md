@@ -858,7 +858,7 @@ Modern Rust-based replacements for traditional Unix tools:
 
 | Traditional | Modern Tool | Description | Alias |
 | --- | --- | --- | --- |
-| `ls` | **eza** | Modern ls with git integration | `ls`, `ll`, `lt` |
+| `ls` | **eza** | Modern ls; git column on `llg` | `ls`, `ll`, `llg`, `lt` |
 | `cat` | **bat** | Cat with syntax highlighting | `cat` |
 | `grep` | **ripgrep** | Faster grep with smart defaults | `rg` |
 | `find` | **fd** | Simpler, faster find | `fd` |
@@ -897,7 +897,10 @@ Modern Rust-based replacements for traditional Unix tools:
 
 ### Shell Enhancements
 
-- **z-shell/zsh-eza**: Smart eza aliases with git status, icons, and grouping
+- **eza aliases**: hand-written in `.zshrc` (the zsh-eza plugin was retired
+  2026-08). Icons and grouping everywhere; the git-status column is on `llg`
+  only, because `--git` costs 2-5x and scales with the repo rather than the
+  directory being listed
 - **Atuin**: Enhanced shell history with SQLite storage, fuzzy search, and syntax
   highlighting
 - **Oh-My-Zsh Libraries** (via Zinit):

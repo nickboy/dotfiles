@@ -4,7 +4,6 @@
 # `brew trust <tap>` also covers every formula the tap adds in future, which is
 # a lot of standing permission for a personal repo.
 #
-#   brew trust --formula jstkdng/programs/ueberzugpp
 #   brew trust --formula smudge/smudge/nightlight
 #   brew trust --formula yakitrak/yakitrak/notesmd-cli
 #
@@ -71,6 +70,11 @@ brew "go"
 brew "hexyl"
 # Command-line benchmarking tool
 brew "hyperfine"
+# yazi preview backend for formats its Rust decoders don't cover — HEIC
+# above all, which is what an iPhone library is made of. Without it yazi
+# renders those as a blank pane with no error, the same silent degradation
+# the removed ueberzugpp note warned about (see the top of this file).
+brew "imagemagick"
 # Lightweight JSON processor (used by tmux-which-key)
 brew "jq"
 # CSV/TSV pager: aligned columns, sticky header, search ("less for CSV")
@@ -118,6 +122,9 @@ brew "pipx"
 brew "procs"
 # Static type checker for Python
 brew "pyright"
+# yazi's SVG preview backend. Small, and SVGs turn up constantly in
+# dotfiles and frontend work; without it they preview as blank.
+brew "resvg"
 # Search tool like grep and The Silver Searcher
 brew "ripgrep"
 # Intuitive find & replace CLI (sed alternative)
@@ -171,11 +178,22 @@ brew "wget"
 brew "xh"
 # An extremely fast Python package installer and resolver, written in Rust
 brew "uv"
-# Image preview backend for yazi. Declared because without it yazi still
-# starts, still loads every plugin, and simply shows no images — a silent
-# degradation with nothing to read. It was installed by hand here and
-# missing from this file, so a fresh machine got exactly that.
-brew "jstkdng/programs/ueberzugpp"
+# ueberzugpp was declared here as yazi's image backend until 2026-08-15.
+# It is not needed on this setup and no longer builds:
+#
+#   `ya env` in a real Ghostty window reports `kgp: true` and
+#   `Adapter Drivers.matches: Kgp` — yazi is using Ghostty's native Kitty
+#   graphics protocol, with `ueberzugpp: No such file or directory` in the
+#   same report. Kitty implements the same protocol, so the backup terminal
+#   is covered too. Nothing else in the dotfiles references ueberzug.
+#
+#   It also cannot be built on macOS 27: its `meta` (range-v3) headers use
+#   _LIBCPP_TEMPLATE_VIS, which that SDK's libc++ removed, so the macro name
+#   itself gets parsed as a type. Homebrew disclaims macOS 27 as non-Tier-1,
+#   so `brew bundle` failed on every bootstrap run.
+#
+# Note the probe only answers over a real TTY — under `script`-allocated ptys
+# it reports `kgp: false`, which is why this has to be checked in a terminal.
 # Yet Another Dotfiles Manager
 brew "yadm"
 # Blazing fast terminal file manager written in Rust

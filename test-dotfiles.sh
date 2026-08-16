@@ -696,6 +696,50 @@ echo
 # Test 15: Unit tests (lib functions + fixture-based checks)
 echo -e "${YELLOW}15. Unit Tests${NC}"
 
+# Time Machine backup-age warning. AutoBackup is OFF by choice (local
+# snapshots were eating the internal disk while the T7 is unplugged), so this
+# check is the only thing standing between here and another eleven-month gap
+# — it has to be proven to FIRE, not just to stay quiet on a healthy machine.
+# The section is extracted and run against fixture plists so the real backup
+# state is never touched and all three branches are exercised.
+if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
+    TM_UT_DIR=$(mktemp -d)
+    awk '/^# --- Time Machine backup age/,/^# --- Machine-local extras/' \
+        "$HOME/daily-maintenance.sh" | sed '$d' > "$TM_UT_DIR/section.sh"
+
+    # stale: a completed backup 100 days old
+    /usr/libexec/PlistBuddy -c "Add :Destinations array" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0 dict" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0:DestinationID string UT" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0:SnapshotDates array" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0:SnapshotDates:0 date '$(LC_ALL=C date -v-100d '+%a %b %d %H:%M:%S %Z %Y')'" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    # fresh: a completed backup from today
+    cp "$TM_UT_DIR/stale.plist" "$TM_UT_DIR/fresh.plist" 2>/dev/null
+    /usr/libexec/PlistBuddy -c "Set :Destinations:0:SnapshotDates:0 '$(LC_ALL=C date '+%a %b %d %H:%M:%S %Z %Y')'" "$TM_UT_DIR/fresh.plist" >/dev/null 2>&1
+    # never: destination configured, no SnapshotDates at all
+    /usr/libexec/PlistBuddy -c "Add :Destinations array" "$TM_UT_DIR/never.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0 dict" "$TM_UT_DIR/never.plist" >/dev/null 2>&1
+    /usr/libexec/PlistBuddy -c "Add :Destinations:0:DestinationID string UT" "$TM_UT_DIR/never.plist" >/dev/null 2>&1
+    # none: no destinations key
+    /usr/libexec/PlistBuddy -c "Add :AutoBackup integer 0" "$TM_UT_DIR/none.plist" >/dev/null 2>&1
+
+    TM_UT="TM_WARN_DAYS=7 bash '$TM_UT_DIR/section.sh'"
+    run_test "TM age: a 100-day-old backup warns" \
+        "TM_PLIST='$TM_UT_DIR/stale.plist' $TM_UT | grep -q 'Stale'"
+    run_test "TM age: a backup from today does NOT warn" \
+        "! { TM_PLIST='$TM_UT_DIR/fresh.plist' $TM_UT | grep -q 'Stale'; }"
+    run_test "TM age: a destination that never completed a backup warns" \
+        "TM_PLIST='$TM_UT_DIR/never.plist' $TM_UT | grep -q 'NEVER completed'"
+    run_test "TM age: no destination configured is not an alarm" \
+        "TM_PLIST='$TM_UT_DIR/none.plist' $TM_UT | grep -q 'No Time Machine destination'"
+    # tmutil latestbackup needs the destination MOUNTED, so it cannot be the
+    # source here — it fails exactly when the warning matters.
+    run_test "TM age: reads SnapshotDates, not tmutil latestbackup" \
+        "grep -q 'SnapshotDates' $HOME/daily-maintenance.sh &&
+         ! grep -qE '^[^#]*tmutil latestbackup' $HOME/daily-maintenance.sh"
+    rm -rf "$TM_UT_DIR"
+fi
+
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
 # Since herdr left Homebrew (2026-08-05) the maintenance call site is a
 # no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled

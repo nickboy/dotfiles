@@ -610,6 +610,75 @@ if command -v tmux >/dev/null 2>&1; then
     fi
 fi
 
+# --- Time Machine backup age ------------------------------------------------
+# AutoBackup was turned off 2026-08-16 so local snapshots would stop consuming
+# the internal disk while the T7 is unplugged. That trade puts backups back on
+# human memory — which is exactly how the previous gap reached ELEVEN MONTHS
+# (2025-09-16 → 2026-08-15, found by a health check, not by noticing).
+# This is the replacement for remembering.
+#
+# Source is SnapshotDates, NOT `tmutil latestbackup`: that command needs the
+# destination MOUNTED, so it fails precisely when the warning matters most.
+# LastBackupActivity is no good either — it records attempts, so it reads
+# "today" even when nothing was backed up. SnapshotDates holds completed
+# backups per destination, and is untouched by `tmutil deletelocalsnapshots`
+# (verified 2026-08-16 after deleting all 7 local snapshots). The plist is
+# world-readable, so this needs no sudo.
+# Both overridable so test-dotfiles.sh can point at a fixture plist and drive
+# the stale/never/no-destination branches without touching real backup state.
+TM_PLIST="${TM_PLIST:-/Library/Preferences/com.apple.TimeMachine.plist}"
+TM_WARN_DAYS="${TM_WARN_DAYS:-7}"
+if [ -r "$TM_PLIST" ] && [ -x /usr/libexec/PlistBuddy ]; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Time Machine backup age"
+
+    tm_latest=0
+    tm_i=0
+    tm_alert=""
+    while /usr/libexec/PlistBuddy -c "Print :Destinations:$tm_i:DestinationID" \
+            "$TM_PLIST" >/dev/null 2>&1; do
+        tm_date=$(/usr/libexec/PlistBuddy \
+            -c "Print :Destinations:$tm_i:SnapshotDates" "$TM_PLIST" 2>/dev/null \
+            | sed -n 's/^ *\([A-Z][a-z][a-z] .*\)$/\1/p' | tail -1)
+        if [ -n "$tm_date" ]; then
+            # LC_ALL=C because launchd hands this script a minimal environment
+            # and the month/day names in the plist are always English.
+            tm_epoch=$(LC_ALL=C date -j -f "%a %b %d %H:%M:%S %Z %Y" \
+                "$tm_date" +%s 2>/dev/null)
+            if [ -n "$tm_epoch" ] && [ "$tm_epoch" -gt "$tm_latest" ]; then
+                tm_latest="$tm_epoch"
+            fi
+        fi
+        tm_i=$((tm_i + 1))
+    done
+
+    if [ "$tm_i" -eq 0 ]; then
+        echo "  No Time Machine destination configured — nothing to check."
+    elif [ "$tm_latest" -eq 0 ]; then
+        echo "  ⚠️  A destination is configured but has NEVER completed a backup."
+        tm_alert="Time Machine has never completed a backup"
+    else
+        tm_age=$(( ( $(date +%s) - tm_latest ) / 86400 ))
+        echo "  Last completed backup: $(date -r "$tm_latest" '+%Y-%m-%d %H:%M')" \
+             "(${tm_age}d ago, warn at ${TM_WARN_DAYS}d)"
+        if [ "$tm_age" -ge "$TM_WARN_DAYS" ]; then
+            echo "  ⚠️  Stale — connect the T7 and run: tmutil startbackup"
+            tm_alert="Last backup was ${tm_age} days ago"
+        fi
+    fi
+
+    # Its own notification rather than FAILED_COMMANDS: nothing here FAILED,
+    # and folding it into the failure list would report a healthy run as
+    # broken (and bury the one line that matters under task names).
+    if [ -n "$tm_alert" ] && command -v terminal-notifier >/dev/null 2>&1; then
+        terminal-notifier \
+            -title "Time Machine: backup is stale" \
+            -message "$tm_alert — connect the T7, then: tmutil startbackup" \
+            >/dev/null 2>&1 || true
+    fi
+fi
+
 # --- Machine-local extras ---------------------------------------------------
 # Deliberately the LAST step. Anything here is specific to one machine — a work
 # laptop needs steps touching remote hosts and corp tooling that must never land

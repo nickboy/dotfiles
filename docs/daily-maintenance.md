@@ -17,6 +17,14 @@ Automates daily system maintenance tasks including:
 - Treesitter parser updates (`nvim --headless '+TSUpdate' +qa`)
 - Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and
   clears cache
+- Time Machine backup-age check - warns in the log and via a notification
+  when the newest completed backup is older than `TM_WARN_DAYS` (default 7).
+  Automatic backups are OFF on this machine, so this is what replaces
+  remembering; the previous gap ran to eleven months before a health check
+  found it. Reads `SnapshotDates` from
+  `/Library/Preferences/com.apple.TimeMachine.plist` rather than
+  `tmutil latestbackup`, which needs the destination mounted and so fails
+  exactly when the warning matters.
 
 ## Features
 

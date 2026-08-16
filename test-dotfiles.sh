@@ -737,6 +737,19 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     run_test "TM age: reads SnapshotDates, not tmutil latestbackup" \
         "grep -q 'SnapshotDates' $HOME/daily-maintenance.sh &&
          ! grep -qE '^[^#]*tmutil latestbackup' $HOME/daily-maintenance.sh"
+
+    # The DEFAULT threshold, exercised with TM_WARN_DAYS unset. Without these
+    # the four tests above pass for any default at all, so a fat-fingered
+    # number would ship silently. 40d must warn and 10d must not, which pins
+    # the default to the 11..40 band and to 30 in practice.
+    /usr/libexec/PlistBuddy -c "Set :Destinations:0:SnapshotDates:0 '$(LC_ALL=C date -v-40d '+%a %b %d %H:%M:%S %Z %Y')'" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    cp "$TM_UT_DIR/stale.plist" "$TM_UT_DIR/d40.plist" 2>/dev/null
+    /usr/libexec/PlistBuddy -c "Set :Destinations:0:SnapshotDates:0 '$(LC_ALL=C date -v-10d '+%a %b %d %H:%M:%S %Z %Y')'" "$TM_UT_DIR/stale.plist" >/dev/null 2>&1
+    cp "$TM_UT_DIR/stale.plist" "$TM_UT_DIR/d10.plist" 2>/dev/null
+    run_test "TM age: default threshold warns at 40 days" \
+        "TM_PLIST='$TM_UT_DIR/d40.plist' bash '$TM_UT_DIR/section.sh' | grep -q 'Stale'"
+    run_test "TM age: default threshold stays quiet at 10 days" \
+        "! { TM_PLIST='$TM_UT_DIR/d10.plist' bash '$TM_UT_DIR/section.sh' | grep -q 'Stale'; }"
     rm -rf "$TM_UT_DIR"
 fi
 

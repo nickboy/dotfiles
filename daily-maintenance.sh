@@ -627,7 +627,12 @@ fi
 # Both overridable so test-dotfiles.sh can point at a fixture plist and drive
 # the stale/never/no-destination branches without touching real backup state.
 TM_PLIST="${TM_PLIST:-/Library/Preferences/com.apple.TimeMachine.plist}"
-TM_WARN_DAYS="${TM_WARN_DAYS:-7}"
+# 30 days: the backup target is an external T7 that is not always plugged in,
+# so a weekly threshold would cry wolf on ordinary travel and get ignored —
+# the failure mode that matters here is a warning nobody reads. The gap this
+# guards against was 330 days, so 30 still catches it an order of magnitude
+# earlier while only firing when something is genuinely wrong.
+TM_WARN_DAYS="${TM_WARN_DAYS:-30}"
 if [ -r "$TM_PLIST" ] && [ -x /usr/libexec/PlistBuddy ]; then
     echo ""
     echo "----------------------------------------"

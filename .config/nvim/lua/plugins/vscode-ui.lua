@@ -61,24 +61,53 @@ return {
     },
   },
 
-  -- Peek definition/references (like VS Code Alt+F12)
+  -- Peek definition/references (like VS Code Alt+F12).
+  --
+  -- Was dnlhc/glance.nvim until 2026-08-16. Same capability, but glance had
+  -- gone 425 days without a commit while sitting directly on the LSP API —
+  -- the part of Neovim that moved most across 0.11-0.13 — and this config
+  -- tracks bob nightly. goto-preview is the same idea with roughly half the
+  -- staleness (233 days) and more users, so it is the safer place to be when
+  -- the next LSP rename lands.
+  --
+  -- It is NOT a drop-in visually: glance drew a split with a candidate list
+  -- down the side, goto-preview stacks floating windows. gR (references) is
+  -- where that shows most — a picker now, not a persistent list. Keys are
+  -- unchanged on purpose so the muscle memory survives the swap.
   {
-    "dnlhc/glance.nvim",
-    cmd = "Glance",
+    "rmagatti/goto-preview",
+    event = "LspAttach",
     opts = {
-      border = {
-        enable = true,
+      width = 120,
+      height = 20,
+      border = { "╭", "─", "╮", "│", "╯", "─", "╰", "│" },
+      default_mappings = false,
+      focus_on_open = true,
+      dismiss_on_move = false,
+      stack_floating_preview_windows = true,
+      preview_window_title = { enable = true, position = "left" },
+      references = {
+        -- snacks, not the telescope default: LazyVim's picker here is
+        -- snacks.picker, and pointing this at telescope would drag in a
+        -- second picker just to list references.
+        provider = "snacks",
       },
-      theme = {
-        enable = true,
-        mode = "auto",
-      },
+      -- glance closed on `q` from inside the peek window. goto-preview has
+      -- no such binding, so map it per preview buffer rather than burning a
+      -- global key (gP is Neovim's own paste-before-and-move-cursor).
+      post_open_hook = function(bufnr, _)
+        vim.keymap.set("n", "q", function()
+          require("goto-preview").close_all_win()
+        end, { buffer = bufnr, desc = "Close preview windows" })
+      end,
     },
     keys = {
-      { "gD", "<cmd>Glance definitions<cr>", desc = "Glance Definition" },
-      { "gR", "<cmd>Glance references<cr>", desc = "Glance References" },
-      { "gY", "<cmd>Glance type_definitions<cr>", desc = "Glance Type Definition" },
-      { "gM", "<cmd>Glance implementations<cr>", desc = "Glance Implementations" },
+      -- stylua: ignore start
+      { "gD", function() require("goto-preview").goto_preview_definition() end, desc = "Peek Definition" },
+      { "gR", function() require("goto-preview").goto_preview_references() end, desc = "Peek References" },
+      { "gY", function() require("goto-preview").goto_preview_type_definition() end, desc = "Peek Type Definition" },
+      { "gM", function() require("goto-preview").goto_preview_implementation() end, desc = "Peek Implementation" },
+      -- stylua: ignore end
     },
   },
 }

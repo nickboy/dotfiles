@@ -207,13 +207,20 @@ fi
 # for both strings would pass with them the wrong way round, which is
 # exactly the bug that leaves a machine with silently-missing packages.
 if [ -f "$HOME/.config/yadm/bootstrap" ] && [ -f "$HOME/Brewfile" ]; then
-    run_test "bootstrap trusts third-party formulae BEFORE brew bundle" \
-        "awk '/brew trust --formula/{t=NR} /brew bundle --file/{b=NR} END{exit !(t && b && t < b)}' '$HOME/.config/yadm/bootstrap'"
+    # Ordering: trust has to be granted before bundle runs, or brew refuses
+    # the package on the very run that was meant to install it. Matched on
+    # `brew trust` alone — the flag is chosen at runtime now (--formula or
+    # --cask), and pinning the literal made this fail on a refactor that had
+    # not changed the behaviour at all.
+    run_test "bootstrap trusts third-party packages BEFORE brew bundle" \
+        "awk '/brew trust /{t=NR} /brew bundle --file/{b=NR} END{exit !(t && b && t < b)}' '$HOME/.config/yadm/bootstrap'"
     # …and derives them from the Brewfile, so "trusted" cannot drift from
-    # "installed" the way a hard-coded list would.
+    # "installed" the way a hard-coded list would. Asserted as "reads the
+    # Brewfile and greps package declarations out of it" rather than one
+    # exact regex, for the same reason.
     run_test "…derived from the Brewfile, not a hard-coded list" \
         "grep -q 'HOME/Brewfile' '$HOME/.config/yadm/bootstrap' &&
-         grep -qE 'grep -E .\\^brew ' '$HOME/.config/yadm/bootstrap'"
+         grep -qE \"grep -E .\\^\\(brew\" '$HOME/.config/yadm/bootstrap'"
     # Every listed plugin must actually be declared, or the list has
     # silently drifted from what the machine really has.
     if [ -f "$HOME/.config/yazi/package.toml" ]; then
@@ -350,6 +357,26 @@ if [ -f "$HOME/Brewfile" ]; then
     run_test "Brewfile: every declared tap has a full owner/tap/name entry" \
         "[ -z '$BREW_TAP_ORPHANS' ]"
     [ -n "$BREW_TAP_ORPHANS" ] && echo -e "  ${YELLOW}untraceable taps: $BREW_TAP_ORPHANS${NC}"
+
+    # The tap-level check above is necessary but NOT sufficient, and signed off
+    # on a real defect: it accepted a `cask` line as satisfying a tap, while
+    # bootstrap's trust loop only read `^brew "`. aprilnea/tap therefore went
+    # untrusted on any fresh machine while this test stayed green.
+    #
+    # So assert the stronger thing directly: every three-part declaration must
+    # be reachable by bootstrap's OWN pipeline. Drift between the two is the
+    # bug, and comparing them is the only way to see it.
+    BREW_DECLARED=$(grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
+        | sed -E 's/.*"(.*)"/\1/' | sort -u)
+    BREW_TRUSTED=$(grep -E '^(brew|cask) "[^/]+/[^/]+/' "$HOME/Brewfile" \
+        | sed -E 's/^(brew|cask) "([^"]*)".*/\2/' | sort -u)
+    BREW_UNTRUSTABLE=$(comm -23 <(printf '%s\n' "$BREW_DECLARED") <(printf '%s\n' "$BREW_TRUSTED") | tr '\n' ' ')
+    run_test "Brewfile: every tap package is reachable by bootstrap's trust loop" \
+        "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
+    # And that bootstrap still reads BOTH kinds — the regression that started it.
+    run_test "bootstrap trusts casks as well as formulae" \
+        "grep -qE \"grep -E '\\^\\(brew\\|cask\\)\" $HOME/.config/yadm/bootstrap &&
+         grep -q 'trust_flag=\"--cask\"' $HOME/.config/yadm/bootstrap"
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane

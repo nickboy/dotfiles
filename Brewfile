@@ -8,6 +8,11 @@
 #   brew trust --formula oven-sh/bun/bun
 #   brew trust --formula smudge/smudge/nightlight
 #   brew trust --formula yakitrak/yakitrak/notesmd-cli
+#   brew trust --cask    aprilnea/tap/openlogi@latest
+#
+# Casks need --cask: brew gates formulae and casks through separate checks
+# (require_trusted_formula! / require_trusted_cask!), so a cask from a
+# third-party tap is refused just like a formula is.
 #
 # EVERY package from a third-party tap must be declared with its FULL
 # owner/tap/name path, never the bare formula name. bootstrap derives the

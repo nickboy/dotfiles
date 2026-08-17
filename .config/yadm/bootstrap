@@ -110,14 +110,25 @@ fi
 # Per-formula, NOT per-tap, deliberately — `brew trust <tap>` also covers
 # every formula that tap adds in future, which is standing permission this
 # repo has decided against (see the header of ~/Brewfile).
+# Formulae AND casks: brew gates them separately (`brew trust --formula` vs
+# `--cask`), so a cask line left out here is untrusted on a fresh machine
+# exactly like a bare formula name is. This loop read only `^brew "` until
+# 2026-08-16, which left aprilnea/tap untrusted the moment a cask from it was
+# declared — the same defect this trust derivation exists to prevent.
 if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
-    echo "🔐 Trusting third-party formulae declared in the Brewfile..."
-    grep -E '^brew "[^/]+/[^/]+/' "$HOME/Brewfile" \
-        | sed 's/^brew "\([^"]*\)".*/\1/' \
-        | while IFS= read -r formula; do
-            [ -n "$formula" ] || continue
-            brew trust --formula "$formula" >/dev/null 2>&1 \
-                || echo "  ⚠️  could not trust $formula"
+    echo "🔐 Trusting third-party packages declared in the Brewfile..."
+    # sed -E, not sed: BSD sed's basic REs have no alternation.
+    grep -E '^(brew|cask) "[^/]+/[^/]+/' "$HOME/Brewfile" \
+        | sed -E 's/^(brew|cask) "([^"]*)".*/\1 \2/' \
+        | while IFS=' ' read -r kind name; do
+            [ -n "$name" ] || continue
+            case "$kind" in
+                brew) trust_flag="--formula" ;;
+                cask) trust_flag="--cask" ;;
+                *)    continue ;;
+            esac
+            brew trust "$trust_flag" "$name" >/dev/null 2>&1 \
+                || echo "  ⚠️  could not trust $name"
         done
 fi
 

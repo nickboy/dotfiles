@@ -95,10 +95,22 @@ return {
       -- glance closed on `q` from inside the peek window. goto-preview has
       -- no such binding, so map it per preview buffer rather than burning a
       -- global key (gP is Neovim's own paste-before-and-move-cursor).
+      -- bufnr here is the TARGET FILE's buffer, not a scratch one — goto-preview
+      -- loads the real file and shows it in a float. So this map lands on a
+      -- buffer that outlives the preview, and with same_file_float_preview on
+      -- (the default) that can be the buffer you are editing: close the peek
+      -- and `q` no longer starts macro recording. buffer_entered also re-runs
+      -- this hook for every buffer entered while inside a preview, so browsing
+      -- references stamps it on each file in turn. post_close_hook undoes it.
       post_open_hook = function(bufnr, _)
         vim.keymap.set("n", "q", function()
           require("goto-preview").close_all_win()
         end, { buffer = bufnr, desc = "Close preview windows" })
+      end,
+      post_close_hook = function(bufnr, _)
+        -- pcall: the buffer may already be wiped (bufhidden = "wipe"), and the
+        -- hook fires from several sites, so a missing mapping is expected.
+        pcall(vim.keymap.del, "n", "q", { buffer = bufnr })
       end,
     },
     keys = {

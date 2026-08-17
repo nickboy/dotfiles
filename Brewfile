@@ -4,8 +4,19 @@
 # `brew trust <tap>` also covers every formula the tap adds in future, which is
 # a lot of standing permission for a personal repo.
 #
+#   brew trust --formula charmbracelet/tap/mods
+#   brew trust --formula oven-sh/bun/bun
 #   brew trust --formula smudge/smudge/nightlight
 #   brew trust --formula yakitrak/yakitrak/notesmd-cli
+#
+# EVERY package from a third-party tap must be declared with its FULL
+# owner/tap/name path, never the bare formula name. bootstrap derives the
+# trust list by grepping three-part names out of this file, so a short name
+# leaves its tap untrusted — and brew then SKIPS that package while printing
+# a warning that scrolls past. `brew "mods"` did this until 2026-08-16:
+# charmbracelet/tap stayed untrusted and `brew info mods` returned nothing,
+# meaning mods was never being upgraded. test-dotfiles.sh now asserts every
+# declared tap has at least one matching three-part entry.
 #
 # Kept on Homebrew rather than moved to a runtime manager on purpose. A tap
 # pins a URL and a sha256 in a formula you can read, and refuses to load until
@@ -19,7 +30,6 @@ tap "aprilnea/tap"
 tap "charmbracelet/tap"
 tap "oven-sh/bun"
 tap "smudge/smudge"
-tap "tw93/tap"
 tap "yakitrak/yakitrak"
 # Code searching, linting, rewriting
 brew "ast-grep"
@@ -33,8 +43,12 @@ brew "bat"
 brew "btop"
 # Apple Silicon power/thermal monitor, no sudo (CPU/GPU/ANE)
 brew "macmon"
-# Fast JavaScript runtime, bundler, and package manager
-brew "bun"
+# Fast JavaScript runtime, bundler, and package manager. Full tap path for the
+# same reason as mods below — and this one had a second problem: it was the
+# only entry in trust.json's "trustedtaps", i.e. trusted TAP-WIDE, which is
+# exactly what the header of this file argues against. Naming it here lets
+# bootstrap grant per-formula trust instead, and the tap-wide grant can go.
+brew "oven-sh/bun/bun"
 # Versatile and fast Unicode/ASCII/ANSI graphics renderer
 brew "chafa"
 # Human-friendly cut alternative
@@ -94,8 +108,13 @@ brew "just"
 brew "lazygit"
 # Package manager for the Lua programming language
 brew "luarocks"
-# AI on the command-line (pipe shell output to LLMs)
-brew "mods"
+# AI on the command-line (pipe shell output to LLMs). Written as the full
+# tap/formula path, not "mods": bootstrap derives the trust list by grepping
+# THREE-part names out of this file, so a short name silently leaves its tap
+# untrusted — and an untrusted tap makes brew skip the package while printing
+# a warning nobody reads. That is what happened here: charmbracelet/tap sat
+# untrusted long enough that `brew info mods` returned nothing at all.
+brew "charmbracelet/tap/mods"
 # Polyglot dev tool version manager (replaces asdf/nvm/pyenv)
 brew "mise"
 # Ambitious Vim-fork focused on extensibility and agility
@@ -104,7 +123,10 @@ brew "neovim"
 brew "smudge/smudge/nightlight"
 # CLI to open, search, and manage Obsidian/NotesMD vaults
 brew "yakitrak/yakitrak/notesmd-cli"
-# Mac disk cleanup CLI (tw93)
+# Mac disk cleanup CLI. From homebrew/core — tw93 is the author, not the tap.
+# The tw93/tap this comment used to imply was dropped 2026-08-16: its only
+# formula is kakuku, which is neither installed nor declared, so the tap
+# existed purely to print an untrusted-tap warning on every brew command.
 brew "mole"
 # Node kept in brew for formula deps (ccusage, pyright);
 # userland Node is managed by mise

@@ -329,6 +329,29 @@ if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
     run_test "Brewfile syntax" "brew bundle check --file=$HOME/Brewfile 2>&1 | head -1"
 fi
 
+# bootstrap builds the trust list by grepping THREE-part owner/tap/name entries
+# out of the Brewfile, so a tap package written with its bare name leaves the
+# tap untrusted — and brew then SKIPS that package behind a warning nobody
+# reads. `brew "mods"` did exactly that until 2026-08-16: charmbracelet/tap sat
+# untrusted, `brew info mods` returned nothing, and mods was never upgraded.
+#
+# The invariant that catches it: every declared tap must have at least one
+# three-part declaration pointing at it. A tap with none is either dead (drop
+# it — tw93/tap was, its only formula neither installed nor declared) or has
+# its package written with a short name (the bug).
+if [ -f "$HOME/Brewfile" ]; then
+    BREW_TAP_ORPHANS=""
+    while IFS= read -r tap_name; do
+        [ -n "$tap_name" ] || continue
+        if ! grep -qE "^(brew|cask) \"$tap_name/" "$HOME/Brewfile"; then
+            BREW_TAP_ORPHANS="${BREW_TAP_ORPHANS}${BREW_TAP_ORPHANS:+ }${tap_name}"
+        fi
+    done <<< "$(grep -oE '^tap "[^"]+"' "$HOME/Brewfile" | sed 's/tap "//; s/"//')"
+    run_test "Brewfile: every declared tap has a full owner/tap/name entry" \
+        "[ -z '$BREW_TAP_ORPHANS' ]"
+    [ -n "$BREW_TAP_ORPHANS" ] && echo -e "  ${YELLOW}untraceable taps: $BREW_TAP_ORPHANS${NC}"
+fi
+
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane
 # with no error anywhere. ueberzugpp taught this the expensive way — it was
 # hand-installed and never declared, so a rebuilt machine just quietly lost

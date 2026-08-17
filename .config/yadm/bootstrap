@@ -57,15 +57,25 @@ echo "👻 Checking Ghostty configuration..."
 if [ -f "$HOME/.config/ghostty/config" ]; then
     GHOSTTY_APP_CONFIG="$HOME/Library/Application Support/com.mitchellh.ghostty"
 
-    # Only remove links we recognise as ours. A REAL file here is a
-    # deliberate machine-local override — warn, never delete.
-    if [ -L "$GHOSTTY_APP_CONFIG/config" ]; then
-        echo "  Removing redundant App Support config symlink (double-load fix)"
-        rm -f "$GHOSTTY_APP_CONFIG/config"
-    elif [ -f "$GHOSTTY_APP_CONFIG/config" ]; then
-        echo "  Warning: a real config exists at $GHOSTTY_APP_CONFIG/config"
-        echo "           Ghostty loads it IN ADDITION to ~/.config/ghostty/config."
-    fi
+    # BOTH filenames. Ghostty 1.3 renamed this file to config.ghostty, and it
+    # RECREATES a commented-out template there whenever it decides no config
+    # exists — one appeared on this machine hours after the original fix
+    # landed. So "the directory must stay empty" was never achievable; the
+    # thing that actually matters is that nothing here contributes settings.
+    #
+    # Only links are removed. A REAL file is a deliberate machine-local
+    # override (or Ghostty's own template) — warn, never delete.
+    for ghostty_cfg in "$GHOSTTY_APP_CONFIG/config" "$GHOSTTY_APP_CONFIG/config.ghostty"; do
+        if [ -L "$ghostty_cfg" ]; then
+            echo "  Removing redundant App Support symlink: $(basename "$ghostty_cfg")"
+            rm -f "$ghostty_cfg"
+        elif [ -f "$ghostty_cfg" ] && grep -qvE '^[[:space:]]*(#|$)' "$ghostty_cfg" 2>/dev/null; then
+            # Comment-only templates are inert and left in silence; only a file
+            # with real settings can double-load, and that is worth saying.
+            echo "  Warning: $ghostty_cfg sets values"
+            echo "           Ghostty loads it IN ADDITION to ~/.config/ghostty/config."
+        fi
+    done
 
     # The shaders link only existed to serve the App Support config; with
     # that gone, relative custom-shader paths resolve next to the real file.

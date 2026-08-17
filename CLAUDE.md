@@ -98,8 +98,9 @@ Check with `which -a <cmd>` before assuming which copy runs.
 
 10. **A failed query is not a negative result** — confirm a query
     reached the right place before reading "nothing found" as "nothing
-    exists". Three variants have already produced wrong conclusions
-    here:
+    exists". Four variants have already produced wrong conclusions
+    here — the fourth was found by a reviewer who nearly hit it while
+    reviewing this very rule:
 
     - **yadm state**: use `yadm remote -v` / `yadm status`, never bare
       `git` from `$HOME`. The bare repo lives in
@@ -116,13 +117,19 @@ Check with `which -a <cmd>` before assuming which copy runs.
       "still needed?" from user data — documents, lock files,
       container contents — not from an index field. This one nearly
       uninstalled an Office install holding 150 documents.
+    - **Isolated-environment probes**: a redirected environment may not
+      redirect every path the program reads. `HOME=/tmp/fake ghostty
+      +show-config` honours `$XDG_CONFIG_HOME` but resolves
+      `~/Library/Application Support` from the REAL home, so a planted
+      config there is invisible and the probe reads "not loaded" for
+      any input. Test with a marker key in the real path (append,
+      observe, restore, verify the checksum) rather than a fake HOME.
 
-    Verified state of this repo, 2026-08-15: `origin` is
-    `git@github.com:nickboy/dotfiles.git` over SSH, the repo is
-    **public**, and default branch `master` is covered by an active
-    ruleset — PR required, 4 status checks, no bypass actors, but
-    **0 required approvals and no signature requirement**. Commits are
-    signed by discipline, not by enforcement.
+    The repo's own state is deliberately NOT recorded here. A dated
+    snapshot of mutable remote state is the cached answer this rule
+    exists to warn about — it looks like it means you need not run the
+    query. Check it: `gh api repos/nickboy/dotfiles/rulesets` (the
+    ruleset endpoint, not `/branches/*/protection`), and `yadm remote -v`.
 
 ## Skills
 

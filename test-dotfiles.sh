@@ -207,13 +207,20 @@ fi
 # for both strings would pass with them the wrong way round, which is
 # exactly the bug that leaves a machine with silently-missing packages.
 if [ -f "$HOME/.config/yadm/bootstrap" ] && [ -f "$HOME/Brewfile" ]; then
-    run_test "bootstrap trusts third-party formulae BEFORE brew bundle" \
-        "awk '/brew trust --formula/{t=NR} /brew bundle --file/{b=NR} END{exit !(t && b && t < b)}' '$HOME/.config/yadm/bootstrap'"
+    # Ordering: trust has to be granted before bundle runs, or brew refuses
+    # the package on the very run that was meant to install it. Matched on
+    # `brew trust` alone — the flag is chosen at runtime now (--formula or
+    # --cask), and pinning the literal made this fail on a refactor that had
+    # not changed the behaviour at all.
+    run_test "bootstrap trusts third-party packages BEFORE brew bundle" \
+        "awk '/brew trust /{t=NR} /brew bundle --file/{b=NR} END{exit !(t && b && t < b)}' '$HOME/.config/yadm/bootstrap'"
     # …and derives them from the Brewfile, so "trusted" cannot drift from
-    # "installed" the way a hard-coded list would.
+    # "installed" the way a hard-coded list would. Asserted as "reads the
+    # Brewfile and greps package declarations out of it" rather than one
+    # exact regex, for the same reason.
     run_test "…derived from the Brewfile, not a hard-coded list" \
         "grep -q 'HOME/Brewfile' '$HOME/.config/yadm/bootstrap' &&
-         grep -qE 'grep -E .\\^brew ' '$HOME/.config/yadm/bootstrap'"
+         grep -qE \"grep -E .\\^\\(brew\" '$HOME/.config/yadm/bootstrap'"
     # Every listed plugin must actually be declared, or the list has
     # silently drifted from what the machine really has.
     if [ -f "$HOME/.config/yazi/package.toml" ]; then
@@ -327,6 +334,67 @@ echo -e "${YELLOW}9. Config File Validation${NC}"
 # Validate Brewfile syntax
 if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
     run_test "Brewfile syntax" "brew bundle check --file=$HOME/Brewfile 2>&1 | head -1"
+fi
+
+# bootstrap builds the trust list by grepping THREE-part owner/tap/name entries
+# out of the Brewfile, so a tap package written with its bare name leaves the
+# tap untrusted — and brew then SKIPS that package behind a warning nobody
+# reads. `brew "mods"` did exactly that until 2026-08-16: charmbracelet/tap sat
+# untrusted, `brew info mods` returned nothing, and mods was never upgraded.
+#
+# The invariant that catches it: every declared tap must have at least one
+# three-part declaration pointing at it. A tap with none is either dead (drop
+# it — tw93/tap was, its only formula neither installed nor declared) or has
+# its package written with a short name (the bug).
+if [ -f "$HOME/Brewfile" ]; then
+    BREW_TAP_ORPHANS=""
+    while IFS= read -r tap_name; do
+        [ -n "$tap_name" ] || continue
+        if ! grep -qE "^(brew|cask) \"$tap_name/" "$HOME/Brewfile"; then
+            BREW_TAP_ORPHANS="${BREW_TAP_ORPHANS}${BREW_TAP_ORPHANS:+ }${tap_name}"
+        fi
+    done <<< "$(grep -oE '^tap "[^"]+"' "$HOME/Brewfile" | sed 's/tap "//; s/"//')"
+    run_test "Brewfile: every declared tap has a full owner/tap/name entry" \
+        "[ -z '$BREW_TAP_ORPHANS' ]"
+    [ -n "$BREW_TAP_ORPHANS" ] && echo -e "  ${YELLOW}untraceable taps: $BREW_TAP_ORPHANS${NC}"
+
+    # The tap-level check above is necessary but NOT sufficient: it signed off
+    # on a real defect, accepting a `cask` line as satisfying a tap while
+    # bootstrap's loop read only `^brew "`, so aprilnea/tap went untrusted on
+    # every fresh machine with this suite green.
+    #
+    # The first replacement was ALSO vacuous — both sides were derived from the
+    # Brewfile by two spellings of one regex, so it was empty for every possible
+    # Brewfile and passed on the bug it was written for. That is the same
+    # "compares the source against itself" shape twice.
+    #
+    # The discriminator is whether the two sides CAN EVER DISAGREE. So one side
+    # now comes from RUNNING bootstrap's own trust block against a stubbed brew,
+    # and only the other is read from the Brewfile. If bootstrap stops seeing a
+    # declaration — a new package kind, a changed regex — the sets diverge.
+    BREW_STUB=$(mktemp -d)
+    # The stub APPENDS to a file rather than echoing: bootstrap sends the
+    # real call to /dev/null 2>&1, so anything written to stdout is lost.
+    printf '#!/bin/sh\n[ "$1" = trust ] && printf "%%s\\n" "$3" >> "$TRUST_LOG"\nexit 0\n' \
+        > "$BREW_STUB/brew"
+    chmod +x "$BREW_STUB/brew"
+    awk '/^# --- Brew trust ---/,/^# --- End brew trust ---/' \
+        "$HOME/.config/yadm/bootstrap" > "$BREW_STUB/trust.sh"
+    : > "$BREW_STUB/log"
+    PATH="$BREW_STUB:$PATH" TRUST_LOG="$BREW_STUB/log" \
+        bash "$BREW_STUB/trust.sh" >/dev/null 2>&1
+    sort -u "$BREW_STUB/log" > "$BREW_STUB/got"
+    grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
+        | sed -E 's/.*"(.*)"/\1/' | sort -u > "$BREW_STUB/want"
+    BREW_UNTRUSTABLE=$(comm -23 "$BREW_STUB/want" "$BREW_STUB/got" | tr '\n' ' ')
+    run_test "Brewfile: bootstrap actually trusts every declared tap package" \
+        "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
+    # Positive control: if the extraction or the stub silently produced
+    # nothing, the comm above is empty for the wrong reason and passes.
+    run_test "…and the trust-loop harness actually ran" \
+        "[ -s '$BREW_STUB/got' ]"
+    [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
+    rm -rf "$BREW_STUB"
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane
@@ -544,11 +612,43 @@ echo -e "${YELLOW}10. Symlink Integrity${NC}"
 # duplication test above). Unconditional on purpose: the old version was
 # wrapped in `if [ -e ] || [ -L ]`, so deleting the link made the assertion
 # silently stop running instead of failing.
-GHOSTTY_LINK="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
-run_test "Ghostty App Support config symlink absent (double-load fix)" \
-    "[ ! -e \"$GHOSTTY_LINK\" ] && [ ! -L \"$GHOSTTY_LINK\" ]"
+#
+# Asserting the directory is EMPTY was wrong twice over. Ghostty 1.3 renamed
+# the file to config.ghostty, so the old check watched a name Ghostty had
+# stopped using — and Ghostty RECREATES a commented-out template there
+# whenever it thinks no config exists, which it did hours after the fix
+# landed. Emptiness was never achievable and never the point.
+#
+# What matters is that nothing there CONTRIBUTES SETTINGS: no symlink back to
+# the real config, and no file with a non-comment line.
+#
+# An EXPLICIT list of the two known names, deliberately not a config* glob:
+# there is a config.784a6feb.bak sitting in that directory carrying two real
+# settings (theme, font-family) which Ghostty never loads, and a glob would
+# fail this test on a healthy machine. The cost is that a future rename needs
+# a line added here — which is why the bootstrap-side coverage is asserted
+# separately below.
+GHOSTTY_APPSUP="$HOME/Library/Application Support/com.mitchellh.ghostty"
+ghostty_appsup_contributes() {
+    local f
+    for f in "$GHOSTTY_APPSUP"/config "$GHOSTTY_APPSUP"/config.ghostty; do
+        [ -L "$f" ] && return 0
+        [ -f "$f" ] && grep -qvE '^[[:space:]]*(#|$)' "$f" 2>/dev/null && return 0
+    done
+    return 1
+}
+run_test "Ghostty App Support contributes no settings (double-load fix)" \
+    "! ghostty_appsup_contributes"
+# Positive control: run_test evals in this shell, so a missing command returns
+# 127 and the `!` above turns that into a pass. If the function is ever renamed
+# or moved below its call site, the assertion goes green silently.
+run_test "…and the contributes-check is actually defined" \
+    "declare -F ghostty_appsup_contributes >/dev/null"
 run_test "bootstrap does not recreate the Ghostty symlink" \
     "! grep -qE 'ln -sfn .*ghostty/config' $HOME/.config/yadm/bootstrap"
+# And that bootstrap handles the post-rename filename at all.
+run_test "bootstrap covers the renamed config.ghostty" \
+    "grep -q 'config.ghostty' $HOME/.config/yadm/bootstrap"
 
 # Critical dotfiles exist and are non-empty
 for dotfile in ~/.zshrc ~/.tmux.conf ~/.gitconfig ~/.config/starship.toml; do

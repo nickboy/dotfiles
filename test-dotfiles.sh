@@ -173,7 +173,7 @@ if command -v eza >/dev/null 2>&1; then
     # byte-identical with and without the flag, so carrying it there was
     # dead config. Keep it that way.
     run_test "eza: non-long aliases carry no dead --git" \
-        "! zsh -ic 'alias ls; alias lt; alias tree' 2>/dev/null | grep -qE '(^| )--git( |\$)'"
+        "! zsh -ic 'alias ls; alias l; alias lt; alias tree' 2>/dev/null | grep -qE '(^| )--git( |\$)'"
 fi
 # yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
 # declaration must be yadm-tracked and every declared plugin installed,
@@ -720,7 +720,12 @@ echo -e "${YELLOW}15. Unit Tests${NC}"
 # state is never touched and all three branches are exercised.
 if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     TM_UT_DIR=$(mktemp -d)
-    awk '/^# --- Time Machine backup age/,/^# --- Machine-local extras/' \
+    # End at the NEXT section, not at Machine-local extras: the orphan-scan
+    # section was added between them, so the wider range pulled it in and
+    # every TM fixture run also scanned the real /Library — 36 plists times
+    # six runs, and on a machine with orphans it would have fired
+    # terminal-notifier six times during a test run.
+    awk '/^# --- Time Machine backup age/,/^# --- Orphaned LaunchAgents/' \
         "$HOME/daily-maintenance.sh" | sed '$d' > "$TM_UT_DIR/section.sh"
 
     # stale: a completed backup 100 days old
@@ -742,6 +747,11 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     TM_UT="TM_WARN_DAYS=7 bash '$TM_UT_DIR/section.sh'"
     run_test "TM age: a 100-day-old backup warns" \
         "TM_PLIST='$TM_UT_DIR/stale.plist' $TM_UT | grep -q 'Stale'"
+    # A positive assertion on the same fixture, so the negatives below cannot
+    # pass vacuously: if fixture construction ever breaks, "does NOT warn"
+    # succeeds for the wrong reason, and nothing would say so.
+    run_test "TM age: the fresh fixture is actually parsed" \
+        "TM_PLIST='$TM_UT_DIR/fresh.plist' $TM_UT | grep -q 'Last completed backup:'"
     run_test "TM age: a backup from today does NOT warn" \
         "! { TM_PLIST='$TM_UT_DIR/fresh.plist' $TM_UT | grep -q 'Stale'; }"
     run_test "TM age: a destination that never completed a backup warns" \

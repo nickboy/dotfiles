@@ -684,6 +684,68 @@ if [ -r "$TM_PLIST" ] && [ -x /usr/libexec/PlistBuddy ]; then
     fi
 fi
 
+# --- Orphaned LaunchAgents / LaunchDaemons ----------------------------------
+# An uninstaller that removes the .app but leaves its LaunchAgent behind
+# creates a job that fails at every login, forever, and tells nobody: launchd
+# records a non-zero exit and moves on. Two were found on 2026-08-16 by
+# scanning for this by hand — com.jetbrains.toolbox (exit 78 at every boot
+# since the app was removed) and com.symless.synergy3 — plus com.logi
+# .cp-dev-mgr the day before. All three were left by app removals.
+#
+# The check is the whole reason this is automated: a silently failing job
+# produces no symptom the owner would ever notice, so it needs something that
+# looks on a schedule rather than a habit of looking.
+#
+# Only ABSOLUTE program paths are judged. A relative path (Contents/Helpers/…)
+# is resolved against a bundle this script cannot identify, and guessing would
+# report every well-formed BTM agent as broken.
+LAUNCHD_SCAN_DIRS="${LAUNCHD_SCAN_DIRS:-/Library/LaunchAgents /Library/LaunchDaemons $HOME/Library/LaunchAgents}"
+if [ -x /usr/libexec/PlistBuddy ]; then
+    echo ""
+    echo "----------------------------------------"
+    echo "Task: Orphaned LaunchAgents/Daemons"
+
+    orphan_count=0
+    orphan_names=""
+    for scan_dir in $LAUNCHD_SCAN_DIRS; do
+        [ -d "$scan_dir" ] || continue
+        for plist in "$scan_dir"/*.plist; do
+            [ -f "$plist" ] || continue
+            prog=$(/usr/libexec/PlistBuddy -c "Print :Program" "$plist" 2>/dev/null)
+            if [ -z "$prog" ]; then
+                prog=$(/usr/libexec/PlistBuddy -c "Print :ProgramArguments:0" "$plist" 2>/dev/null)
+            fi
+            case "$prog" in
+                /*) ;;      # absolute — judgeable
+                *)  continue ;;
+            esac
+            if [ ! -e "$prog" ]; then
+                label=$(basename "$plist" .plist)
+                echo "  ⚠️  $label"
+                echo "      → $prog (missing)"
+                orphan_count=$((orphan_count + 1))
+                orphan_names="${orphan_names}${orphan_names:+, }${label}"
+            fi
+        done
+    done
+
+    if [ "$orphan_count" -eq 0 ]; then
+        echo "  None — every plist points at a program that exists."
+    else
+        echo ""
+        echo "  Removing one: launchctl bootout gui/\$(id -u)/<label>, then delete"
+        echo "  the plist — bootout alone lets it return at the next login."
+        # Its own notification, not FAILED_COMMANDS: no task here failed, and
+        # burying this in the failure list is how it stayed invisible before.
+        if command -v terminal-notifier >/dev/null 2>&1; then
+            terminal-notifier \
+                -title "$orphan_count orphaned launchd job(s)" \
+                -message "$orphan_names — see: ml" \
+                >/dev/null 2>&1 || true
+        fi
+    fi
+fi
+
 # --- Machine-local extras ---------------------------------------------------
 # Deliberately the LAST step. Anything here is specific to one machine — a work
 # laptop needs steps touching remote hosts and corp tooling that must never land

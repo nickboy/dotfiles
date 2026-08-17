@@ -17,6 +17,17 @@ Automates daily system maintenance tasks including:
 - Treesitter parser updates (`nvim --headless '+TSUpdate' +qa`)
 - Homebrew cleanup (`brew cleanup --prune=all`) - removes old versions and
   clears cache
+- Orphaned LaunchAgent/LaunchDaemon check - scans `/Library/LaunchAgents`,
+  `/Library/LaunchDaemons` and `~/Library/LaunchAgents` for plists whose
+  program no longer exists, and warns via the log and a notification. An
+  uninstaller that removes the `.app` but leaves its LaunchAgent creates a
+  job that fails at every login and reports to nobody — CleanMyMac left
+  three of them here (`com.logi.cp-dev-mgr`, `com.jetbrains.toolbox`,
+  `com.symless.synergy3`), one failing since the app was removed. Only
+  absolute program paths are judged; a bundle-relative path (how BTM agents
+  are written) is skipped rather than guessed at. Fixing one takes both
+  steps: `launchctl bootout gui/$(id -u)/<label>` **and** deleting the
+  plist — bootout alone lets it return at the next login.
 - Time Machine backup-age check - warns in the log and via a notification
   when the newest completed backup is older than `TM_WARN_DAYS` (default 30;
   the target is an external disk that travels, and a weekly threshold would

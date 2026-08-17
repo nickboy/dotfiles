@@ -651,6 +651,21 @@ if [ -r "$TM_PLIST" ] && [ -x /usr/libexec/PlistBuddy ]; then
             # and the month/day names in the plist are always English.
             tm_epoch=$(LC_ALL=C date -j -f "%a %b %d %H:%M:%S %Z %Y" \
                 "$tm_date" +%s 2>/dev/null)
+            # %Z rejects NUMERIC zone abbreviations, and PlistBuddy renders the
+            # date in whatever zone the Mac is currently in. Singapore, Kuala
+            # Lumpur, Bangkok, Ho Chi Minh and Dubai all print "+08"/"+07"/"+04"
+            # and fail to parse; Taipei, Tokyo, Sydney and London are fine.
+            # Auto-timezone is on, so a flight is enough to trigger it.
+            #
+            # Without this line an unparseable date and a genuinely never-backed-
+            # up destination produce the SAME message, and the output points away
+            # from the cause. The real fix is to stop round-tripping through a
+            # formatted string (plutil emits ISO-8601 UTC, no zone abbreviation
+            # anywhere); that is a parsing change and gets its own commit.
+            if [ -z "$tm_epoch" ]; then
+                echo "  ⚠️  Could not parse backup date: $tm_date"
+                echo "      (numeric zone abbreviation? %Z cannot read those)"
+            fi
             if [ -n "$tm_epoch" ] && [ "$tm_epoch" -gt "$tm_latest" ]; then
                 tm_latest="$tm_epoch"
             fi

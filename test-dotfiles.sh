@@ -776,6 +776,12 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
         "TM_PLIST='$TM_UT_DIR/d40.plist' bash '$TM_UT_DIR/section.sh' | grep -q 'Stale'"
     run_test "TM age: default threshold stays quiet at 10 days" \
         "! { TM_PLIST='$TM_UT_DIR/d10.plist' bash '$TM_UT_DIR/section.sh' | grep -q 'Stale'; }"
+    # An unparseable date and a never-backed-up destination used to produce the
+    # SAME message, so in a zone whose abbreviation is numeric (+08, +07, +04 —
+    # Singapore, Bangkok, Dubai) the output pointed away from the cause. Run the
+    # fixture under such a zone and require the parse failure to be named.
+    run_test "TM age: an unparseable date says so, not 'never backed up'" \
+        "TZ=Asia/Singapore TM_PLIST='$TM_UT_DIR/stale.plist' bash '$TM_UT_DIR/section.sh' | grep -q 'Could not parse backup date'"
     rm -rf "$TM_UT_DIR"
 fi
 

@@ -372,31 +372,29 @@ if [ -f "$HOME/Brewfile" ]; then
     # now comes from RUNNING bootstrap's own trust block against a stubbed brew,
     # and only the other is read from the Brewfile. If bootstrap stops seeing a
     # declaration — a new package kind, a changed regex — the sets diverge.
-    if [ -x /usr/libexec/PlistBuddy ] || true; then
-        BREW_STUB=$(mktemp -d)
-        # The stub APPENDS to a file rather than echoing: bootstrap sends the
-        # real call to /dev/null 2>&1, so anything written to stdout is lost.
-        printf '#!/bin/sh\n[ "$1" = trust ] && printf "%%s\\n" "$3" >> "$TRUST_LOG"\nexit 0\n' \
-            > "$BREW_STUB/brew"
-        chmod +x "$BREW_STUB/brew"
-        awk '/^# --- Brew trust ---/,/^# --- End brew trust ---/' \
-            "$HOME/.config/yadm/bootstrap" > "$BREW_STUB/trust.sh"
-        : > "$BREW_STUB/log"
-        PATH="$BREW_STUB:$PATH" TRUST_LOG="$BREW_STUB/log" \
-            bash "$BREW_STUB/trust.sh" >/dev/null 2>&1
-        sort -u "$BREW_STUB/log" > "$BREW_STUB/got"
-        grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
-            | sed -E 's/.*"(.*)"/\1/' | sort -u > "$BREW_STUB/want"
-        BREW_UNTRUSTABLE=$(comm -23 "$BREW_STUB/want" "$BREW_STUB/got" | tr '\n' ' ')
-        run_test "Brewfile: bootstrap actually trusts every declared tap package" \
-            "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
-        # Positive control: if the extraction or the stub silently produced
-        # nothing, the comm above is empty for the wrong reason and passes.
-        run_test "…and the trust-loop harness actually ran" \
-            "[ -s '$BREW_STUB/got' ]"
-        [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
-        rm -rf "$BREW_STUB"
-    fi
+    BREW_STUB=$(mktemp -d)
+    # The stub APPENDS to a file rather than echoing: bootstrap sends the
+    # real call to /dev/null 2>&1, so anything written to stdout is lost.
+    printf '#!/bin/sh\n[ "$1" = trust ] && printf "%%s\\n" "$3" >> "$TRUST_LOG"\nexit 0\n' \
+        > "$BREW_STUB/brew"
+    chmod +x "$BREW_STUB/brew"
+    awk '/^# --- Brew trust ---/,/^# --- End brew trust ---/' \
+        "$HOME/.config/yadm/bootstrap" > "$BREW_STUB/trust.sh"
+    : > "$BREW_STUB/log"
+    PATH="$BREW_STUB:$PATH" TRUST_LOG="$BREW_STUB/log" \
+        bash "$BREW_STUB/trust.sh" >/dev/null 2>&1
+    sort -u "$BREW_STUB/log" > "$BREW_STUB/got"
+    grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
+        | sed -E 's/.*"(.*)"/\1/' | sort -u > "$BREW_STUB/want"
+    BREW_UNTRUSTABLE=$(comm -23 "$BREW_STUB/want" "$BREW_STUB/got" | tr '\n' ' ')
+    run_test "Brewfile: bootstrap actually trusts every declared tap package" \
+        "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
+    # Positive control: if the extraction or the stub silently produced
+    # nothing, the comm above is empty for the wrong reason and passes.
+    run_test "…and the trust-loop harness actually ran" \
+        "[ -s '$BREW_STUB/got' ]"
+    [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
+    rm -rf "$BREW_STUB"
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane

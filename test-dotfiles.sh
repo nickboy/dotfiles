@@ -552,8 +552,14 @@ echo -e "${YELLOW}10. Symlink Integrity${NC}"
 # landed. Emptiness was never achievable and never the point.
 #
 # What matters is that nothing there CONTRIBUTES SETTINGS: no symlink back to
-# the real config, and no file with a non-comment line. Both filenames, via a
-# glob, so the next rename does not silently disable this again.
+# the real config, and no file with a non-comment line.
+#
+# An EXPLICIT list of the two known names, deliberately not a config* glob:
+# there is a config.784a6feb.bak sitting in that directory carrying two real
+# settings (theme, font-family) which Ghostty never loads, and a glob would
+# fail this test on a healthy machine. The cost is that a future rename needs
+# a line added here — which is why the bootstrap-side coverage is asserted
+# separately below.
 GHOSTTY_APPSUP="$HOME/Library/Application Support/com.mitchellh.ghostty"
 ghostty_appsup_contributes() {
     local f
@@ -565,6 +571,11 @@ ghostty_appsup_contributes() {
 }
 run_test "Ghostty App Support contributes no settings (double-load fix)" \
     "! ghostty_appsup_contributes"
+# Positive control: run_test evals in this shell, so a missing command returns
+# 127 and the `!` above turns that into a pass. If the function is ever renamed
+# or moved below its call site, the assertion goes green silently.
+run_test "…and the contributes-check is actually defined" \
+    "declare -F ghostty_appsup_contributes >/dev/null"
 run_test "bootstrap does not recreate the Ghostty symlink" \
     "! grep -qE 'ln -sfn .*ghostty/config' $HOME/.config/yadm/bootstrap"
 # And that bootstrap handles the post-rename filename at all.

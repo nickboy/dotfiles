@@ -769,6 +769,47 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     rm -rf "$TM_UT_DIR"
 fi
 
+# Orphaned LaunchAgent detection. An app removal that leaves its LaunchAgent
+# behind produces a job that fails at every login and reports to nobody — three
+# were found by hand in 2026-08 (com.logi.cp-dev-mgr, com.jetbrains.toolbox,
+# com.symless.synergy3), all from uninstalls. The scan runs against fixtures so
+# the real /Library is never touched, and so BOTH polarities are exercised: a
+# detector that has only ever been seen finding nothing is not a detector.
+if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
+    ORPH_DIR=$(mktemp -d)
+    mkdir -p "$ORPH_DIR/agents"
+    awk '/^# --- Orphaned LaunchAgents/,/^# --- Machine-local extras/' \
+        "$HOME/daily-maintenance.sh" | sed '$d' > "$ORPH_DIR/section.sh"
+
+    orph_pb() { /usr/libexec/PlistBuddy -c "$1" "$2" >/dev/null 2>&1; }
+    # absolute path, missing target -> must be caught
+    orph_pb "Add :Program string /Applications/Gone.app/Contents/MacOS/gone" "$ORPH_DIR/agents/com.test.orphan.plist"
+    # absolute path that exists -> must NOT be caught
+    orph_pb "Add :Program string /bin/echo" "$ORPH_DIR/agents/com.test.valid.plist"
+    # bundle-relative (how BTM agents are written) -> must NOT be caught, since
+    # it resolves against a bundle this check cannot identify
+    orph_pb "Add :ProgramArguments array" "$ORPH_DIR/agents/com.test.rel.plist"
+    orph_pb "Add :ProgramArguments:0 string Contents/Helpers/trampoline" "$ORPH_DIR/agents/com.test.rel.plist"
+    # ProgramArguments form of an orphan -> must be caught (Program is absent)
+    orph_pb "Add :ProgramArguments array" "$ORPH_DIR/agents/com.test.orphan2.plist"
+    orph_pb "Add :ProgramArguments:0 string /opt/nonexistent/bin/thing" "$ORPH_DIR/agents/com.test.orphan2.plist"
+
+    ORPH_RUN="LAUNCHD_SCAN_DIRS='$ORPH_DIR/agents' bash '$ORPH_DIR/section.sh'"
+    run_test "launchd orphans: a missing Program is reported" \
+        "$ORPH_RUN | grep -q 'com.test.orphan\b'"
+    run_test "launchd orphans: a missing ProgramArguments[0] is reported" \
+        "$ORPH_RUN | grep -q 'com.test.orphan2'"
+    run_test "launchd orphans: an existing program is not reported" \
+        "! { $ORPH_RUN | grep -q 'com.test.valid'; }"
+    run_test "launchd orphans: a bundle-relative path is not a false positive" \
+        "! { $ORPH_RUN | grep -q 'com.test.rel'; }"
+    # And the empty case, which is what a healthy machine should print.
+    mkdir -p "$ORPH_DIR/empty"
+    run_test "launchd orphans: a clean directory reports none" \
+        "LAUNCHD_SCAN_DIRS='$ORPH_DIR/empty' bash '$ORPH_DIR/section.sh' | grep -q 'None'"
+    rm -rf "$ORPH_DIR"
+fi
+
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
 # Since herdr left Homebrew (2026-08-05) the maintenance call site is a
 # no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled

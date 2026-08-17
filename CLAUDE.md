@@ -69,7 +69,10 @@ Check with `which -a <cmd>` before assuming which copy runs.
    `master`). `tree-sitter-cli` must be installed via cargo, not
    Homebrew. Run `:TSUpdate` after updating nvim-treesitter.
 
-9. **No secrets in dotfiles** — Use `.gitignore` for sensitive files.
+9. **No secrets in dotfiles** — **this repo is public; treat every
+   tracked file as published.** Nothing here is semi-private, and CI
+   does not verify signatures, so do not assume it will catch an
+   unsigned or unwanted commit. Use `.gitignore` for sensitive files.
    The invariant on EVERY machine: credentials and identity live in
    untracked files (`~/.gitconfig`, machine ssh config), never in
    tracked ones. The specifics below describe the PERSONAL machines;
@@ -99,8 +102,8 @@ Check with `which -a <cmd>` before assuming which copy runs.
 10. **A failed query is not a negative result** — confirm a query
     reached the right place before reading "nothing found" as "nothing
     exists". Four variants have already produced wrong conclusions
-    here — the fourth was found by a reviewer who nearly hit it while
-    reviewing this very rule:
+    here — the fourth while reviewing this very rule, where the wrong
+    conclusion was reached and caught before it was acted on:
 
     - **yadm state**: use `yadm remote -v` / `yadm status`, never bare
       `git` from `$HOME`. The bare repo lives in

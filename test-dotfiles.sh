@@ -544,11 +544,32 @@ echo -e "${YELLOW}10. Symlink Integrity${NC}"
 # duplication test above). Unconditional on purpose: the old version was
 # wrapped in `if [ -e ] || [ -L ]`, so deleting the link made the assertion
 # silently stop running instead of failing.
-GHOSTTY_LINK="$HOME/Library/Application Support/com.mitchellh.ghostty/config"
-run_test "Ghostty App Support config symlink absent (double-load fix)" \
-    "[ ! -e \"$GHOSTTY_LINK\" ] && [ ! -L \"$GHOSTTY_LINK\" ]"
+#
+# Asserting the directory is EMPTY was wrong twice over. Ghostty 1.3 renamed
+# the file to config.ghostty, so the old check watched a name Ghostty had
+# stopped using — and Ghostty RECREATES a commented-out template there
+# whenever it thinks no config exists, which it did hours after the fix
+# landed. Emptiness was never achievable and never the point.
+#
+# What matters is that nothing there CONTRIBUTES SETTINGS: no symlink back to
+# the real config, and no file with a non-comment line. Both filenames, via a
+# glob, so the next rename does not silently disable this again.
+GHOSTTY_APPSUP="$HOME/Library/Application Support/com.mitchellh.ghostty"
+ghostty_appsup_contributes() {
+    local f
+    for f in "$GHOSTTY_APPSUP"/config "$GHOSTTY_APPSUP"/config.ghostty; do
+        [ -L "$f" ] && return 0
+        [ -f "$f" ] && grep -qvE '^[[:space:]]*(#|$)' "$f" 2>/dev/null && return 0
+    done
+    return 1
+}
+run_test "Ghostty App Support contributes no settings (double-load fix)" \
+    "! ghostty_appsup_contributes"
 run_test "bootstrap does not recreate the Ghostty symlink" \
     "! grep -qE 'ln -sfn .*ghostty/config' $HOME/.config/yadm/bootstrap"
+# And that bootstrap handles the post-rename filename at all.
+run_test "bootstrap covers the renamed config.ghostty" \
+    "grep -q 'config.ghostty' $HOME/.config/yadm/bootstrap"
 
 # Critical dotfiles exist and are non-empty
 for dotfile in ~/.zshrc ~/.tmux.conf ~/.gitconfig ~/.config/starship.toml; do

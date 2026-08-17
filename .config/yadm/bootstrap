@@ -115,6 +115,11 @@ fi
 # exactly like a bare formula name is. This loop read only `^brew "` until
 # 2026-08-16, which left aprilnea/tap untrusted the moment a cask from it was
 # declared — the same defect this trust derivation exists to prevent.
+# --- Brew trust ---
+# Markers are load-bearing: test-dotfiles.sh extracts this block by range and
+# RUNS it against a stubbed `brew`, which is the only way to check the trust
+# list without re-deriving it from the Brewfile. Pinning that range to prose
+# would make the test fail on a reworded comment.
 if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
     echo "🔐 Trusting third-party packages declared in the Brewfile..."
     # sed -E, not sed: BSD sed's basic REs have no alternation.
@@ -131,6 +136,7 @@ if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then
                 || echo "  ⚠️  could not trust $name"
         done
 fi
+# --- End brew trust ---
 
 # Install Brewfile packages
 if [ -f "$HOME/Brewfile" ] && command -v brew &> /dev/null; then

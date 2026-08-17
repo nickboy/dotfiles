@@ -358,25 +358,45 @@ if [ -f "$HOME/Brewfile" ]; then
         "[ -z '$BREW_TAP_ORPHANS' ]"
     [ -n "$BREW_TAP_ORPHANS" ] && echo -e "  ${YELLOW}untraceable taps: $BREW_TAP_ORPHANS${NC}"
 
-    # The tap-level check above is necessary but NOT sufficient, and signed off
-    # on a real defect: it accepted a `cask` line as satisfying a tap, while
-    # bootstrap's trust loop only read `^brew "`. aprilnea/tap therefore went
-    # untrusted on any fresh machine while this test stayed green.
+    # The tap-level check above is necessary but NOT sufficient: it signed off
+    # on a real defect, accepting a `cask` line as satisfying a tap while
+    # bootstrap's loop read only `^brew "`, so aprilnea/tap went untrusted on
+    # every fresh machine with this suite green.
     #
-    # So assert the stronger thing directly: every three-part declaration must
-    # be reachable by bootstrap's OWN pipeline. Drift between the two is the
-    # bug, and comparing them is the only way to see it.
-    BREW_DECLARED=$(grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
-        | sed -E 's/.*"(.*)"/\1/' | sort -u)
-    BREW_TRUSTED=$(grep -E '^(brew|cask) "[^/]+/[^/]+/' "$HOME/Brewfile" \
-        | sed -E 's/^(brew|cask) "([^"]*)".*/\2/' | sort -u)
-    BREW_UNTRUSTABLE=$(comm -23 <(printf '%s\n' "$BREW_DECLARED") <(printf '%s\n' "$BREW_TRUSTED") | tr '\n' ' ')
-    run_test "Brewfile: every tap package is reachable by bootstrap's trust loop" \
-        "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
-    # And that bootstrap still reads BOTH kinds — the regression that started it.
-    run_test "bootstrap trusts casks as well as formulae" \
-        "grep -qE \"grep -E '\\^\\(brew\\|cask\\)\" $HOME/.config/yadm/bootstrap &&
-         grep -q 'trust_flag=\"--cask\"' $HOME/.config/yadm/bootstrap"
+    # The first replacement was ALSO vacuous — both sides were derived from the
+    # Brewfile by two spellings of one regex, so it was empty for every possible
+    # Brewfile and passed on the bug it was written for. That is the same
+    # "compares the source against itself" shape twice.
+    #
+    # The discriminator is whether the two sides CAN EVER DISAGREE. So one side
+    # now comes from RUNNING bootstrap's own trust block against a stubbed brew,
+    # and only the other is read from the Brewfile. If bootstrap stops seeing a
+    # declaration — a new package kind, a changed regex — the sets diverge.
+    if [ -x /usr/libexec/PlistBuddy ] || true; then
+        BREW_STUB=$(mktemp -d)
+        # The stub APPENDS to a file rather than echoing: bootstrap sends the
+        # real call to /dev/null 2>&1, so anything written to stdout is lost.
+        printf '#!/bin/sh\n[ "$1" = trust ] && printf "%%s\\n" "$3" >> "$TRUST_LOG"\nexit 0\n' \
+            > "$BREW_STUB/brew"
+        chmod +x "$BREW_STUB/brew"
+        awk '/^# --- Brew trust ---/,/^# --- End brew trust ---/' \
+            "$HOME/.config/yadm/bootstrap" > "$BREW_STUB/trust.sh"
+        : > "$BREW_STUB/log"
+        PATH="$BREW_STUB:$PATH" TRUST_LOG="$BREW_STUB/log" \
+            bash "$BREW_STUB/trust.sh" >/dev/null 2>&1
+        sort -u "$BREW_STUB/log" > "$BREW_STUB/got"
+        grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
+            | sed -E 's/.*"(.*)"/\1/' | sort -u > "$BREW_STUB/want"
+        BREW_UNTRUSTABLE=$(comm -23 "$BREW_STUB/want" "$BREW_STUB/got" | tr '\n' ' ')
+        run_test "Brewfile: bootstrap actually trusts every declared tap package" \
+            "[ -z \"\$(echo '$BREW_UNTRUSTABLE' | tr -d '[:space:]')\" ]"
+        # Positive control: if the extraction or the stub silently produced
+        # nothing, the comm above is empty for the wrong reason and passes.
+        run_test "…and the trust-loop harness actually ran" \
+            "[ -s '$BREW_STUB/got' ]"
+        [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
+        rm -rf "$BREW_STUB"
+    fi
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane

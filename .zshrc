@@ -166,6 +166,10 @@ if command -v eza &> /dev/null; then
     alias l="eza --git-ignore $EZA_BASE"
     alias ll="eza --all --header --long $EZA_BASE"
     alias llg="eza --all --header --long --git $EZA_BASE"
+    # llm is long, so it COULD show the git column — it drops --git for the
+    # same cost reason as ll, not the "renders nothing" reason that applies to
+    # the short views. It is the everyday "what changed recently" view; llg is
+    # where you go for git status.
     alias llm="eza --all --header --long --sort=modified $EZA_BASE"
     alias la="eza -lbhHigUmuSa --git $EZA_BASE"
     alias lx="eza -lbhHigUmuSa@ --git $EZA_BASE"

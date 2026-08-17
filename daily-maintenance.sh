@@ -730,6 +730,12 @@ if [ -x /usr/libexec/PlistBuddy ]; then
             if [ -z "$prog" ]; then
                 prog=$(/usr/libexec/PlistBuddy -c "Print :ProgramArguments:0" "$plist" 2>/dev/null)
             fi
+            # BundleProgram is the third documented way to name the executable.
+            # No plist on this machine uses it today (checked all 36), so this
+            # costs nothing now and stops the scan going blind if one appears.
+            if [ -z "$prog" ]; then
+                prog=$(/usr/libexec/PlistBuddy -c "Print :BundleProgram" "$plist" 2>/dev/null)
+            fi
             case "$prog" in
                 /*) ;;      # absolute — judgeable
                 *)  continue ;;

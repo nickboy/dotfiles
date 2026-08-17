@@ -809,12 +809,16 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     # ProgramArguments form of an orphan -> must be caught (Program is absent)
     orph_pb "Add :ProgramArguments array" "$ORPH_DIR/agents/com.test.orphan2.plist"
     orph_pb "Add :ProgramArguments:0 string /opt/nonexistent/bin/thing" "$ORPH_DIR/agents/com.test.orphan2.plist"
+    # BundleProgram form -> the third documented key, unused on this machine
+    orph_pb "Add :BundleProgram string /opt/nonexistent/bin/bundled" "$ORPH_DIR/agents/com.test.orphan3.plist"
 
     ORPH_RUN="LAUNCHD_SCAN_DIRS='$ORPH_DIR/agents' bash '$ORPH_DIR/section.sh'"
     run_test "launchd orphans: a missing Program is reported" \
         "$ORPH_RUN | grep -q 'com.test.orphan\b'"
     run_test "launchd orphans: a missing ProgramArguments[0] is reported" \
         "$ORPH_RUN | grep -q 'com.test.orphan2'"
+    run_test "launchd orphans: a missing BundleProgram is reported" \
+        "$ORPH_RUN | grep -q 'com.test.orphan3'"
     run_test "launchd orphans: an existing program is not reported" \
         "! { $ORPH_RUN | grep -q 'com.test.valid'; }"
     run_test "launchd orphans: a bundle-relative path is not a false positive" \

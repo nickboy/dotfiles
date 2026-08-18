@@ -57,11 +57,28 @@ fi
 
 # The shared half, verbatim. Paths stay in ~ / $HOME form so they work
 # for whichever user clones this — never hardcode /Users/<name>.
+#
+# refreshInterval is 30, and it is a measurement, not a preference. The
+# field is ADDITIVE to the event-driven redraws, not a throttle — unset
+# means events only. One render costs ~80 ms and spawns ~25 processes
+# (jq, git, date, stat, awk, and a curl to ClaudeDeck's daemon when
+# settings.local.json delegates through this script's statusline).
+# Measured 2026-08-17 with three sessions open: at 5 that was 36 renders
+# per minute, ~4.8% of one core around the clock, and ~223 cfprefsd
+# "Couldn't open" errors per minute — the largest single source of log
+# noise on the machine. Dropping to 30 cut curl from 42/min to 6/min.
+# Not higher: the only time-based field is a minute-resolution
+# rate-limit countdown, so 30 keeps staleness under half its resolution.
+#
+# This value lives HERE, not in ~/.claude/settings.json. That file is
+# untracked and this script rewrites it, so an edit there survives until
+# the next `yadm pull` and then silently reverts — which is exactly how
+# it was lost once already.
 shared=$(cat <<'SHARED_JSON'
 {
   "statusLine": {
     "command": "~/.local/bin/claude-statusline",
-    "refreshInterval": 5,
+    "refreshInterval": 30,
     "type": "command"
   },
   "theme": "custom:my-theme",

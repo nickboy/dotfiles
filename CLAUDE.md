@@ -101,9 +101,11 @@ Check with `which -a <cmd>` before assuming which copy runs.
 
 10. **A failed query is not a negative result** — confirm a query
     reached the right place before reading "nothing found" as "nothing
-    exists". Four variants have already produced wrong conclusions
+    exists". Five variants have already produced wrong conclusions
     here — the fourth while reviewing this very rule, where the wrong
-    conclusion was reached and caught before it was acted on:
+    conclusion was reached and caught before it was acted on; the
+    fifth during a log audit, where a shadowed command reported an
+    empty system log:
 
     - **yadm state**: use `yadm remote -v` / `yadm status`, never bare
       `git` from `$HOME`. The bare repo lives in
@@ -127,6 +129,23 @@ Check with `which -a <cmd>` before assuming which copy runs.
       config there is invisible and the probe reads "not loaded" for
       any input. Test with a marker key in the real path (append,
       observe, restore, verify the checksum) rather than a fake HOME.
+    - **Shadowed commands**: `log show …` can run zsh's `log`
+      *builtin*, which takes no arguments — it prints `too many
+      arguments` and exits **1**, but a pipeline's status is its LAST
+      command's, so `| wc -l` still prints `0` and exits `0`. A
+      system log holding 48,299 error/fault lines in 30 minutes read
+      as "0 errors". `setopt pipefail` catches this one; use
+      `/usr/bin/log` anyway. It bites Claude, not the terminal:
+      `/etc/zshrc` runs `disable log`, but that file is read by
+      interactive shells only and Claude's shell replays an alias
+      snapshot without it — "it works when I type it" proves nothing
+      here. Two aliases shadow in BOTH shells: `ls` is eza (`-t` is
+      `--time <FIELD>`, so `ls -t *.log` eats the first match and
+      exits 2) and `ps` is procs — `-Ao` is rejected loudly, but
+      `ps aux` is taken as a *keyword filter* and exits 0 with 4 rows
+      where `/bin/ps aux` gives 943. That last one is the shape to
+      fear: right exit code, wrong answer. Per the PATH note above,
+      `which -a <cmd>` before trusting output that looks empty.
 
     The repo's own state is deliberately NOT recorded here. A dated
     snapshot of mutable remote state is the cached answer this rule

@@ -404,6 +404,44 @@ if [ -f "$HOME/Brewfile" ]; then
     [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
     rm -rf "$BREW_STUB"
 
+    # Both checks above are Brewfile-internal: one reads the file, the other
+    # reads bootstrap reading the file. Neither can see a package that is
+    # INSTALLED but never declared — byokey sat in aprilnea/tap for a day and
+    # passed both, because openlogi already satisfied that tap. That was not
+    # the tap-orphan test being true for the wrong reason; its invariant held.
+    # Installed-but-undeclared is a class those tests do not address at all,
+    # so this one asks the MACHINE and the two sides can genuinely disagree.
+    #
+    # Scoped to tap packages deliberately: ~100 core packages are undeclared
+    # by choice, so a global gate would be red on day one and only an
+    # allowlist would green it. An undeclared TAP package is the ueberzugpp
+    # gap — a fresh bootstrap silently lacks it, and were it the tap's only
+    # package the tap would go untrusted too.
+    #
+    # Honest caveat: on a CI runner nothing from a tap is installed, so the
+    # installed set is empty and this passes by emptiness. Machine-local
+    # gate, not a CI gate — and a positive control cannot fix that, because
+    # emptiness is legitimate there.
+    if command -v brew >/dev/null 2>&1; then
+        # Only taps THIS Brewfile declares. A CI runner arrives with taps of
+        # its own and packages from them are not this repo's business — the
+        # first version compared against every installed tap package and went
+        # red on the runner while passing locally.
+        BREW_OWN_TAPS=$(grep -oE '^tap "[^"]+"' "$HOME/Brewfile" \
+            | sed 's/tap "//; s/"//' | sort -u)
+        BREW_TAP_UNDECLARED=$(comm -23 \
+            <({ brew list --formula --full-name
+                brew list --cask --full-name; } 2>/dev/null \
+                | grep '/' \
+                | grep -F -f <(printf '%s\n' "$BREW_OWN_TAPS" | sed 's|$|/|') \
+                | sort -u) \
+            <(grep -oE '^(brew|cask) "[^/"]+/[^/"]+/[^"]+"' "$HOME/Brewfile" \
+                | sed -E 's/.*"(.*)"/\1/' | sort -u) | tr '\n' ' ')
+        run_test "Brewfile: every INSTALLED tap package is declared" \
+            "[ -z \"\$(echo '$BREW_TAP_UNDECLARED' | tr -d '[:space:]')\" ]"
+        [ -n "$BREW_TAP_UNDECLARED" ] && \
+            echo -e "  ${YELLOW}installed but undeclared: $BREW_TAP_UNDECLARED${NC}"
+    fi
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane

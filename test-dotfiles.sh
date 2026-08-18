@@ -333,7 +333,15 @@ echo -e "${YELLOW}9. Config File Validation${NC}"
 
 # Validate Brewfile syntax
 if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
-    run_test "Brewfile syntax" "brew bundle check --file=$HOME/Brewfile 2>&1 | head -1"
+    # `| head -1` made this pass for EVERY possible Brewfile: run_test reads
+    # the exit status, and a pipeline's is its last command's — the same bug
+    # rule 10 documents for `log show ... | wc -l`. Proved with a Brewfile
+    # holding an unterminated string: bare check exits 1, piped exits 0.
+    # `check` is also the wrong verb here — it fails when a declared package
+    # is not INSTALLED, which is most of the file on a CI runner. `list`
+    # parses and stops, which is what "syntax" means: exit 1 on a syntax
+    # error, exit 0 on a merely uninstalled package.
+    run_test "Brewfile syntax" "brew bundle list --file=$HOME/Brewfile"
 fi
 
 # bootstrap builds the trust list by grepping THREE-part owner/tap/name entries
@@ -395,6 +403,7 @@ if [ -f "$HOME/Brewfile" ]; then
         "[ -s '$BREW_STUB/got' ]"
     [ -n "$BREW_UNTRUSTABLE" ] && echo -e "  ${YELLOW}never trusted: $BREW_UNTRUSTABLE${NC}"
     rm -rf "$BREW_STUB"
+
 fi
 
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane

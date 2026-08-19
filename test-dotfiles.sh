@@ -1064,6 +1064,44 @@ if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
     rm -rf "$BF_DIR"
 fi
 
+# dm_pack_garbage_clean: the yadm repo reached 31GB with 2MB of tracked
+# content, 17.2GB of it half-written packs from interrupted pack writes.
+#
+# THE GUARD IS AGE, and the assertion that matters is that a RECENT temp
+# pack survives. tmp_pack_* is written by `index-pack` — the receiving
+# side of fetch/clone/pull — so a maintenance run racing a `yadm pull`
+# must not delete the pack that fetch is still writing. Two earlier
+# guards failed here: a ps-grep for "git gc" matched any command line
+# mentioning the string, and `[ -f gc.pid ]` misses index-pack entirely
+# while a KILLED gc leaves that lock behind forever.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    PG_DIR=$(mktemp -d); mkdir -p "$PG_DIR/objects/pack"
+    PG_SRC="source '$HOME/daily-maintenance-lib.sh' >/dev/null 2>&1;"
+    : > "$PG_DIR/objects/pack/tmp_pack_FRESH"          # an in-flight fetch
+    : > "$PG_DIR/objects/pack/pack-real.pack"          # a real pack
+    : > "$PG_DIR/objects/pack/tmp_pack_OLD"
+    touch -t 202001010000 "$PG_DIR/objects/pack/tmp_pack_OLD"   # abandoned
+
+    run_test "dm_pack_garbage_clean spares an in-flight temp pack and real packs" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 1' &&
+         [ -f '$PG_DIR/objects/pack/tmp_pack_FRESH' ] &&
+         [ -f '$PG_DIR/objects/pack/pack-real.pack' ] &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_OLD' ]"
+
+    # A stale gc.pid must NOT block cleanup: a killed gc leaves one behind,
+    # and that is precisely the interruption that creates the garbage.
+    : > "$PG_DIR/gc.pid"
+    : > "$PG_DIR/objects/pack/tmp_pack_OLD2"
+    touch -t 202001010000 "$PG_DIR/objects/pack/tmp_pack_OLD2"
+    run_test "…is not blocked by the stale gc.pid a killed gc leaves behind" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 1' &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_OLD2' ]"
+
+    run_test "…is silent and returns non-zero when there is nothing old to remove" \
+        "! bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q ."
+    rm -rf "$PG_DIR"
+fi
+
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
 # Since herdr left Homebrew (2026-08-05) the maintenance call site is a
 # no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled

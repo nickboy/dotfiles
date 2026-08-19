@@ -56,6 +56,10 @@ Violating these produces confident wrong answers, not errors.
 6. **sudo needs a password and will hang.** Test once with
    `sudo -n true`. If it fails, do not run sudo — collect every
    root-only command into one block for the user to run with `!`.
+7. **Some diagnostic commands stream forever** and will hang the shell
+   until it times out, producing no output at all: `pmset -g thermlog`,
+   `log stream`, `fs_usage` without `-t`, `top` without `-l`,
+   `powermetrics` without `-n`. Always bound them.
 
 ## Post-mortem: what took the machine down
 
@@ -119,14 +123,26 @@ count, condition, and AC status.
 ### B. Throttling versus merely warm
 
 ```bash
-pmset -g therm      # CPU_Speed_Limit < 100 means throttled
-pmset -g thermlog
+pmset -g therm      # see the warning below before reading this
 ```
 
-Root-only, for the ask-the-user block:
-`sudo powermetrics -n 3 -i 1000 --samplers cpu_power,thermal,smc`.
-Name which measurement decides it — a fanless Air runs hot by design,
-so temperature alone is not the verdict.
+**`pmset -g therm` cannot answer this on Apple Silicon.** Its
+`CPU_Speed_Limit` / `CPU_Available_CPUs` counters are an Intel-era
+mechanism; on Apple Silicon the reply is three lines of
+"No … has been recorded", and that is the NORMAL reply, not a clean
+bill of health. Reporting it as "not throttling" is exactly the
+unrun-query mistake in rule 4. Do not run `pmset -g thermlog` either —
+it streams (rule 7).
+
+The verdict needs root, so put it in the ask-the-user block:
+
+```bash
+sudo powermetrics -n 3 -i 1000 --samplers cpu_power,thermal,smc
+```
+
+Read package watts, fan RPM and die temperature. A fanless Air runs hot
+by design, so temperature alone is never the verdict. Until this runs,
+thermal status is **inconclusive** — say so in those words.
 
 ### C. Who is burning CPU — ask BOTH questions
 
@@ -148,7 +164,19 @@ Then `JetsamEvent*.ips` in `/Library/Logs/DiagnosticReports`:
 - `reason: per-process-limit` — a daemon hit ITS OWN cap. Routine.
 - `reason: vm-pageshortage` / `highwater` — real system-wide pressure.
 
-Do not report the first as if it were the second.
+**The `reason` field alone under-reports.** Also read
+`memoryStatus.memoryPages.free` and `compressorSize` inside each event
+and take the median across events: a run of `per-process-limit` kills
+that all fired while free was near zero IS system-wide pressure, whatever
+each individual victim's reason says. Count the events per day too —
+a handful a week is background noise, several a day is not.
+
+Cross-check with `launchctl` for jobs killed by SIGKILL (`exit = -9`):
+Apple daemons dying that way are Jetsam's work, not their own crashes.
+
+Rate matters more than totals: divide `decompressions` by uptime in
+seconds. Every decompression is CPU work AND a stalled thread, so a
+sustained rate explains heat and slowness with one number.
 
 ### E. Disk (a near-full boot volume stalls the whole machine)
 
@@ -243,3 +271,29 @@ the volume, so a 16 GB machine could neither grow swap nor purge
 caches, and every page-out blocked on a disk with no room. The
 age-based pack cleanup in `~/daily-maintenance-lib.sh` exists to stop
 this recurring — see the **dotfiles-maintenance** skill.
+
+## Worked example — MacBook, 2026-08-19 (steady-state)
+
+Symptom: hotter and slower over weeks, no crashes. Verdict: **memory
+overload, not heat.** Heat and slowness were two symptoms of one cause.
+
+The deciding number was a **rate**, not a total: 68.2M decompressions
+over 28.75 h uptime = **659/s sustained**. Supporting: free 0.08 GB on
+a 16 GB machine, compressor 6.76 GB holding 14.41 GB, so a ~23 GB
+working set in 16 GB of RAM. 28 JetsamEvents in 7 days with median free
+118 MB at event time, and 15 Apple daemons killed with `exit = -9`.
+
+Second cause, independent of the first: **8 HAL virtual audio drivers**
+in `/Library/Audio/Plug-Ins/HAL/`, at least 3 belonging to uninstalled
+apps, all loaded into one `coreaudiod` — 5.6% of a core all day, plus
+two `PreventUserIdleSystemSleep` assertions so the laptop never idled.
+Orphaned drivers outlive the app that installed them; check that
+directory on any Mac that runs hot.
+
+Also found: two identical `powermetrics` daemons from iStat Menus, each
+waking the SoC every 2 s — the power meter costing power.
+
+Ruled out with evidence, all of which the hot-and-slow story would have
+predicted: 124 GB free, zero APFS snapshots, no backup running,
+Spotlight at 0.4% (not reindexing), post-upgrade analysis daemons at
+~0 s cumulative, no respawn storm, and the beta already current.

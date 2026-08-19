@@ -256,24 +256,38 @@ kitty_graphics = false
 # Keep OFF: would persist pane output (possibly secrets) to disk
 pane_history = false
 
-# Update channel, per machine CLASS.
+# Update channel, opted into per machine by an EXTRA class.
 #
-# Personal machines follow `preview`, which ships most days; stable has
-# been sitting on v0.8.0 since 2026-08-03. Work machines stay on stable:
-# unreleased builds are not something to carry into an environment you do
-# not control.
+# `preview` ships most days; stable has sat on v0.8.0 since 2026-08-03,
+# and the fix for the client SIGABRT on terminal hangup (upstream #2427)
+# exists only on preview.
 #
-# Set the class ONCE per machine: `yadm config local.class personal`
-# (or `work`). The DEFAULT — no class set — is deliberately stable. A work
-# machine nobody classified must not silently end up on unreleased builds;
-# an unclassified personal machine merely stays where it already was.
+# The condition is a dedicated `herdr-preview` class, NOT `personal`,
+# because those answer different questions. `local.class` says what a
+# machine IS — rule 9 keys credential handling off exactly that — while
+# the channel says what RISK you accept on it. A work machine that wants
+# preview should not have to claim it is a personal one; that answer
+# would silently apply to every future `yadm.class == "personal"` branch.
+#
+# Opt a machine in with an ADDITIONAL class, identity left intact:
+#
+#   yadm config local.class work            # or personal — the identity
+#   yadm config --add local.class herdr-preview
+#
+# `yadm.class == "X"` is a MEMBERSHIP test across every class, not a
+# comparison against the last one: yadm's built-in processor loops the
+# class list looking for a match. Verified by rendering — class
+# "work,herdr-preview" produces preview, "work" alone produces stable.
+#
+# The DEFAULT — no `herdr-preview` class — is stable, so a machine nobody
+# opted in cannot drift onto unreleased builds.
 #
 # This lives in the TEMPLATE and not in the generated config because
 # `herdr channel set` writes into config.toml, and `yadm alt` — which runs
 # on every `yadm pull` — regenerates that file from here and wipes it.
 # Verified by adding a marker line by hand and running `yadm alt`: gone.
 [update]
-{% if yadm.class == "personal" %}
+{% if yadm.class == "herdr-preview" %}
 channel = "preview"
 {% else %}
 channel = "stable"

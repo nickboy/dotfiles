@@ -311,9 +311,15 @@ fetch_to ~/.config/btop/themes/catppuccin_mocha.theme \
     https://raw.githubusercontent.com/catppuccin/btop/main/themes/catppuccin_mocha.theme || \
     echo "    ⚠️  Failed to download btop theme (existing copy kept)"
 
-# Install yazi packages from the tracked NAME list.
+# Install yazi packages from the tracked NAME list — PLUGINS AND
+# FLAVORS both. The list used to be called plugins.list and was
+# generated at a moment when `ya pkg list` showed an EMPTY Flavors
+# section, so the theme flavor was silently absent from it: a fresh
+# machine got all 13 plugins and no theme, with nothing to read that
+# said why. The name is packages.list now because the old one is what
+# made the omission easy to miss.
 #
-# What is tracked is `plugins.list` — the names — and NOT package.toml,
+# What is tracked is `packages.list` — the names — and NOT package.toml,
 # which is the lockfile `ya pkg` rewrites with a rev and hash per plugin.
 # The reason is that `ya pkg upgrade` runs from daily maintenance on every
 # machine, so a tracked lockfile went dirty everywhere and the machines
@@ -332,7 +338,7 @@ fetch_to ~/.config/btop/themes/catppuccin_mocha.theme \
 # first pull that carries the untracking, and on any fresh machine.
 if command -v ya &> /dev/null; then
     echo "📂 Installing yazi packages..."
-    yazi_list="$HOME/.config/yazi/plugins.list"
+    yazi_list="$HOME/.config/yazi/packages.list"
     yazi_lock="$HOME/.config/yazi/package.toml"
     if [ -f "$yazi_list" ]; then
         # If the lockfile is missing or empty — which is the state on the

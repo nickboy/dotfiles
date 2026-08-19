@@ -258,9 +258,31 @@ pane_history = false
 
 # Update channel, opted into per machine by an EXTRA class.
 #
-# `preview` ships most days; stable has sat on v0.8.0 since 2026-08-03,
-# and the fix for the client SIGABRT on terminal hangup (upstream #2427)
-# exists only on preview.
+# STABLE IS THE DEFAULT AND THE RECOMMENDATION. Preview was adopted on
+# 2026-08-19 and reverted the same day. The opt-in machinery stays because it
+# is sound, but the case for using it did not survive measurement.
+#
+# What this comment used to claim: "`preview` ships most days; stable has sat
+# on v0.8.0 since 2026-08-03, and the fix for the client SIGABRT on terminal
+# hangup (upstream #2427) exists only on preview." Every part of that is now
+# false, and the first part was never true.
+#
+# Preview is the SLOWER channel. Release history 2026-03..08: 55 stable
+# releases against 27 previews, preview cadence falling 17 -> 7 -> 3 per
+# month, gaps reaching 14 days, and no previews at all before 2026-06.
+#
+# Preview can also run BEHIND stable. Comparing
+# `preview-2026-08-18-9fac51722653...v0.8.2` gave ahead_by 10, behind_by 0 —
+# stable strictly contained the newest preview, so switching lost nothing.
+# The tag naming hides this: a preview reports its version as
+# `0.8.0-preview.<date>`, which sorts BELOW plain `0.8.0` in semver, so a tag
+# that looks newer than v0.8.0 is in fact two patch versions behind v0.8.2.
+#
+# The cost is not local either. herdr refuses attach on ANY version mismatch,
+# and `hbox` passes `--handoff`, so a mismatch does not fail cleanly — it
+# replaces the remote server on every attach. Every machine sharing a remote
+# server has to move channel together, including ones this repo does not
+# manage; see docs/work-machine-checklist.md.
 #
 # The condition is a dedicated `herdr-preview` class, NOT `personal`,
 # because those answer different questions. `local.class` says what a

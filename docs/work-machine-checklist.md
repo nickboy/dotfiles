@@ -532,20 +532,43 @@ not.
   cannot be fixed — it has to reattach.
 
 - [ ] **Remote Linux server: herdr is one static binary.** Assets are
-  `herdr-linux-x86_64` and `herdr-linux-aarch64`. On a box yadm does
-  NOT manage, set the channel with herdr itself — nothing regenerates
-  the config there, so it sticks:
+  `herdr-linux-x86_64` and `herdr-linux-aarch64`. Where the channel
+  setting belongs depends on what manages that box, and there are
+  THREE cases, not two:
+
+  | The box is | Put the channel |
+  | --- | --- |
+  | yadm-managed | in the `##template`, via the class |
+  | managed by ANOTHER dotfiles repo | committed in THAT repo |
+  | genuinely unmanaged | `herdr channel set` — it sticks |
 
   ```bash
-  herdr channel set preview     # or stable
+  herdr channel set stable      # unmanaged boxes only
   herdr channel show
   herdr update
   herdr --version
   ```
 
-  On a yadm-managed box use the class instead. `herdr channel set`
-  writes into `config.toml`, and `yadm alt` regenerates that file from
-  the template on every pull and wipes it.
+  This page used to say `herdr channel set` sticks on any box yadm
+  does not manage. **That is wrong for the middle case, and the middle
+  case is the common one.** A repo that symlinks its config into place,
+
+  ```bash
+  ln -sf ../../dotfiles/config/herdr/config.toml ~/.config/herdr/config.toml
+  ```
+
+  makes `herdr channel set` write into that repo's WORKING COPY. It
+  takes effect at once and looks durable, then a checkout, a reset or
+  a fresh install script discards it in silence — after which
+  `herdr update` walks the machine onto a different channel from its
+  peer, and attach breaks with no obvious cause. Found 2026-08-19 on a
+  devserver managed by a separate repo. The tell is one command:
+  `readlink ~/.config/herdr/config.toml`. If it resolves into a repo,
+  commit the value there instead.
+
+  On a yadm-managed box use the class. `herdr channel set` writes into
+  `config.toml`, and `yadm alt` regenerates that file from the
+  template on every pull and wipes it.
 
 - [ ] **A non-interactive ssh gets a minimal PATH**
   (`/usr/bin:/bin:/usr/sbin:/sbin`), which excludes `~/.local/bin`. So

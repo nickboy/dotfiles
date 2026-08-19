@@ -20,6 +20,37 @@ maintenance.
 
 ## Notes
 
+0. **yadm's own repo** — it reached **31GB on a machine whose tracked
+   content is 2MB**, and nearly filled a 228GB disk. Two causes, and
+   NEITHER is visible to a general-purpose cleaner: mole's "Large files"
+   scan reported *"Nothing to clean"* with 26GB sitting there, because to
+   any such tool a `.git/objects` directory is legitimate repo data.
+
+   ```text
+   size-garbage: 17.2GB   objects/pack/tmp_pack_*  — half-written packs
+                          left by a `git gc`/repack that was KILLED
+                          partway. git labels them "garbage" and never
+                          removes them; they only accumulate.
+   size:          8.6GB   unreachable loose objects — aborted adds,
+                          dropped stashes.
+   ```
+
+   A full disk then stops *every* tool on the machine, which is how this
+   was found. Daily maintenance now removes pack garbage OLDER THAN AN HOUR — age,
+   not a lock. `tmp_pack_*` is written by `index-pack` (the receiving
+   side of fetch/clone/pull) as well as by gc, and index-pack takes no
+   lock, so a lock-based guard would delete the pack an in-flight fetch
+   is still writing. For loose objects it runs plain `git gc`, whose
+   default expiry is `2.weeks.ago`: that keeps the
+   `git fsck --unreachable` net which recovered real work here once,
+   while still bounding the pile.
+
+   Check any machine by hand with:
+
+   ```bash
+   GIT_DIR=$(yadm introspect repo) git count-objects -vH
+   ```
+
 1. **Yazi** — plugins are declared by NAME in the tracked
    `.config/yazi/plugins.list`; `package.toml` is `ya pkg`'s lockfile and
    is deliberately **untracked**. `ya pkg upgrade` runs from daily
@@ -56,12 +87,54 @@ maintenance.
    `set -g theme terminal` first to keep current behaviour. It also adds
    floating panes (a candidate to replace `display-popup`) and OSC 133
    command hooks.
-4. **herdr** — **UPDATE CHANNEL IS PER MACHINE CLASS.** Personal
-   machines follow `preview`, which ships most days; stable sat on
-   v0.8.0 from 2026-08-03. Work machines stay on stable. Set it once per
-   machine with `yadm config local.class personal` (or `work`); the
-   default, no class, resolves to **stable** on purpose, so a machine
-   nobody classified cannot silently end up on unreleased builds.
+4. **herdr** — **A 2026-08-18 preview incident, recorded as observation,
+   not as a standing instruction.** Upstream published `v0.8.1`, reverted
+   it ("fix: restore v0.8.0 as stable release") and removed the tag. A
+   MacBook running `0.8.0-preview.2026-08-18` froze hard enough to need a
+   power cycle, on the same day.
+
+   **A follow-up search found ZERO reports of herdr freezing a whole
+   machine.** The closest candidate, issue #2592, was read and excluded:
+   it is a musl allocator-lock convoy on a 316-core Linux host, it is
+   server-side, and that machine never froze — its reporter ran `perf`
+   and started new clients throughout. The decisive discriminator is that
+   SSH was unresponsive: sshd and WindowServer are independent, so a
+   frozen UI leaves SSH answering, and a machine that refuses SSH has
+   stopped scheduling — kernel, memory-pressure collapse, saturated I/O
+   or hardware, not a userspace TUI. The frozen machine was also the
+   CLIENT, while herdr's heavy paths run server-side. Both machines run
+   macOS 27 BETA and the one that froze was on an OLDER build
+   (26A5406e versus 26A5416b). On that evidence the beta OS is the first
+   suspect and herdr is well down the list.
+
+   No diagnosis was captured before the restart, so none of this is
+   proof. The check that would settle it, worth running before
+   theorising — a `.panic` file ends the question, because userspace
+   cannot produce a kernel panic:
+
+   ```bash
+   ls -la /Library/Logs/DiagnosticReports/*.panic
+   ```
+
+   The channel is machine state, discoverable at runtime, so this file
+   deliberately does NOT say which one to be on — it would be wrong the
+   first time anyone changed it. Read it with
+   `yadm config --get-all local.class`, and move with `--add` / `--unset`.
+
+   **Debugging herdr later? The log on disk may be a dead inode.** A
+   short-lived second server can replace it, leaving the live server
+   writing to an unlinked file. Find the real one with
+   `lsof -p <server-pid> | grep -i log` before trusting what you read.
+
+   **THE CHANNEL IS AN OPT-IN CLASS, NOT AN IDENTITY.** Preview is
+   selected by an ADDITIONAL `herdr-preview` class, never by `personal`:
+   `local.class` says what a machine IS (rule 9 keys credential handling
+   off it) while the channel says what RISK you accept, and conflating
+   them would make a work machine claim to be personal just to test a
+   build. `yadm.class == "X"` is a membership test across every class, so
+   the two coexist — verified by rendering: `work` alone → stable,
+   `work,herdr-preview` → preview. No opt-in resolves to **stable**, so a
+   machine nobody opted in cannot drift onto unreleased builds.
 
    The channel lives in `config.toml##template`, NOT in the generated
    config. `herdr channel set` writes to `~/.config/herdr/config.toml`,

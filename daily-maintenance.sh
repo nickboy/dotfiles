@@ -476,6 +476,64 @@ else
     echo "Warning: mise not found, skipping runtime upgrade"
 fi
 
+# --- yadm repo hygiene ------------------------------------------------------
+# The yadm bare repo grew to 31GB on this machine while the real content was
+# 2MB. Two causes, both invisible to every general-purpose cleaner — mole's
+# "Large files" scan reported "Nothing to clean" with 26GB sitting there,
+# because to any such tool a .git/objects directory is legitimate repo data:
+#
+#   17.2GB  objects/pack/tmp_pack_*  — half-written packs left by a `git gc`
+#                                      or repack that was KILLED partway.
+#                                      git labels them "garbage" in
+#                                      count-objects and never removes them.
+#   8.6GB   unreachable loose objects — aborted adds, dropped stashes.
+#
+# It nearly filled a 228GB disk, and a full disk is what stopped every tool
+# on this machine from working at all.
+#
+# tmp_pack_* removal is guarded on no git process running: deleting those
+# from UNDER a live repack is how you corrupt a repo. `git gc` itself is
+# left to the human — running it unattended is what created this mess, and
+# an interrupted gc makes the problem bigger, not smaller.
+if command -v yadm >/dev/null 2>&1; then
+    _ym_dir=$(yadm introspect repo 2>/dev/null)
+    if [ -n "$_ym_dir" ] && [ -d "$_ym_dir" ]; then
+        _ym_stats=$(GIT_DIR="$_ym_dir" git count-objects -v 2>/dev/null)
+        _ym_garbage=$(printf '%s\n' "$_ym_stats" | awk '/^size-garbage:/{print $2+0}')
+        _ym_loose=$(printf '%s\n' "$_ym_stats" | awk '/^size:/{print $2+0}')
+        _ym_garbage=${_ym_garbage:-0}; _ym_loose=${_ym_loose:-0}
+
+        if [ "$_ym_garbage" -gt 0 ] 2>/dev/null; then
+            dm_pack_garbage_clean "$_ym_dir" || true
+        fi
+
+        # Loose objects: run PLAIN `git gc`, whose default expiry is
+        # 2.weeks.ago. That was the false dichotomy in the first version —
+        # it framed the choice as `--prune=now` (which destroys the
+        # `git fsck --unreachable` net that recovered real work here) or
+        # never pruning at all (which leaves an unbounded pile that simply
+        # refills). git's own default keeps a fortnight of unreachable
+        # objects and reclaims what is older, so the net survives by
+        # construction and the steady state is bounded.
+        #
+        # Warning only about what SURVIVES a gc, because a daily entry in
+        # FAILED_COMMANDS that no safe action can clear turns the whole
+        # maintenance report into noise.
+        if [ "$_ym_loose" -gt 1048576 ] 2>/dev/null; then
+            echo "yadm repo: $((_ym_loose / 1048576))GB loose objects, running git gc (keeps 2 weeks)"
+            GIT_DIR="$_ym_dir" run_with_timeout 600 git gc >/dev/null 2>&1 || true
+            _ym_loose=$(GIT_DIR="$_ym_dir" git count-objects -v 2>/dev/null | awk '/^size:/{print $2+0}')
+            if [ "${_ym_loose:-0}" -gt 1048576 ] 2>/dev/null; then
+                echo "⚠️  $((_ym_loose / 1048576))GB of loose objects survived gc — younger than the"
+                echo "    2-week expiry, or still reachable. Inspect before forcing anything:"
+                echo "    GIT_DIR=$_ym_dir git fsck --unreachable | head"
+                FAILED_COMMANDS+=("yadm repo still $((_ym_loose / 1048576))GB loose after gc")
+            fi
+        fi
+        unset _ym_dir _ym_stats _ym_garbage _ym_loose
+    fi
+fi
+
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then
     if ! run_command "Yazi package upgrade" ya pkg upgrade; then

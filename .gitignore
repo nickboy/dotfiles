@@ -37,6 +37,9 @@
 # shadowed the package-managed copy with a frozen one.
 .local/bin/obsidian-cli
 
+# Machine-local Brewfile exclusions (see the header in ~/Brewfile)
+.Brewfile.skip
+
 # Machine-local shell overrides. On a work machine this holds corp paths
 # and identity, so it must never be committed to this PUBLIC repo. Note
 # status.showUntrackedFiles=no means an unignored file here would be

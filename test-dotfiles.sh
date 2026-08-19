@@ -572,20 +572,28 @@ if [ -f "$HOME/.config/starship.toml" ]; then
              grep -qF 'not a Claude pane' $HOME/.tmux.conf"
     fi
 
-    # herdr update channel follows the machine CLASS. The property that
-    # matters is the SAFE DEFAULT: a machine with no class — which is
-    # every machine until someone runs `yadm config local.class …` —
-    # must resolve to stable. Getting this backwards would put a work
-    # machine on unreleased builds silently, which is the one outcome
-    # there is no way to notice.
+    # herdr update channel is opted into by an EXTRA class, not by the
+    # machine's identity. The property that matters is the SAFE DEFAULT:
+    # a machine without the `herdr-preview` class — which is every
+    # machine until someone runs the `--add` — must resolve to stable.
+    # Getting this backwards would put a work machine on unreleased
+    # builds silently, which is the one outcome there is no way to
+    # notice.
+    #
+    # `--get-all`, not `--get`: classes are a LIST and the opt-in may sit
+    # anywhere in it. `--get` returns only the first, so a machine set up
+    # as `work` + `herdr-preview` would read as `work` and this test
+    # would demand stable while yadm rendered preview. yadm's own
+    # template processor loops the whole list, and the test has to model
+    # that, not the first entry.
     #
     # Asserted against the GENERATED config, not the template, because
     # the template is only correct if yadm actually renders it that way.
     if [ -f "$HOME/.config/herdr/config.toml" ]; then
         run_test "herdr update channel matches this machine's yadm class" \
-            "cls=\$(yadm config --get local.class 2>/dev/null || true);
+            "cls=\$(yadm config --get-all local.class 2>/dev/null || true);
              ch=\$(grep -A2 '^\[update\]' '$HOME/.config/herdr/config.toml' | grep -m1 '^channel' | sed 's/.*\"\\(.*\\)\".*/\\1/');
-             if [ \"\$cls\" = personal ]; then [ \"\$ch\" = preview ]; else [ \"\$ch\" = stable ]; fi"
+             if printf '%s\\n' \"\$cls\" | grep -qx herdr-preview; then [ \"\$ch\" = preview ]; else [ \"\$ch\" = stable ]; fi"
     fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it

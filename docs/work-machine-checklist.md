@@ -29,11 +29,37 @@ this repo — most common) or **fresh clone**. Update path first.
   yadm config local.class work      # personal machines: `personal`
   ```
 
-  It selects the herdr update channel: `personal` follows `preview`
-  (ships most days), anything else resolves to `stable`. The default
-  with no class set is already `stable`, so forgetting is safe on a work
-  machine — the failure direction is only ever "stayed on stable".
-  Reflect it with `yadm alt`; a `yadm pull` does that for you.
+  This is the machine's IDENTITY, not a feature switch. Rule 9 keys
+  credential handling off it, so never set `personal` on a corp machine
+  to borrow some behaviour — opt into that behaviour by its own class
+  instead, as below.
+
+- [ ] **Opt into the herdr preview channel — only if you want it.**
+
+  ```bash
+  yadm config --add local.class herdr-preview
+  yadm alt          # regenerate the herdr config from the template
+  ```
+
+  `preview` ships most days; `stable` has sat on v0.8.0 since
+  2026-08-03. Without this extra class the machine renders
+  `channel = "stable"`, and that is the default for a reason — a machine
+  nobody opted in cannot drift onto unreleased builds. The failure
+  direction is only ever "stayed on stable".
+
+  `yadm.class == "X"` is a MEMBERSHIP test over every class, so `work`
+  and `herdr-preview` coexist and the identity stays honest. Verified by
+  rendering: `work` alone → stable, `work,herdr-preview` → preview.
+
+  **Migration:** `personal` alone used to select preview and no longer
+  does. Every personal machine needs the `--add` above once, or it
+  silently drops to stable at the next `yadm alt`.
+
+  Confirm what actually rendered, never assume:
+
+  ```bash
+  grep -A2 '^\[update\]' ~/.config/herdr/config.toml
+  ```
 
 - [ ] Pull (HTTPS pull works anonymously on this public repo):
 

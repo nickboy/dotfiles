@@ -56,7 +56,16 @@ Violating these produces confident wrong answers, not errors.
 6. **sudo needs a password and will hang.** Test once with
    `sudo -n true`. If it fails, do not run sudo — collect every
    root-only command into one block for the user to run with `!`.
-7. **Some diagnostic commands stream forever** and will hang the shell
+7. **`pgrep` and `ps -o ucomm=` are not supersets of each other**, and
+   the mismatch fails silently. One machine: `ps` showed `ghostty` while
+   `pgrep -x ghostty` returned nothing, and `pgrep -x claude` found pids
+   that `ps ucomm==claude` did not. An empty substitution turns
+   `footprint $(pgrep -x X)` into an argless `footprint`, whose error
+   ("try as root?") points at permissions rather than at the real fault.
+   Guard EVERY variable that comes from a command substitution — not
+   just the one you happened to think of. The same investigation added
+   a non-empty check for one pid and then failed identically on the next.
+8. **Some diagnostic commands stream forever** and will hang the shell
    until it times out, producing no output at all: `pmset -g thermlog`,
    `log stream`, `fs_usage` without `-t`, `top` without `-l`,
    `powermetrics` without `-n`. Always bound them.
@@ -273,6 +282,29 @@ how far back their activity goes, not by the fact that they are running.
 `buildVariant: CustomerSeed` enables AutoBugCapture, DiagnosticRequest
 and Tailspin captures (37 MB each is normal). Count them, estimate the
 disk-write cost, and check `softwareupdate -l` for a newer build.
+
+## Before you run an A/B
+
+Ask what MECHANISM connects the variable you are about to change to the
+metric you are about to read. **A variable that cannot move the metric
+produces a null result that reads exactly like "ruled out"** — worse
+than no experiment, because it looks like one was done.
+
+A real example, caught before it ran: the plan was to vary the number of
+terminal panes and watch GPU surface bytes. But those panes are drawn by
+a multiplexer INSIDE one window and allocate no surfaces of their own —
+`windows: 1`. The null was structural, guaranteed before the first
+measurement, and would have been written up as "pane count is not the
+cause".
+
+Then check the metric can actually respond in the direction you expect.
+Allocated GPU surfaces are not released on a config reload, so BYTES
+cannot answer "does this setting cost anything" — but WindowServer's CPU
+per unit time can, because a per-frame effect stops costing per-frame
+work the moment it is off. Rate over total, again.
+
+And change one thing the intended way: reload the config rather than
+restarting the app, or the effect you measure is the restart.
 
 ## Measured baselines
 

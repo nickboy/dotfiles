@@ -56,12 +56,40 @@ maintenance.
    `set -g theme terminal` first to keep current behaviour. It also adds
    floating panes (a candidate to replace `display-popup`) and OSC 133
    command hooks.
-4. **herdr** — **UPDATE CHANNEL IS PER MACHINE CLASS.** Personal
-   machines follow `preview`, which ships most days; stable sat on
-   v0.8.0 from 2026-08-03. Work machines stay on stable. Set it once per
-   machine with `yadm config local.class personal` (or `work`); the
-   default, no class, resolves to **stable** on purpose, so a machine
-   nobody classified cannot silently end up on unreleased builds.
+4. **herdr** — **PREVIEW WAS ROLLED BACK 2026-08-19. Stay on stable
+   unless you are deliberately testing.** Upstream published `v0.8.1`,
+   then reverted it ("fix: restore v0.8.0 as stable release") and
+   REMOVED the tag from the releases list, so `/releases/latest` points
+   at v0.8.0 again. On this side, a MacBook running
+   `0.8.0-preview.2026-08-18` froze hard enough to need a power cycle.
+   The two are not proven to be the same fault — a freeze has many
+   possible causes and no diagnosis was captured before the restart —
+   but upstream pulling a release is reason enough not to sit on
+   preview while it is unexplained.
+
+   To roll a machine back: drop the opt-in class, re-render, and then
+   run the updater OUTSIDE herdr.
+
+   ```bash
+   yadm config --unset local.class herdr-preview
+   yadm alt
+   grep -A2 '^\[update\]' ~/.config/herdr/config.toml   # channel = "stable"
+   herdr update      # outside herdr; a DOWNGRADE may need herdr.dev/install.sh
+   ```
+
+   Both ends must move together — the wire protocol refuses to attach
+   across any version gap — and a `--remote` attach syncs the remote to
+   whatever the LOCAL binary is, so downgrade the client first.
+
+   **THE CHANNEL IS AN OPT-IN CLASS, NOT AN IDENTITY.** Preview is
+   selected by an ADDITIONAL `herdr-preview` class, never by `personal`:
+   `local.class` says what a machine IS (rule 9 keys credential handling
+   off it) while the channel says what RISK you accept, and conflating
+   them would make a work machine claim to be personal just to test a
+   build. `yadm.class == "X"` is a membership test across every class, so
+   the two coexist — verified by rendering: `work` alone → stable,
+   `work,herdr-preview` → preview. No opt-in resolves to **stable**, so a
+   machine nobody opted in cannot drift onto unreleased builds.
 
    The channel lives in `config.toml##template`, NOT in the generated
    config. `herdr channel set` writes to `~/.config/herdr/config.toml`,

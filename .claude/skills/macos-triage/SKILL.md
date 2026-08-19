@@ -164,15 +164,33 @@ Then `JetsamEvent*.ips` in `/Library/Logs/DiagnosticReports`:
 - `reason: per-process-limit` — a daemon hit ITS OWN cap. Routine.
 - `reason: vm-pageshortage` / `highwater` — real system-wide pressure.
 
-**The `reason` field alone under-reports.** Also read
-`memoryStatus.memoryPages.free` and `compressorSize` inside each event
-and take the median across events: a run of `per-process-limit` kills
-that all fired while free was near zero IS system-wide pressure, whatever
-each individual victim's reason says. Count the events per day too —
-a handful a week is background noise, several a day is not.
+**Finding the field is its own trap.** `reason` sits on the KILLED
+process inside a `processes` array that can run to hundreds of entries
+— on one machine it was entry 264 of 665. A walk that samples the first
+few and reports "no reason field" has truncated its own search, which is
+rule 4 wearing a different hat. Grep the raw file for the reason strings
+rather than sampling a decoded prefix.
 
-Cross-check with `launchctl` for jobs killed by SIGKILL (`exit = -9`):
-Apple daemons dying that way are Jetsam's work, not their own crashes.
+**Never promote `per-process-limit` to evidence of memory pressure.** It
+means what it says regardless of what the machine looked like at the
+time: one measured event fired with **6 GB free**. And do not judge this
+from a median across events — inspect the distribution and the outliers,
+because the counterexample is usually already printed in your own output,
+unread. Count per VICTIM, not per event: 20 kills of one 16 MB daemon is
+that daemon looping on its own cap, not a machine under load.
+
+Cross-checking `launchctl` for SIGKILL (`exit = -9`) only counts when the
+two victim lists OVERLAP. Jetsam is not the only sender of SIGKILL; on
+one machine the two sets were disjoint, so it corroborated nothing.
+
+**RSS is not the footprint, and the footprint may not be reclaimable.**
+For a GUI process run `footprint <pid>` or `vmmap -summary <pid>`. On
+Apple Silicon, `IOAccelerator` and `IOSurface` regions are GPU surfaces
+in unified memory: Dirty, Reclaimable 0, so the compressor cannot touch
+them and no scrollback or cache setting affects them. One terminal
+emulator held 1.5 GB that way. Blur, transparency and custom shaders are
+the usual source, and their CPU cost lands on `WindowServer` — attribute
+it there, not to the app.
 
 Rate matters more than totals: divide `decompressions` by uptime in
 seconds. Every decompression is CPU work AND a stalled thread, so a
@@ -280,8 +298,17 @@ overload, not heat.** Heat and slowness were two symptoms of one cause.
 The deciding number was a **rate**, not a total: 68.2M decompressions
 over 28.75 h uptime = **659/s sustained**. Supporting: free 0.08 GB on
 a 16 GB machine, compressor 6.76 GB holding 14.41 GB, so a ~23 GB
-working set in 16 GB of RAM. 28 JetsamEvents in 7 days with median free
-118 MB at event time, and 15 Apple daemons killed with `exit = -9`.
+working set in 16 GB of RAM.
+
+**The 28 JetsamEvents were retracted from this verdict, and the
+retraction is the lesson.** They were first filed as the headline
+evidence on a median free of 118 MB. Reading the `reason` field showed
+all 29 were `per-process-limit`, 20 of them one 16 MB daemon looping on
+its own cap — and one fired with 6 GB free. That outlier had been
+printed in the investigator's own output and passed over, because a
+median was computed instead of the distribution being looked at. The
+verdict survived on `vm_stat` and the decompression rate alone; the
+evidence base got narrower and more honest.
 
 Second cause, independent of the first: **8 HAL virtual audio drivers**
 in `/Library/Audio/Plug-Ins/HAL/`, at least 3 belonging to uninstalled

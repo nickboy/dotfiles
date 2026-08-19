@@ -255,3 +255,26 @@ kitty_graphics = false
 {% endif %}
 # Keep OFF: would persist pane output (possibly secrets) to disk
 pane_history = false
+
+# Update channel, per machine CLASS.
+#
+# Personal machines follow `preview`, which ships most days; stable has
+# been sitting on v0.8.0 since 2026-08-03. Work machines stay on stable:
+# unreleased builds are not something to carry into an environment you do
+# not control.
+#
+# Set the class ONCE per machine: `yadm config local.class personal`
+# (or `work`). The DEFAULT — no class set — is deliberately stable. A work
+# machine nobody classified must not silently end up on unreleased builds;
+# an unclassified personal machine merely stays where it already was.
+#
+# This lives in the TEMPLATE and not in the generated config because
+# `herdr channel set` writes into config.toml, and `yadm alt` — which runs
+# on every `yadm pull` — regenerates that file from here and wipes it.
+# Verified by adding a marker line by hand and running `yadm alt`: gone.
+[update]
+{% if yadm.class == "personal" %}
+channel = "preview"
+{% else %}
+channel = "stable"
+{% endif %}

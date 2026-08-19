@@ -179,9 +179,19 @@ because the counterexample is usually already printed in your own output,
 unread. Count per VICTIM, not per event: 20 kills of one 16 MB daemon is
 that daemon looping on its own cap, not a machine under load.
 
-Cross-checking `launchctl` for SIGKILL (`exit = -9`) only counts when the
-two victim lists OVERLAP. Jetsam is not the only sender of SIGKILL; on
-one machine the two sets were disjoint, so it corroborated nothing.
+**Ask launchd instead of parsing reports.** `launchctl print <service>`
+prints `last exit reason = JETSAM_REASON_*` outright — no `.ips` file, no
+hundreds-of-entries array, nothing that can be truncated. Prefer it to
+everything above; it is the same answer without the trap.
+
+**Jetsam has layers, and the mild layer writes no report at all.**
+`MEMORY_IDLE_EXIT` reclaims idle daemons and restarts them on demand and
+produces NO `JetsamEvent*.ips`. So a SIGKILL victim absent from the
+reports says nothing about Jetsam's innocence — it is a fact about the
+REPORTING layer. One machine had 171 `MEMORY_IDLE_EXIT` against 2
+`PERPROCESSLIMIT`, and its two victim lists were disjoint for exactly
+that reason. Read a high idle-exit count as real but not acute: routine
+reclamation running more often than on a roomy machine, not an alarm.
 
 **RSS is not the footprint, and the footprint may not be reclaimable.**
 For a GUI process run `footprint <pid>` or `vmmap -summary <pid>`. On
@@ -192,6 +202,12 @@ emulator held 1.5 GB that way. Blur, transparency and custom shaders are
 the usual source, and their CPU cost lands on `WindowServer` — attribute
 it there, not to the app.
 
+**JetsamEvent reports carry a full process table**, so a week of them is
+a free time series of any process's memory. Pull `rpages` per pid to
+settle "is this growing?" without waiting. Compare WITHIN one pid: flat
+with occasional step changes is design cost, monotonic growth is a leak.
+A cross-pid comparison is meaningless if the app restarted in between.
+
 Rate matters more than totals: divide `decompressions` by uptime in
 seconds. Every decompression is CPU work AND a stalled thread, so a
 sustained rate explains heat and slowness with one number.
@@ -199,8 +215,17 @@ sustained rate explains heat and slowness with one number.
 ### E. Disk (a near-full boot volume stalls the whole machine)
 
 `/bin/df -h / /System/Volumes/Data`,
-`tmutil listlocalsnapshots /`, whether a backup is running, `mdutil -as`
-and whether `mds`/`mds_stores` are reindexing.
+`tmutil listlocalsnapshots /`, whether a backup is running, `mdutil -as`.
+
+**Do not clear Spotlight on the parent's CPU.** The work happens in
+`mdworker_shared` children that are spawned and killed continuously, so
+`mds` itself sits near idle while the machine churns — measure the spawn
+and kill RATE, not the parent's cumulative time. Then beware the opposite
+error: summing worker lifetimes is an upper bound, not a cost. One
+machine's workers summed to "1.85 cores equivalent" while sampling the
+live ones showed under 1%. A tightly clustered median lifetime (42 s
+there) is a timeout signature — workers spawned and reclaimed without
+ever being given work.
 
 ### F. Log flood — both a symptom and a cause
 

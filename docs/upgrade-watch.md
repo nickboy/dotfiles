@@ -56,7 +56,28 @@ maintenance.
    `set -g theme terminal` first to keep current behaviour. It also adds
    floating panes (a candidate to replace `display-popup`) and OSC 133
    command hooks.
-4. **herdr** — the wire protocol refuses to attach across ANY version
+4. **herdr** — **UPDATE CHANNEL IS PER MACHINE CLASS.** Personal
+   machines follow `preview`, which ships most days; stable sat on
+   v0.8.0 from 2026-08-03. Work machines stay on stable. Set it once per
+   machine with `yadm config local.class personal` (or `work`); the
+   default, no class, resolves to **stable** on purpose, so a machine
+   nobody classified cannot silently end up on unreleased builds.
+
+   The channel lives in `config.toml##template`, NOT in the generated
+   config. `herdr channel set` writes to `~/.config/herdr/config.toml`,
+   and `yadm alt` — which runs on every `yadm pull` — regenerates that
+   file and wipes it. Verified by adding a marker line by hand and
+   running `yadm alt`: gone. `herdr channel set` also refuses to stick
+   from INSIDE a herdr session: it immediately attempts an update, that
+   update fails ("run `herdr update` outside herdr after detaching"),
+   and the channel is rolled back a few seconds later. Detach first.
+
+   **On preview, the 0.8.0 behaviours pinned in note (9) may change** —
+   the keymap strip, `MAX_CLIPBOARD_BYTES`, and the session-replacement
+   policy are all read out of a released binary. Re-check them after a
+   preview jump rather than assuming.
+
+   The wire protocol refuses to attach across ANY version
    gap. `herdr integration install claude` rewrites `settings.json` with
    an absolute `/Users` path; re-fix it to `$HOME` afterwards.
    Self-updater managed since 2026-08-05 (left the Brewfile — brew

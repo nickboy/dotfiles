@@ -543,6 +543,22 @@ if [ -f "$HOME/.config/starship.toml" ]; then
             "grep -qF 'pane_current_command' $HOME/.tmux.conf &&
              grep -qF 'not a Claude pane' $HOME/.tmux.conf"
     fi
+
+    # herdr update channel follows the machine CLASS. The property that
+    # matters is the SAFE DEFAULT: a machine with no class — which is
+    # every machine until someone runs `yadm config local.class …` —
+    # must resolve to stable. Getting this backwards would put a work
+    # machine on unreleased builds silently, which is the one outcome
+    # there is no way to notice.
+    #
+    # Asserted against the GENERATED config, not the template, because
+    # the template is only correct if yadm actually renders it that way.
+    if [ -f "$HOME/.config/herdr/config.toml" ]; then
+        run_test "herdr update channel matches this machine's yadm class" \
+            "cls=\$(yadm config --get local.class 2>/dev/null || true);
+             ch=\$(grep -A2 '^\[update\]' '$HOME/.config/herdr/config.toml' | grep -m1 '^channel' | sed 's/.*\"\\(.*\\)\".*/\\1/');
+             if [ \"\$cls\" = personal ]; then [ \"\$ch\" = preview ]; else [ \"\$ch\" = stable ]; fi"
+    fi
     # ssh-terminfo (not ssh-env) keeps TERM intact on remotes — herdr's
     # terminal-notification detection over SSH depends on it
     # (ssh-env is the wrong tool: it downgrades TERM to xterm-256color)

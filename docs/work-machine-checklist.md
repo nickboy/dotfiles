@@ -23,6 +23,18 @@ this repo — most common) or **fresh clone**. Update path first.
   usual suspect) block or conflict the pull. Move work-specific
   values into `~/.claude/settings.local.json`, then either commit
   keepers on a branch or discard: `yadm checkout -- <file>`.
+- [ ] **Set the machine class — do this BEFORE the first pull.**
+
+  ```bash
+  yadm config local.class work      # personal machines: `personal`
+  ```
+
+  It selects the herdr update channel: `personal` follows `preview`
+  (ships most days), anything else resolves to `stable`. The default
+  with no class set is already `stable`, so forgetting is safe on a work
+  machine — the failure direction is only ever "stayed on stable".
+  Reflect it with `yadm alt`; a `yadm pull` does that for you.
+
 - [ ] Pull (HTTPS pull works anonymously on this public repo):
 
   ```bash

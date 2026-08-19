@@ -232,11 +232,39 @@ if [ -f "$HOME/.config/yadm/bootstrap" ] && [ -f "$HOME/Brewfile" ]; then
     fi
 fi
 if [ -f "$HOME/.config/yazi/package.toml" ]; then
-    # Plugin presence only where ya pkg has actually run (CI checkouts
-    # have no plugins/ — contents are ignored build artifacts)
+    # Presence only where ya pkg has actually run (CI checkouts have no
+    # plugins/ — contents are ignored build artifacts).
+    #
+    # PLUGINS AND FLAVORS ARE DIFFERENT and the old version conflated
+    # them: it grepped every `use =` line and looked for all of them under
+    # plugins/, so the moment a flavor was declared the check went red
+    # claiming `catppuccin-mocha` was a missing plugin. They live in
+    # different directories and are marked by different files —
+    # plugins/<n>.yazi/main.lua vs flavors/<n>.yazi/flavor.toml — so the
+    # section header in package.toml decides which is which.
+    # THE LIST MUST COVER EVERYTHING package.toml DECLARES. This is the
+    # assertion that would have caught the bug it exists because of:
+    # packages.list was generated from `ya pkg list` at a moment when the
+    # Flavors section happened to be EMPTY, so the theme flavor never
+    # entered the tracked list. Plugins installed fine on a fresh machine
+    # and the theme silently did not — nothing errors, yazi just renders
+    # in default colours. Comparing the two files catches an omission the
+    # "all installed" check above cannot, because that one only looks at
+    # what package.toml already says.
+    if [ -f "$HOME/.config/yazi/package.toml" ] && [ -f "$HOME/.config/yazi/packages.list" ]; then
+        run_test "yazi packages.list covers every declared package" \
+            "! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml |
+                  sed -E 's/use = \"//; s/\"//' |
+                  while IFS= read -r pkg; do
+                    grep -qxF \"\$pkg\" \$HOME/.config/yazi/packages.list || echo \"absent \$pkg\"
+                  done | grep -q .)"
+    fi
     if [ -d "$HOME/.config/yazi/plugins" ]; then
-        run_test "yazi declared plugins all installed" \
-            "! (grep -oE 'use = \"[^\"]+\"' \$HOME/.config/yazi/package.toml | sed -E 's/.*[:\\/]([^\":]+)\"/\\1/' | while IFS= read -r p; do [ -f \"\$HOME/.config/yazi/plugins/\$p.yazi/main.lua\" ] || echo \"missing \$p\"; done | grep -q .)"
+        run_test "yazi declared packages all installed (plugins and flavors)" \
+            "! (awk '/^\\[\\[plugin.deps\\]\\]/{d=\"plugins\"; f=\"main.lua\"} /^\\[\\[flavor.deps\\]\\]/{d=\"flavors\"; f=\"flavor.toml\"} /^use = /{n=\$0; sub(/.*[:\\/]/,\"\",n); gsub(/\"/,\"\",n); print d, n, f}' \$HOME/.config/yazi/package.toml |
+                while read -r dir name marker; do
+                  [ -f \"\$HOME/.config/yazi/\$dir/\$name.yazi/\$marker\" ] || echo \"missing \$dir/\$name\"
+                done | grep -q .)"
     fi
 fi
 # Theme is owned by ~/.config/bat/config — call sites must not override

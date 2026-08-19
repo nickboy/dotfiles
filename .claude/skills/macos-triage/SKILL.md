@@ -190,8 +190,15 @@ produces NO `JetsamEvent*.ips`. So a SIGKILL victim absent from the
 reports says nothing about Jetsam's innocence — it is a fact about the
 REPORTING layer. One machine had 171 `MEMORY_IDLE_EXIT` against 2
 `PERPROCESSLIMIT`, and its two victim lists were disjoint for exactly
-that reason. Read a high idle-exit count as real but not acute: routine
-reclamation running more often than on a roomy machine, not an alarm.
+that reason.
+
+**The idle-exit count is not a pressure signal without a baseline.** It
+is tempting to read a big number as pressure; measure a second machine
+first. 171 over 28.75 h of uptime looked meaningful until a same-RAM
+machine with no complaint gave **298 over 3 h** — nine times the uptime
+and 40% fewer. Note also that this is a snapshot of each service's LAST
+exit, not a count of events, so it cannot be normalised by uptime at
+all. Treat `MEMORY_IDLE_EXIT` as housekeeping.
 
 **RSS is not the footprint, and the footprint may not be reclaimable.**
 For a GUI process run `footprint <pid>` or `vmmap -summary <pid>`. On

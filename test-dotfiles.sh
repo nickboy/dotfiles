@@ -1065,40 +1065,39 @@ if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
 fi
 
 # dm_pack_garbage_clean: the yadm repo reached 31GB with 2MB of tracked
-# content, 17.2GB of it half-written packs from an INTERRUPTED `git gc`.
-# git calls them garbage and never removes them; no general-purpose
-# cleaner sees them (mole reported "Nothing to clean" with 26GB there).
+# content, 17.2GB of it half-written packs from interrupted pack writes.
 #
-# The guard is the safety-critical half — deleting those from under a
-# LIVE repack corrupts the repo — and it had a real bug: the first
-# version grepped `ps` for "git gc", which matched any process whose
-# command line merely MENTIONED the string, including the shell running
-# the check. On an agent-heavy machine it would have been stuck on
-# forever and the cleanup would never have run once. `gc.pid` is git's
-# own lock and answers the question exactly.
+# THE GUARD IS AGE, and the assertion that matters is that a RECENT temp
+# pack survives. tmp_pack_* is written by `index-pack` — the receiving
+# side of fetch/clone/pull — so a maintenance run racing a `yadm pull`
+# must not delete the pack that fetch is still writing. Two earlier
+# guards failed here: a ps-grep for "git gc" matched any command line
+# mentioning the string, and `[ -f gc.pid ]` misses index-pack entirely
+# while a KILLED gc leaves that lock behind forever.
 if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     PG_DIR=$(mktemp -d); mkdir -p "$PG_DIR/objects/pack"
     PG_SRC="source '$HOME/daily-maintenance-lib.sh' >/dev/null 2>&1;"
-    : > "$PG_DIR/objects/pack/tmp_pack_A"; : > "$PG_DIR/objects/pack/tmp_pack_B"
-    : > "$PG_DIR/objects/pack/pack-real.pack"
+    : > "$PG_DIR/objects/pack/tmp_pack_FRESH"          # an in-flight fetch
+    : > "$PG_DIR/objects/pack/pack-real.pack"          # a real pack
+    : > "$PG_DIR/objects/pack/tmp_pack_OLD"
+    touch -t 202001010000 "$PG_DIR/objects/pack/tmp_pack_OLD"   # abandoned
 
-    # Guard ON: a gc holds the lock, so nothing may be deleted.
+    run_test "dm_pack_garbage_clean spares an in-flight temp pack and real packs" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 1' &&
+         [ -f '$PG_DIR/objects/pack/tmp_pack_FRESH' ] &&
+         [ -f '$PG_DIR/objects/pack/pack-real.pack' ] &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_OLD' ]"
+
+    # A stale gc.pid must NOT block cleanup: a killed gc leaves one behind,
+    # and that is precisely the interruption that creates the garbage.
     : > "$PG_DIR/gc.pid"
-    run_test "dm_pack_garbage_clean leaves garbage alone while gc holds the lock" \
-        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'left alone' &&
-         [ -f '$PG_DIR/objects/pack/tmp_pack_A' ]"
+    : > "$PG_DIR/objects/pack/tmp_pack_OLD2"
+    touch -t 202001010000 "$PG_DIR/objects/pack/tmp_pack_OLD2"
+    run_test "…is not blocked by the stale gc.pid a killed gc leaves behind" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 1' &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_OLD2' ]"
 
-    # Guard OFF: garbage goes, and a REAL pack must survive — a rule that
-    # deletes actual packs would destroy the repo it is cleaning.
-    rm -f "$PG_DIR/gc.pid"
-    run_test "…removes the garbage once the lock is gone, keeping real packs" \
-        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 2' &&
-         [ ! -f '$PG_DIR/objects/pack/tmp_pack_A' ] &&
-         [ ! -f '$PG_DIR/objects/pack/tmp_pack_B' ] &&
-         [ -f '$PG_DIR/objects/pack/pack-real.pack' ]"
-
-    # Nothing to do must report nothing, so a clean machine stays quiet.
-    run_test "…is silent and returns non-zero when there is no garbage" \
+    run_test "…is silent and returns non-zero when there is nothing old to remove" \
         "! bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q ."
     rm -rf "$PG_DIR"
 fi

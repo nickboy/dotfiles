@@ -36,11 +36,14 @@ maintenance.
    ```
 
    A full disk then stops *every* tool on the machine, which is how this
-   was found. Daily maintenance now removes the pack garbage (guarded on
-   no `git gc`/repack running — deleting those from under a live repack
-   corrupts the repo) and WARNS about loose objects rather than pruning
-   them, because `git gc --prune=now` discards the
-   `git fsck --unreachable` net that recovered real work here once.
+   was found. Daily maintenance now removes pack garbage OLDER THAN AN HOUR — age,
+   not a lock. `tmp_pack_*` is written by `index-pack` (the receiving
+   side of fetch/clone/pull) as well as by gc, and index-pack takes no
+   lock, so a lock-based guard would delete the pack an in-flight fetch
+   is still writing. For loose objects it runs plain `git gc`, whose
+   default expiry is `2.weeks.ago`: that keeps the
+   `git fsck --unreachable` net which recovered real work here once,
+   while still bounding the pile.
 
    Check any machine by hand with:
 
@@ -84,30 +87,44 @@ maintenance.
    `set -g theme terminal` first to keep current behaviour. It also adds
    floating panes (a candidate to replace `display-popup`) and OSC 133
    command hooks.
-4. **herdr** — **PREVIEW WAS ROLLED BACK 2026-08-19. Stay on stable
-   unless you are deliberately testing.** Upstream published `v0.8.1`,
-   then reverted it ("fix: restore v0.8.0 as stable release") and
-   REMOVED the tag from the releases list, so `/releases/latest` points
-   at v0.8.0 again. On this side, a MacBook running
-   `0.8.0-preview.2026-08-18` froze hard enough to need a power cycle.
-   The two are not proven to be the same fault — a freeze has many
-   possible causes and no diagnosis was captured before the restart —
-   but upstream pulling a release is reason enough not to sit on
-   preview while it is unexplained.
+4. **herdr** — **A 2026-08-18 preview incident, recorded as observation,
+   not as a standing instruction.** Upstream published `v0.8.1`, reverted
+   it ("fix: restore v0.8.0 as stable release") and removed the tag. A
+   MacBook running `0.8.0-preview.2026-08-18` froze hard enough to need a
+   power cycle, on the same day.
 
-   To roll a machine back: drop the opt-in class, re-render, and then
-   run the updater OUTSIDE herdr.
+   **A follow-up search found ZERO reports of herdr freezing a whole
+   machine.** The closest candidate, issue #2592, was read and excluded:
+   it is a musl allocator-lock convoy on a 316-core Linux host, it is
+   server-side, and that machine never froze — its reporter ran `perf`
+   and started new clients throughout. The decisive discriminator is that
+   SSH was unresponsive: sshd and WindowServer are independent, so a
+   frozen UI leaves SSH answering, and a machine that refuses SSH has
+   stopped scheduling — kernel, memory-pressure collapse, saturated I/O
+   or hardware, not a userspace TUI. The frozen machine was also the
+   CLIENT, while herdr's heavy paths run server-side. Both machines run
+   macOS 27 BETA and the one that froze was on an OLDER build
+   (26A5406e versus 26A5416b). On that evidence the beta OS is the first
+   suspect and herdr is well down the list.
+
+   No diagnosis was captured before the restart, so none of this is
+   proof. The check that would settle it, worth running before
+   theorising — a `.panic` file ends the question, because userspace
+   cannot produce a kernel panic:
 
    ```bash
-   yadm config --unset local.class herdr-preview
-   yadm alt
-   grep -A2 '^\[update\]' ~/.config/herdr/config.toml   # channel = "stable"
-   herdr update      # outside herdr; a DOWNGRADE may need herdr.dev/install.sh
+   ls -la /Library/Logs/DiagnosticReports/*.panic
    ```
 
-   Both ends must move together — the wire protocol refuses to attach
-   across any version gap — and a `--remote` attach syncs the remote to
-   whatever the LOCAL binary is, so downgrade the client first.
+   The channel is machine state, discoverable at runtime, so this file
+   deliberately does NOT say which one to be on — it would be wrong the
+   first time anyone changed it. Read it with
+   `yadm config --get-all local.class`, and move with `--add` / `--unset`.
+
+   **Debugging herdr later? The log on disk may be a dead inode.** A
+   short-lived second server can replace it, leaving the live server
+   writing to an unlinked file. Find the real one with
+   `lsof -p <server-pid> | grep -i log` before trusting what you read.
 
    **THE CHANNEL IS AN OPT-IN CLASS, NOT AN IDENTITY.** Preview is
    selected by an ADDITIONAL `herdr-preview` class, never by `personal`:

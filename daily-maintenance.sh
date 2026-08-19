@@ -507,14 +507,28 @@ if command -v yadm >/dev/null 2>&1; then
             dm_pack_garbage_clean "$_ym_dir" || true
         fi
 
-        # Loose objects are NOT auto-pruned: `git gc --prune=now` discards the
-        # `git fsck --unreachable` safety net, which recovered real work on
-        # this machine once. Say it and let a human decide.
+        # Loose objects: run PLAIN `git gc`, whose default expiry is
+        # 2.weeks.ago. That was the false dichotomy in the first version —
+        # it framed the choice as `--prune=now` (which destroys the
+        # `git fsck --unreachable` net that recovered real work here) or
+        # never pruning at all (which leaves an unbounded pile that simply
+        # refills). git's own default keeps a fortnight of unreachable
+        # objects and reclaims what is older, so the net survives by
+        # construction and the steady state is bounded.
+        #
+        # Warning only about what SURVIVES a gc, because a daily entry in
+        # FAILED_COMMANDS that no safe action can clear turns the whole
+        # maintenance report into noise.
         if [ "$_ym_loose" -gt 1048576 ] 2>/dev/null; then
-            echo "⚠️  yadm repo holds $((_ym_loose / 1048576))GB of unreachable loose objects."
-            echo "    Reclaim when convenient (this DROPS fsck --unreachable recovery):"
-            echo "    GIT_DIR=$_ym_dir git gc --prune=now"
-            FAILED_COMMANDS+=("yadm repo needs gc ($((_ym_loose / 1048576))GB loose)")
+            echo "yadm repo: $((_ym_loose / 1048576))GB loose objects, running git gc (keeps 2 weeks)"
+            GIT_DIR="$_ym_dir" run_with_timeout 600 git gc >/dev/null 2>&1 || true
+            _ym_loose=$(GIT_DIR="$_ym_dir" git count-objects -v 2>/dev/null | awk '/^size:/{print $2+0}')
+            if [ "${_ym_loose:-0}" -gt 1048576 ] 2>/dev/null; then
+                echo "⚠️  $((_ym_loose / 1048576))GB of loose objects survived gc — younger than the"
+                echo "    2-week expiry, or still reachable. Inspect before forcing anything:"
+                echo "    GIT_DIR=$_ym_dir git fsck --unreachable | head"
+                FAILED_COMMANDS+=("yadm repo still $((_ym_loose / 1048576))GB loose after gc")
+            fi
         fi
         unset _ym_dir _ym_stats _ym_garbage _ym_loose
     fi

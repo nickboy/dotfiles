@@ -93,31 +93,48 @@ dm_herdr_strand_detected() {
     [ -n "$before" ] && [ "$before" != "$after" ] && [ -S "$sock" ]
 }
 
-# Remove half-written packs left by a `git gc`/repack that was KILLED
-# partway. git labels them "garbage" in count-objects and never removes
-# them, so they only accumulate — 17.2GB of them on this machine, and no
-# general-purpose cleaner can see them (a .git/objects directory looks
-# like legitimate repo data to every one of them).
+# Remove half-written packs left behind by an INTERRUPTED pack write.
+# git labels them "garbage" in count-objects and never removes them, so
+# they accumulate — 17.2GB on this machine, invisible to every
+# general-purpose cleaner because a .git/objects directory looks like
+# legitimate repo data.
 #
-# THE GUARD IS `gc.pid`, NOT A ps SCAN. git writes that file for the
-# duration of a gc and removes it after, so it answers the question
-# exactly. The first version grepped `ps -axo command` for "git gc",
-# which matched any process whose COMMAND LINE merely mentioned the
-# string — including the shell running this very check, and any agent
-# that had typed it. On a machine full of agents that guard would have
-# been permanently stuck on, so the cleanup would never once have run.
+# THE GUARD IS AGE, and two earlier guards were both wrong:
 #
-# Prints what it did. Returns 0 when it removed something, 1 otherwise.
+#   ps -grep for "git gc" matched any process whose COMMAND LINE merely
+#   mentioned the string, including the shell running the check — 4 false
+#   matches measured with no gc running, so it was stuck ON forever.
+#
+#   `[ -f gc.pid ]` is wrong in BOTH directions. tmp_pack_* is written by
+#   `index-pack` (the receiving side of fetch/clone/pull) and by
+#   `pack-objects`, and NEITHER takes that lock — so a maintenance run
+#   racing a `yadm pull` would delete the pack an in-flight fetch is
+#   still writing. And a KILLED gc leaves gc.pid behind, which is exactly
+#   the interruption that produces this garbage, so the cleanup would be
+#   blocked permanently by the very event it exists to clean up after.
+#   git itself never trusts that file's existence: it parses "<pid>
+#   <host>" and checks the process is alive.
+#
+# Age settles all of it. An in-flight temp pack is seconds old; garbage
+# from a killed operation is hours or days old. Age is robust against
+# every producer rather than the one that happens to take a lock, and no
+# stale lock can jam it.
+#
+# `find -delete` also fixes a false success: `rm -f <glob>` overflows
+# ARG_MAX at the volumes that motivated this, and the old code reported
+# "removed N" unconditionally afterwards.
+DM_PACK_GARBAGE_MIN_AGE_MIN=${DM_PACK_GARBAGE_MIN_AGE_MIN:-60}
+
 dm_pack_garbage_clean() {   # $1 = GIT_DIR
-    local d="$1" n
+    local d="$1" before after removed
     [ -n "$d" ] && [ -d "$d/objects/pack" ] || return 1
-    if [ -f "$d/gc.pid" ]; then
-        echo "pack garbage left alone: a git gc holds $d/gc.pid"
-        return 1
-    fi
-    n=$(/bin/ls "$d"/objects/pack/tmp_pack_* 2>/dev/null | wc -l | tr -d ' ')
-    [ "${n:-0}" -gt 0 ] || return 1
-    rm -f "$d"/objects/pack/tmp_pack_* 2>/dev/null || true
-    echo "removed $n interrupted-repack pack file(s)"
+    before=$(find "$d/objects/pack" -name 'tmp_pack_*' -mmin "+$DM_PACK_GARBAGE_MIN_AGE_MIN" 2>/dev/null | wc -l | tr -d ' ')
+    [ "${before:-0}" -gt 0 ] || return 1
+    find "$d/objects/pack" -name 'tmp_pack_*' -mmin "+$DM_PACK_GARBAGE_MIN_AGE_MIN" -delete 2>/dev/null
+    after=$(find "$d/objects/pack" -name 'tmp_pack_*' -mmin "+$DM_PACK_GARBAGE_MIN_AGE_MIN" 2>/dev/null | wc -l | tr -d ' ')
+    removed=$((before - ${after:-0}))
+    # Report what was ACTUALLY removed, measured, not what was attempted.
+    [ "$removed" -gt 0 ] || { echo "pack garbage found but nothing could be removed"; return 1; }
+    echo "removed $removed interrupted-write pack file(s) older than ${DM_PACK_GARBAGE_MIN_AGE_MIN}m"
     return 0
 }

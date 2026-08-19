@@ -504,12 +504,7 @@ if command -v yadm >/dev/null 2>&1; then
         _ym_garbage=${_ym_garbage:-0}; _ym_loose=${_ym_loose:-0}
 
         if [ "$_ym_garbage" -gt 0 ] 2>/dev/null; then
-            if /bin/ps -axo command 2>/dev/null | grep -qE '[g]it (gc|repack|pack-objects)'; then
-                echo "yadm repo: ${_ym_garbage}KB of pack garbage, but a git repack is RUNNING — left alone"
-            else
-                echo "yadm repo: removing ${_ym_garbage}KB of interrupted-repack garbage"
-                command rm -f "$_ym_dir"/objects/pack/tmp_pack_* 2>/dev/null || true
-            fi
+            dm_pack_garbage_clean "$_ym_dir" || true
         fi
 
         # Loose objects are NOT auto-pruned: `git gc --prune=now` discards the

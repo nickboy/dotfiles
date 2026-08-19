@@ -92,3 +92,32 @@ dm_herdr_strand_detected() {
     local sock="${3:-$HOME/.config/herdr/herdr.sock}"
     [ -n "$before" ] && [ "$before" != "$after" ] && [ -S "$sock" ]
 }
+
+# Remove half-written packs left by a `git gc`/repack that was KILLED
+# partway. git labels them "garbage" in count-objects and never removes
+# them, so they only accumulate — 17.2GB of them on this machine, and no
+# general-purpose cleaner can see them (a .git/objects directory looks
+# like legitimate repo data to every one of them).
+#
+# THE GUARD IS `gc.pid`, NOT A ps SCAN. git writes that file for the
+# duration of a gc and removes it after, so it answers the question
+# exactly. The first version grepped `ps -axo command` for "git gc",
+# which matched any process whose COMMAND LINE merely mentioned the
+# string — including the shell running this very check, and any agent
+# that had typed it. On a machine full of agents that guard would have
+# been permanently stuck on, so the cleanup would never once have run.
+#
+# Prints what it did. Returns 0 when it removed something, 1 otherwise.
+dm_pack_garbage_clean() {   # $1 = GIT_DIR
+    local d="$1" n
+    [ -n "$d" ] && [ -d "$d/objects/pack" ] || return 1
+    if [ -f "$d/gc.pid" ]; then
+        echo "pack garbage left alone: a git gc holds $d/gc.pid"
+        return 1
+    fi
+    n=$(/bin/ls "$d"/objects/pack/tmp_pack_* 2>/dev/null | wc -l | tr -d ' ')
+    [ "${n:-0}" -gt 0 ] || return 1
+    rm -f "$d"/objects/pack/tmp_pack_* 2>/dev/null || true
+    echo "removed $n interrupted-repack pack file(s)"
+    return 0
+}

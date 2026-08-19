@@ -1064,6 +1064,45 @@ if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
     rm -rf "$BF_DIR"
 fi
 
+# dm_pack_garbage_clean: the yadm repo reached 31GB with 2MB of tracked
+# content, 17.2GB of it half-written packs from an INTERRUPTED `git gc`.
+# git calls them garbage and never removes them; no general-purpose
+# cleaner sees them (mole reported "Nothing to clean" with 26GB there).
+#
+# The guard is the safety-critical half — deleting those from under a
+# LIVE repack corrupts the repo — and it had a real bug: the first
+# version grepped `ps` for "git gc", which matched any process whose
+# command line merely MENTIONED the string, including the shell running
+# the check. On an agent-heavy machine it would have been stuck on
+# forever and the cleanup would never have run once. `gc.pid` is git's
+# own lock and answers the question exactly.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    PG_DIR=$(mktemp -d); mkdir -p "$PG_DIR/objects/pack"
+    PG_SRC="source '$HOME/daily-maintenance-lib.sh' >/dev/null 2>&1;"
+    : > "$PG_DIR/objects/pack/tmp_pack_A"; : > "$PG_DIR/objects/pack/tmp_pack_B"
+    : > "$PG_DIR/objects/pack/pack-real.pack"
+
+    # Guard ON: a gc holds the lock, so nothing may be deleted.
+    : > "$PG_DIR/gc.pid"
+    run_test "dm_pack_garbage_clean leaves garbage alone while gc holds the lock" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'left alone' &&
+         [ -f '$PG_DIR/objects/pack/tmp_pack_A' ]"
+
+    # Guard OFF: garbage goes, and a REAL pack must survive — a rule that
+    # deletes actual packs would destroy the repo it is cleaning.
+    rm -f "$PG_DIR/gc.pid"
+    run_test "…removes the garbage once the lock is gone, keeping real packs" \
+        "bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q 'removed 2' &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_A' ] &&
+         [ ! -f '$PG_DIR/objects/pack/tmp_pack_B' ] &&
+         [ -f '$PG_DIR/objects/pack/pack-real.pack' ]"
+
+    # Nothing to do must report nothing, so a clean machine stays quiet.
+    run_test "…is silent and returns non-zero when there is no garbage" \
+        "! bash -c \"$PG_SRC dm_pack_garbage_clean '$PG_DIR'\" | grep -q ."
+    rm -rf "$PG_DIR"
+fi
+
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
 # Since herdr left Homebrew (2026-08-05) the maintenance call site is a
 # no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled

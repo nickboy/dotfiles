@@ -476,6 +476,55 @@ else
     echo "Warning: mise not found, skipping runtime upgrade"
 fi
 
+# --- yadm repo hygiene ------------------------------------------------------
+# The yadm bare repo grew to 31GB on this machine while the real content was
+# 2MB. Two causes, both invisible to every general-purpose cleaner — mole's
+# "Large files" scan reported "Nothing to clean" with 26GB sitting there,
+# because to any such tool a .git/objects directory is legitimate repo data:
+#
+#   17.2GB  objects/pack/tmp_pack_*  — half-written packs left by a `git gc`
+#                                      or repack that was KILLED partway.
+#                                      git labels them "garbage" in
+#                                      count-objects and never removes them.
+#   8.6GB   unreachable loose objects — aborted adds, dropped stashes.
+#
+# It nearly filled a 228GB disk, and a full disk is what stopped every tool
+# on this machine from working at all.
+#
+# tmp_pack_* removal is guarded on no git process running: deleting those
+# from UNDER a live repack is how you corrupt a repo. `git gc` itself is
+# left to the human — running it unattended is what created this mess, and
+# an interrupted gc makes the problem bigger, not smaller.
+if command -v yadm >/dev/null 2>&1; then
+    _ym_dir=$(yadm introspect repo 2>/dev/null)
+    if [ -n "$_ym_dir" ] && [ -d "$_ym_dir" ]; then
+        _ym_stats=$(GIT_DIR="$_ym_dir" git count-objects -v 2>/dev/null)
+        _ym_garbage=$(printf '%s\n' "$_ym_stats" | awk '/^size-garbage:/{print $2+0}')
+        _ym_loose=$(printf '%s\n' "$_ym_stats" | awk '/^size:/{print $2+0}')
+        _ym_garbage=${_ym_garbage:-0}; _ym_loose=${_ym_loose:-0}
+
+        if [ "$_ym_garbage" -gt 0 ] 2>/dev/null; then
+            if /bin/ps -axo command 2>/dev/null | grep -qE '[g]it (gc|repack|pack-objects)'; then
+                echo "yadm repo: ${_ym_garbage}KB of pack garbage, but a git repack is RUNNING — left alone"
+            else
+                echo "yadm repo: removing ${_ym_garbage}KB of interrupted-repack garbage"
+                command rm -f "$_ym_dir"/objects/pack/tmp_pack_* 2>/dev/null || true
+            fi
+        fi
+
+        # Loose objects are NOT auto-pruned: `git gc --prune=now` discards the
+        # `git fsck --unreachable` safety net, which recovered real work on
+        # this machine once. Say it and let a human decide.
+        if [ "$_ym_loose" -gt 1048576 ] 2>/dev/null; then
+            echo "⚠️  yadm repo holds $((_ym_loose / 1048576))GB of unreachable loose objects."
+            echo "    Reclaim when convenient (this DROPS fsck --unreachable recovery):"
+            echo "    GIT_DIR=$_ym_dir git gc --prune=now"
+            FAILED_COMMANDS+=("yadm repo needs gc ($((_ym_loose / 1048576))GB loose)")
+        fi
+        unset _ym_dir _ym_stats _ym_garbage _ym_loose
+    fi
+fi
+
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then
     if ! run_command "Yazi package upgrade" ya pkg upgrade; then

@@ -20,6 +20,34 @@ maintenance.
 
 ## Notes
 
+0. **yadm's own repo** — it reached **31GB on a machine whose tracked
+   content is 2MB**, and nearly filled a 228GB disk. Two causes, and
+   NEITHER is visible to a general-purpose cleaner: mole's "Large files"
+   scan reported *"Nothing to clean"* with 26GB sitting there, because to
+   any such tool a `.git/objects` directory is legitimate repo data.
+
+   ```text
+   size-garbage: 17.2GB   objects/pack/tmp_pack_*  — half-written packs
+                          left by a `git gc`/repack that was KILLED
+                          partway. git labels them "garbage" and never
+                          removes them; they only accumulate.
+   size:          8.6GB   unreachable loose objects — aborted adds,
+                          dropped stashes.
+   ```
+
+   A full disk then stops *every* tool on the machine, which is how this
+   was found. Daily maintenance now removes the pack garbage (guarded on
+   no `git gc`/repack running — deleting those from under a live repack
+   corrupts the repo) and WARNS about loose objects rather than pruning
+   them, because `git gc --prune=now` discards the
+   `git fsck --unreachable` net that recovered real work here once.
+
+   Check any machine by hand with:
+
+   ```bash
+   GIT_DIR=$(yadm introspect repo) git count-objects -vH
+   ```
+
 1. **Yazi** — plugins are declared by NAME in the tracked
    `.config/yazi/plugins.list`; `package.toml` is `ya pkg`'s lockfile and
    is deliberately **untracked**. `ya pkg upgrade` runs from daily

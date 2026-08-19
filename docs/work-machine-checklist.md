@@ -464,6 +464,98 @@ claim was never verified and is removed rather than reworded.
   `.zshrc` never runs there, so env set in the `.zshrc` chain
   disappears across a server restart.
 
+## herdr remote (`hbox`)
+
+`hbox` attaches this machine as a CLIENT to a herdr server running on
+another box — a Mac mini, a Linux server, anything with sshd and herdr.
+The wrapper lives in `.zshrc`; everything it needs to find the box does
+not.
+
+- [ ] **All three things `hbox` needs are UNTRACKED, deliberately.**
+  Rule 9: the repo is public, so no hostnames, addresses or keys are in
+  it. A freshly cloned machine has none of them and `hbox` just prints
+  its usage line. Create them by hand:
+
+  | File | Holds |
+  | --- | --- |
+  | `~/.zshrc.local` | `export HERDR_REMOTE_HOST="user@host"` |
+  | `~/.ssh/config.d/NN-<host>.conf` | `Host` block naming the identity |
+  | the private key it points at | the key itself |
+
+  `.zshrc` sources `~/.zshrc.local` as its last step, and `.gitignore`
+  already covers it. Confirm before writing a host into it:
+
+  ```bash
+  yadm check-ignore -v ~/.zshrc.local
+  ```
+
+- [ ] **`00-defaults.conf` sets `IdentitiesOnly yes` for `Host *`.**
+  ssh then ignores agent-provided keys and offers ONLY what a matching
+  `IdentityFile` names. A remote with no host block falls back to
+  `~/.ssh/id_rsa` and fails with a bare
+  `Permission denied (publickey,password,...)` that names no cause.
+  Ask the resolver, never the files:
+
+  ```bash
+  ssh -G user@host | grep -E 'identityfile|identitiesonly'
+  ```
+
+- [ ] **Put every name you will use on the `Host` line, the raw IP
+  included.** An mDNS name (`foo.local`) survives a DHCP lease change
+  and is the better value for `HERDR_REMOTE_HOST`; the IP is what gets
+  pasted into scripts. A name absent from the block silently skips the
+  identity and lands you back on the failure above.
+
+- [ ] **On a corp network a `.local` name or a private IP may not
+  resolve at all.** Separate "cannot reach" from "reached, refused"
+  before touching the config:
+
+  ```bash
+  ssh -o BatchMode=yes -o ConnectTimeout=8 user@host true
+  ```
+
+  `Permission denied` means sshd answered — an auth problem.
+  A timeout means it did not — a network problem. A failed `ping`
+  proves neither; ICMP is commonly filtered.
+
+- [ ] **Client and server herdr versions must match.** `hbox` passes
+  `--handoff`, which hands live panes over when an attach REPLACES a
+  version-mismatched remote server. Two machines on different channels
+  therefore replace each other's server on every attach. Put every
+  machine sharing a remote server on the same channel — see the
+  `herdr-preview` class above.
+
+- [ ] **`--remote-keybindings=server` is load-bearing, not taste.** The
+  default (`local`) makes the SERVER strip every custom command out of
+  the client's keymap: bindings then do nothing at all, with no error.
+  Keybindings are read ONCE at attach, so a client already running
+  cannot be fixed — it has to reattach.
+
+- [ ] **Remote Linux server: herdr is one static binary.** Assets are
+  `herdr-linux-x86_64` and `herdr-linux-aarch64`. On a box yadm does
+  NOT manage, set the channel with herdr itself — nothing regenerates
+  the config there, so it sticks:
+
+  ```bash
+  herdr channel set preview     # or stable
+  herdr channel show
+  herdr update
+  herdr --version
+  ```
+
+  On a yadm-managed box use the class instead. `herdr channel set`
+  writes into `config.toml`, and `yadm alt` regenerates that file from
+  the template on every pull and wipes it.
+
+- [ ] **A non-interactive ssh gets a minimal PATH**
+  (`/usr/bin:/bin:/usr/sbin:/sbin`), which excludes `~/.local/bin`. So
+  `ssh host 'command -v herdr'` reports nothing for a perfectly working
+  install and reads as "not installed". Check the path directly:
+
+  ```bash
+  ssh host 'ls -l ~/.local/bin/herdr && ~/.local/bin/herdr --version'
+  ```
+
 ## Verify
 
 ```bash

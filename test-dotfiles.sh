@@ -974,7 +974,42 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     mkdir -p "$ORPH_DIR/empty"
     run_test "launchd orphans: a clean directory reports none" \
         "LAUNCHD_SCAN_DIRS='$ORPH_DIR/empty' bash '$ORPH_DIR/section.sh' | grep -q 'None'"
+
+    # The managed-machine guard. On an MDM-enrolled Mac the system-wide dirs
+    # belong to the org's management stack: an entry there returns after
+    # removal, and taking the wrong one out can break enrolment — so the
+    # "bootout, then delete" advice must not be aimed at them. `profiles` is
+    # stubbed both ways so the result does not depend on whether the machine
+    # running this suite happens to be enrolled.
+    ORPH_BIN="$ORPH_DIR/bin"; mkdir -p "$ORPH_BIN"
+    orph_mdm() { printf '#!/bin/sh\necho "MDM enrollment: %s"\n' "$1" > "$ORPH_BIN/profiles"; chmod +x "$ORPH_BIN/profiles"; }
+
+    orph_mdm "Yes (User Approved)"
+    run_test "launchd orphans: an MDM machine narrows the scan to \$HOME" \
+        "PATH='$ORPH_BIN:$PATH' HOME='$ORPH_DIR' bash '$ORPH_DIR/section.sh' | grep -q 'managed machine'"
+    run_test "launchd orphans: an explicit scope still wins on an MDM machine" \
+        "PATH='$ORPH_BIN:$PATH' LAUNCHD_SCAN_DIRS='$ORPH_DIR/agents' bash '$ORPH_DIR/section.sh' | grep -q 'com.test.orphan\b'"
+
+    orph_mdm "No"
+    run_test "launchd orphans: an unmanaged machine keeps the full scan" \
+        "! { PATH='$ORPH_BIN:$PATH' HOME='$ORPH_DIR' bash '$ORPH_DIR/section.sh' | grep -q 'managed machine'; }"
     rm -rf "$ORPH_DIR"
+fi
+
+
+# Brewfile machine-local exclusions. The mechanism is only worth having if a
+# listed name actually disappears AND an absent file changes nothing, so both
+# are asserted. Uses a throwaway HOME so the real ~/.Brewfile.skip is untouched.
+if command -v brew >/dev/null 2>&1 && [ -f "$HOME/Brewfile" ]; then
+    BF_DIR=$(mktemp -d)
+    run_test "Brewfile: parses and declares openlogi with no skip file" \
+        "HOME='$BF_DIR' brew bundle list --file='$HOME/Brewfile' --cask 2>/dev/null | grep -q openlogi"
+    printf '# comment\n\n  openlogi   # trailing\n' > "$BF_DIR/.Brewfile.skip"
+    run_test "Brewfile: a skipped name is dropped (comments/blanks tolerated)" \
+        "! { HOME='$BF_DIR' brew bundle list --file='$HOME/Brewfile' --cask 2>/dev/null | grep -q openlogi; }"
+    run_test "Brewfile: skipping the cask also drops its tap" \
+        "! { HOME='$BF_DIR' brew bundle list --file='$HOME/Brewfile' --tap 2>/dev/null | grep -q aprilnea; }"
+    rm -rf "$BF_DIR"
 fi
 
 # dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.

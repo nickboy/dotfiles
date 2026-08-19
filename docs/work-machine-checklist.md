@@ -268,6 +268,17 @@ claim was never verified and is removed rather than reworded.
 - [ ] Review the Brewfile before `brew bundle` — it targets a
   personal machine (spotify, iina, adguard, setapp, 1password casks).
   Install selectively where MDM or policy applies.
+- [ ] **Drop packages this machine should not have via
+  `~/.Brewfile.skip`** (untracked, one name per line, `#` comments and
+  blank lines ignored). Guarded declarations in the Brewfile disappear,
+  including the tap a skipped cask came from, so `yadm bootstrap` stays
+  usable instead of being something you avoid running. Two reasons a
+  package belongs here rather than in an edit to the tracked Brewfile:
+  the machine already receives the same tool from its own software
+  management, or the package comes from a third-party tap that
+  `brew upgrade --cask --greedy-latest --yes` would then auto-upgrade
+  unattended. The absent file skips nothing, so a fresh machine is
+  unaffected.
 
 ## Known gotchas (learned on the primary machine)
 

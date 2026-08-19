@@ -714,11 +714,24 @@ fi
 # Only ABSOLUTE program paths are judged. A relative path (Contents/Helpers/…)
 # is resolved against a bundle this script cannot identify, and guessing would
 # report every well-formed BTM agent as broken.
+# On a centrally managed machine the system-wide dirs belong to the management
+# stack, not to you. An entry there is reinstated after removal, and taking the
+# wrong one out can break enrolment — so the advice printed below ("bootout,
+# then delete") is actively harmful there. It is also aimed at the gui/ domain,
+# which is not where a LaunchDaemon lives. Judge only the agents the user owns,
+# unless a scope was set explicitly. `profiles` needs no sudo and answers in
+# well under a second; if it is missing or silent we keep the full scan.
+if [ -z "${LAUNCHD_SCAN_DIRS:-}" ] &&
+   profiles status -type enrollment 2>/dev/null | grep -q "MDM enrollment: Yes"; then
+    LAUNCHD_SCAN_DIRS="$HOME/Library/LaunchAgents"
+    LAUNCHD_SCOPE_NOTE="managed machine — scanning your own LaunchAgents only"
+fi
 LAUNCHD_SCAN_DIRS="${LAUNCHD_SCAN_DIRS:-/Library/LaunchAgents /Library/LaunchDaemons $HOME/Library/LaunchAgents}"
 if [ -x /usr/libexec/PlistBuddy ]; then
     echo ""
     echo "----------------------------------------"
     echo "Task: Orphaned LaunchAgents/Daemons"
+    [ -n "${LAUNCHD_SCOPE_NOTE:-}" ] && echo "  (${LAUNCHD_SCOPE_NOTE})"
 
     orphan_count=0
     orphan_names=""

@@ -39,6 +39,15 @@ Automates daily system maintenance tasks including:
   `tmutil latestbackup`, which needs the destination mounted and so fails
   exactly when the warning matters.
 
+  On a centrally managed Mac (`profiles status -type enrollment` reports
+  `MDM enrollment: Yes`) the scan narrows to `~/Library/LaunchAgents` and
+  says so in its output. The system-wide dirs there belong to the org's
+  management stack: an entry is reinstated after removal, taking the wrong
+  one out can break enrolment, and the printed advice targets the `gui/`
+  domain, which is not where a LaunchDaemon lives. Set `LAUNCHD_SCAN_DIRS`
+  explicitly to override in either direction — an explicit scope always
+  wins, and the probe needs no sudo.
+
 ## Features
 
 - ✅ Runs automatically at 9:00 AM daily via launchd

@@ -31,7 +31,26 @@
 # verification settings are per-backend (node.verify and go checksums are on,
 # locked_verify_provenance is off) with nothing bun-specific.
 
-tap "aprilnea/tap"
+# Machine-local exclusions. Not every package belongs on every machine: a
+# centrally managed laptop may already receive the same tool from its own
+# software management, or forbid a third-party build of it outright. List one
+# name per line in the UNTRACKED ~/.Brewfile.skip (blank lines and # comments
+# ignored) and the guarded declarations below are dropped. No file means
+# nothing is skipped, so a fresh machine still gets everything.
+BREWFILE_SKIP = begin
+  path = File.expand_path("~/.Brewfile.skip")
+  File.exist?(path) ? File.read(path).lines.map { |l| l.sub(/#.*/, "").strip }.reject(&:empty?) : []
+rescue StandardError
+  # A malformed skip file must not take the whole Brewfile down with it.
+  []
+end
+
+# A lambda, not a def: the Brewfile is instance_eval'd on Homebrew's Dsl
+# object, so a top-level def lands on the wrong receiver and raises
+# "undefined method". Locals survive the whole file, so this works.
+brewfile_keep = ->(name) { !BREWFILE_SKIP.include?(name) }
+
+tap "aprilnea/tap" if brewfile_keep.call("openlogi")
 tap "charmbracelet/tap"
 tap "oven-sh/bun"
 tap "smudge/smudge"
@@ -270,7 +289,7 @@ cask "iina"
 # on a machine with no Logitech mouse/keyboard. Declared because it was
 # hand-installed and missing here — the same gap that lost ueberzugpp, caught
 # by auditing installed-but-undeclared taps rather than by anything failing.
-cask "aprilnea/tap/openlogi@latest"
+cask "aprilnea/tap/openlogi@latest" if brewfile_keep.call("openlogi")
 # Control your tools with a few keystrokes
 cask "raycast"
 # Window snapping tool

@@ -114,10 +114,13 @@ fingerprint() {
 }
 
 # herdr owns its SessionStart entry, so the merge above never writes it
-# — a hardcoded copy would go stale, and herdr bakes an ABSOLUTE path
-# into the command, which is wrong on every other machine anyway (one
-# more reason this file could never have been shared). Ask herdr to
-# reinstate it instead.
+# — a hardcoded copy would go stale. Ask herdr to reinstate it instead.
+#
+# The second reason used to be that herdr bakes an ABSOLUTE path into the
+# command, wrong on every other machine. That stopped mattering when #85
+# untracked settings.json: the file never travels now, so a machine-local
+# file naming its own home is simply correct. Staleness is the whole
+# reason today, and it is enough on its own.
 #
 # Guarded on the ENTRY, not on the hook script. The script is untracked
 # and survives a pull; the settings.json entry does not — so guarding on

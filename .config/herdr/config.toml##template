@@ -102,6 +102,16 @@ height = "70%"
 # `agent prompt` refuses with agent_not_found
 # and types nothing (verified against a shell pane).
 #
+# 0.8.2 ADDED A SECOND REFUSAL, and it needs a different message. Upstream
+# #2788 made `agent prompt` reject an agent already waiting at an approval
+# or question dialog with `agent_blocked`, again without sending text or
+# Enter. Good change — the old behaviour answered that dialog with "/copy"
+# — but a single fallback string turns it into a lie: press this while a
+# Claude pane sits on a y/N prompt and "not a Claude pane" is both wrong
+# and points at the wrong fix. So the command branches on the error code.
+# Both codes verified by running them: agent_not_found against a shell
+# pane, agent_blocked against a session at its resume picker.
+#
 # NOT ALWAYS ONE KEYSTROKE. When the reply contains a code block,
 # `/copy` opens a selector and waits — so the pane goes modal until you
 # press Enter or Esc. Answer that picker with "3. Always copy full
@@ -115,7 +125,18 @@ height = "70%"
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"
-command = "herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy' || herdr notification show 'copy' --body 'not a Claude pane'"
+command = '''
+e=$(herdr agent prompt "$HERDR_ACTIVE_PANE_ID" '/copy' 2>&1) || {
+  c=$(printf '%s' "$e" | jq -r '.error.code // empty' 2>/dev/null)
+  [ -n "$c" ] || c=$(printf '%s' "$e" | sed -n 's/.*"code":"\([a-z_]*\)".*/\1/p')
+  case "$c" in
+    agent_not_found) m='not a Claude pane' ;;
+    agent_blocked)   m='pane is waiting on its own prompt' ;;
+    *)               m="copy failed (${c:-unknown})" ;;
+  esac
+  herdr notification show 'copy' --body "$m"
+}
+'''
 description = "copy last Claude message"
 
 # ── Plugin bindings ────────────────────────────────────────────────
@@ -201,6 +222,29 @@ description = "new jj workspace (tab)"
 show_agent_labels_on_pane_borders = true
 # Reclaim a row when a workspace has only one tab
 hide_tab_bar_when_single_tab = true
+
+# Outer terminal title (0.8.2). Worth setting BECAUSE of the remote attach:
+# it renders on the SERVER, so {hostname} names the box the panes actually
+# run on, not the laptop in front of you. With two machines and `hbox`, the
+# Ghostty tab stops being ambiguous about which one you are driving.
+# Tokens: {hostname} {workspace} {tab} {pane} {terminal_title}; "" leaves the
+# title alone.
+#
+# GATED BY CLASS, because the hostname is not the same KIND of string on a
+# work machine. Here `hostname` returns `NickdeMac-mini.local`; on a
+# corporate network the same call can return a fully qualified name
+# carrying the employer's domain, and work hostnames are often
+# `firstname-lastname-macbook` or an asset tag. Titles surface in
+# screenshots, screen shares, window switchers and recordings — so the
+# personal form would put a name and an employer into the title bar of
+# every screenshot taken on that machine. Nothing reaches this public repo
+# (the value resolves at runtime) but the repo would be CAUSING that
+# display on machines it does not own.
+{% if yadm.class == "work" %}
+window_title = "{workspace}"
+{% else %}
+window_title = "{hostname}: {workspace}"
+{% endif %}
 
 # Agent panel rows were unreadably dim. Theme-matched across the
 # stack: workspace in Mocha blue (same #89b4fa zjstatus uses for the

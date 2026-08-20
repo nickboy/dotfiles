@@ -150,9 +150,25 @@ maintenance.
    policy are all read out of a released binary. Re-check them after a
    preview jump rather than assuming.
 
-   The wire protocol refuses to attach across ANY version
-   gap. `herdr integration install claude` rewrites `settings.json` with
-   an absolute `/Users` path; re-fix it to `$HOME` afterwards.
+   The wire protocol refuses to attach across ANY version gap.
+
+   ~~`herdr integration install claude` rewrites `settings.json` with an
+   absolute `/Users` path; re-fix it to `$HOME` afterwards.~~ **Dead since
+   #85 untracked `settings.json`** — a machine-local file naming its own
+   home is simply correct, and there is nothing to commit. PR #111
+   removed this from `herdr-setup.md` and missed the copy here, which is
+   the failure mode that PR was about: one claim, two homes, one fixed.
+
+   **0.8.2 changes the window title on pull.** `ui.window_title` is now
+   set, so after `yadm pull` the outer terminal title starts naming the
+   host and workspace where it did not before. That is deliberate — it
+   renders on the SERVER, so it disambiguates which machine a remote
+   attach is driving — but a title bar that silently starts naming the
+   host is exactly the kind of change someone notices without knowing
+   what caused it. On `work` class it renders `{workspace}` only, since
+   a corporate `hostname` can carry the employer's domain or the user's
+   name, and titles surface in screenshots and screen shares. Set
+   `window_title = ""` to opt out entirely.
    Self-updater managed since 2026-08-05 (left the Brewfile — brew
    installs can't live-handoff): upgrade via `herdr update --handoff`;
    never from non-interactive automation.

@@ -54,8 +54,10 @@ Violating these produces confident wrong answers, not errors.
    your command is itself logged. Check hits against your own shell
    activity before believing a recent one.
 6. **sudo needs a password and will hang.** Test once with
-   `sudo -n true`. If it fails, do not run sudo — collect every
-   root-only command into one block for the user to run with `!`.
+   `sudo -n true`, run BARE — rule 3 defeats this check inside a
+   pipeline, where `sudo -n true | head -1` exits 0 while the bare form
+   exits 1. If it fails, do not run sudo — collect every root-only
+   command into one block for the user to run with `!`.
 7. **`pgrep` and `ps -o ucomm=` are not supersets of each other**, and
    the mismatch fails silently. One machine: `ps` showed `ghostty` while
    `pgrep -x ghostty` returned nothing, and `pgrep -x claude` found pids
@@ -65,7 +67,16 @@ Violating these produces confident wrong answers, not errors.
    Guard EVERY variable that comes from a command substitution — not
    just the one you happened to think of. The same investigation added
    a non-empty check for one pid and then failed identically on the next.
-8. **Some diagnostic commands stream forever** and will hang the shell
+8. **Every baseline, threshold and "X means Y" carries its SAMPLE and
+   the machine it came from, and an n=1 claim says n=1.** Rule 4 polices
+   what you READ; this one polices what you WRITE, and it is where this
+   file has failed most often. "171 idle-exits means real but not acute
+   pressure" survived because it was stated without its sample; written
+   as "(n=1, Mac16,10, 16 GB)" it invites the control measurement that
+   refuted it. Inherited knowledge counts as n=0 until measured on the
+   hardware in front of you — `pmset -g therm` was Intel-era fact that
+   had never been checked on Apple Silicon.
+9. **Some diagnostic commands stream forever** and will hang the shell
    until it times out, producing no output at all: `pmset -g thermlog`,
    `log stream`, `fs_usage` without `-t`, `top` without `-l`,
    `powermetrics` without `-n`. Always bound them.
@@ -85,9 +96,17 @@ found` from a `*.panic` glob proves nothing: the glob failed, so `ls`
 never ran. Only a readable, non-empty directory with zero `*panic*`
 hits is a real negative.
 
-**No panic report + machine had to be force-restarted = it HUNG.** The
-kernel never faulted; it was starved. That points at resources (disk,
-memory, I/O), not at a crashing driver.
+**No panic report + machine had to be force-restarted = it HUNG** — but
+only once you have checked the machine could have WRITTEN one. A panic
+report is a file, and writing it needs room. On the machine in the worked
+example below, the kernel logged `Failed to open corefile of size 1024 MB
+(low disk space)` sixteen minutes before the outage, which means the
+absence of a report on that volume proves nothing about whether a panic
+occurred. Grep the log for `corefile` before drawing the inference.
+
+Where the inference does hold, the kernel never faulted and was starved
+instead, which points at resources (disk, memory, I/O) rather than at a
+crashing driver. Where it does not, say **inconclusive**.
 
 ### Step 2 — Find the moment it stopped
 
@@ -146,12 +165,28 @@ it streams (rule 7).
 The verdict needs root, so put it in the ask-the-user block:
 
 ```bash
-sudo powermetrics -n 3 -i 1000 --samplers cpu_power,thermal,smc
+sudo powermetrics -n 3 -i 1000 --samplers cpu_power,gpu_power,thermal
 ```
 
-Read package watts, fan RPM and die temperature. A fanless Air runs hot
-by design, so temperature alone is never the verdict. Until this runs,
-thermal status is **inconclusive** — say so in those words.
+**There is no `smc` sampler on this build** — passing one fails the whole
+command. Verified list (n=1, Mac16,10): tasks, battery, network, disk,
+interrupts, cpu_power, thermal, gpu_power, ane_power, sfi. Confirm with
+`powermetrics --help` rather than trusting this line.
+
+Not a desktop artefact — `battery` is still listed on a machine that has
+none, so the list is not hardware-filtered. `smc` is an Intel-era
+sampler, same family as `pmset -g therm` above. **That is the general
+form worth carrying to other tools**: a mechanism inherited from Intel
+Macs does not error on Apple Silicon, it answers emptily, and an empty
+answer reads as a clean bill of health.
+
+That also means **fan RPM and die temperature are not available here**;
+get fans from a third-party tool if you need them. What you do get is the
+`thermal` sampler's thermal PRESSURE level (Nominal / Fair / Serious /
+Critical), which is the Apple Silicon answer to the Intel speed-limit
+counters, plus package watts and frequency residency from `cpu_power`.
+A fanless Air runs hot by design, so temperature was never the verdict
+anyway. Until this runs, thermal status is **inconclusive** — those words.
 
 ### C. Who is burning CPU — ask BOTH questions
 
@@ -182,8 +217,16 @@ rather than sampling a decoded prefix.
 
 **Never promote `per-process-limit` to evidence of memory pressure.** It
 means what it says regardless of what the machine looked like at the
-time: one measured event fired with **6 GB free**. And do not judge this
-from a median across events — inspect the distribution and the outliers,
+time: one measured event fired with **6 GB free**.
+
+**That is not licence to ignore the free number in the same report.** The
+two fields answer different questions and neither overwrites the other. A
+per-process-limit kill at 7,080 free pages — 110 MB, measured — is two
+independent facts: that daemon hit its own cap, AND the machine was low.
+Report both. Collapsing them in either direction loses half the report.
+
+**Do not judge any of this from a median across events** — inspect the
+distribution and the outliers,
 because the counterexample is usually already printed in your own output,
 unread. Count per VICTIM, not per event: 20 kills of one 16 MB daemon is
 that daemon looping on its own cap, not a machine under load.
@@ -285,10 +328,23 @@ disk-write cost, and check `softwareupdate -l` for a newer build.
 
 ## Before you run an A/B
 
-Ask what MECHANISM connects the variable you are about to change to the
-metric you are about to read. **A variable that cannot move the metric
-produces a null result that reads exactly like "ruled out"** — worse
-than no experiment, because it looks like one was done.
+**State what each hypothesis PREDICTS before you run anything. If they
+predict the same observation, it is not a test.** A null from a
+non-discriminating test must be written **inconclusive**, never "ruled
+out" — it closes a question it never opened.
+
+This is the dominant failure mode in this repo's history, five instances
+of one shape: a lock that could not cover the writers it needed to, an
+end-to-end check that sampled a single case, a diff that could only ever
+have shown nothing, a deliberate break that changed nothing so its
+survival proved nothing, and the A/B below. A claim from n=1 is wrong but
+CHECKABLE — the next machine refutes it. A test whose arms predict the
+same thing is wrong and UNCHECKABLE.
+
+So ask what MECHANISM connects the variable you are about to change to
+the metric you are about to read. **A variable that cannot move the
+metric produces a null that reads exactly like "ruled out"** — worse than
+no experiment, because it looks like one was done.
 
 A real example, caught before it ran: the plan was to vary the number of
 terminal panes and watch GPU surface bytes. But those panes are drawn by
@@ -311,11 +367,24 @@ restarting the app, or the effect you measure is the restart.
 From Nick's Mac mini (Mac16,10, 16 GB, macOS 27 beta) on 2026-08-18.
 Use for comparison, re-measure rather than trusting the age of these.
 
+All n=1, with the command that produced each, so the next machine can be
+measured rather than compared against a remembered number.
+
 | Metric | Normal | In trouble |
 | --- | --- | --- |
-| unified log messages/min | ~12,000 | 118,000 (10x), 3.18M at boot |
-| `vm_stat` page size | 16384 bytes | — |
-| free pages under pressure | — | ~7,000 pages (110 MB) |
+| log msgs/min | ~12,000 | 118,000 (10x); 3.18M at boot |
+| page size | 16384 B | — |
+| free pages | — | ~7,000 (110 MB) |
+| jetsam idle-exits | 298 at 3 h uptime | not a signal at all |
+| decompressions/s | — | 659 sustained |
+
+```bash
+/usr/bin/log show --start "…" --end "…" --style compact | wc -l
+vm_stat | head -1                              # page size
+vm_stat | awk '/Pages free/{print $3}'
+launchctl dumpstate | grep -c JETSAM_REASON_MEMORY_IDLE_EXIT
+vm_stat | awk '/decompress/{print $2}'         # divide by uptime seconds
+```
 
 ## Output format
 

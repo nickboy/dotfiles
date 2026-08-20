@@ -87,39 +87,27 @@ maintenance.
    `set -g theme terminal` first to keep current behaviour. It also adds
    floating panes (a candidate to replace `display-popup`) and OSC 133
    command hooks.
-4. **herdr** — **A 2026-08-18 preview incident, recorded as observation,
-   not as a standing instruction.** Upstream published `v0.8.1`, reverted
-   it ("fix: restore v0.8.0 as stable release") and removed the tag. A
-   MacBook running `0.8.0-preview.2026-08-18` froze hard enough to need a
-   power cycle, on the same day.
+4. **herdr** — **The 2026-08-18 freeze is diagnosed and lives in the
+   `macos-triage` skill, not here.** A Mac mini froze hard enough to need
+   a 15-second power-button hold; the cause was a full boot volume, with
+   `deleted_helper` unable to purge at urgency 3 and the machine unable
+   to grow swap. No kernel panic — the log simply stops mid-sentence at
+   20:44:25 with a boot 42 seconds later. The mechanism that filled the
+   volume is note (0) above, which IS watchable because it depends on
+   git's behaviour. The incident itself is history with no upstream to
+   watch, so the worked example is the single home for it:
+   `~/.claude/skills/macos-triage/SKILL.md`.
 
-   **A follow-up search found ZERO reports of herdr freezing a whole
-   machine.** The closest candidate, issue #2592, was read and excluded:
-   it is a musl allocator-lock convoy on a 316-core Linux host, it is
-   server-side, and that machine never froze — its reporter ran `perf`
-   and started new clients throughout. The decisive discriminator is that
-   SSH was unresponsive: sshd and WindowServer are independent, so a
-   frozen UI leaves SSH answering, and a machine that refuses SSH has
-   stopped scheduling — kernel, memory-pressure collapse, saturated I/O
-   or hardware, not a userspace TUI. The frozen machine was also the
-   CLIENT, while herdr's heavy paths run server-side. Both machines run
-   macOS 27 BETA and the one that froze was on an OLDER build
-   (26A5406e versus 26A5416b). On that evidence the beta OS is the first
-   suspect and herdr is well down the list.
-
-   No diagnosis was captured before the restart, so none of this is
-   proof. The check that would settle it, worth running before
-   theorising — a `.panic` file ends the question, because userspace
-   cannot produce a kernel panic:
-
-   ```bash
-   ls -la /Library/Logs/DiagnosticReports/*.panic
-   ```
-
-   The channel is machine state, discoverable at runtime, so this file
-   deliberately does NOT say which one to be on — it would be wrong the
-   first time anyone changed it. Read it with
-   `yadm config --get-all local.class`, and move with `--add` / `--unset`.
+   **The check this note used to prescribe produced a FALSE negative**,
+   and no command for it appears here on purpose. A `*.panic` glob under
+   zsh aborts the whole command before `ls` runs, and prints `no matches
+   found` — which a tired eye takes for a clean negative. Not a check that
+   fails to produce a signal: one that produces the wrong signal, in the
+   document about canaries. It is described rather than shown because a
+   marker is metadata and a fenced command is payload, and a skimming
+   reader takes the payload. The correct form — assert the directory is
+   readable and non-empty, then search — lives in the skill with the rest
+   of the playbook.
 
    **Debugging herdr later? The log on disk may be a dead inode.** A
    short-lived second server can replace it, leaving the live server

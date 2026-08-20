@@ -83,6 +83,27 @@ Violating these produces confident wrong answers, not errors.
 
 ## Post-mortem: what took the machine down
 
+### Step 0 — The cheap high-prior causes, BEFORE any log work
+
+```bash
+/bin/df -h / /System/Volumes/Data
+GIT_DIR=$(yadm introspect repo) git count-objects -vH   # size-pack
+```
+
+**A full boot volume presents as below-userspace unresponsiveness.** It
+stalls SSH, WindowServer and audio alike, so every symptom points at the
+kernel and every careful argument built from those symptoms points away
+from the answer. This step exists because that argument was built once,
+here: SSH being unresponsive was used to place the cause below userspace,
+the macOS beta was ranked first suspect and an upstream issue was read and
+excluded — all sound reasoning, and the answer was a full disk that ten
+seconds of `df` would have shown. The reasoning was not wrong so much as
+unnecessary.
+
+The second command is here because the volume filled from a place no
+general-purpose cleaner can see: git garbage in the yadm repo, 31 GB on a
+machine whose tracked content is 2 MB.
+
 ### Step 1 — Was it a panic or a hang?
 
 ```bash

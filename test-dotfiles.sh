@@ -211,6 +211,15 @@ if [ -f "$HOME/.config/yazi/packages.list" ]; then
     run_test "bulk ya pkg calls discard artifact drift" \
         "grep -qE 'ya pkg upgrade[^|]*--discard' '$HOME/daily-maintenance.sh' &&
          grep -qE 'ya pkg install[^|]*--discard' '$HOME/.config/yadm/bootstrap'"
+    # --discard removes the only drift signal there was, so the count has
+    # to be taken BEFORE the upgrade. `install` is load-bearing: it
+    # deploys the rev the LOCKFILE records, so a directory that changes
+    # under it was out of step with its own entry. Under `upgrade` a
+    # changed directory could just be a new upstream release.
+    run_test "yazi drift is measured before it is discarded" \
+        "grep -q 'dm_yazi_drift_repair' '$HOME/daily-maintenance.sh' &&
+         awk '/dm_yazi_drift_repair \"\\\$HOME/{d=NR} /ya pkg upgrade/{u=NR} END{exit !(d && u && d < u)}' '$HOME/daily-maintenance.sh' &&
+         awk '/^dm_yazi_drift_repair\(\)/,/^}/' '$HOME/daily-maintenance-lib.sh' | grep -q 'ya pkg install --discard'"
 fi
 
 # Third-party formulae must be TRUSTED BEFORE `brew bundle`, or Homebrew

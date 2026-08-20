@@ -536,6 +536,13 @@ fi
 
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then
+    # Count the drift before repairing it, because --discard removes the
+    # only signal we had. See dm_yazi_drift_repair for why the signal was
+    # worth converting rather than keeping.
+    if drift=$(dm_yazi_drift_repair "$HOME/.config/yazi"); then
+        echo "Yazi: $drift"
+    fi
+
     # --discard is REQUIRED, not a convenience. `ya pkg` refuses to deploy
     # over a directory whose contents differ from the hash it recorded, and
     # that check has no way to distinguish a hand-edit from a lockfile that

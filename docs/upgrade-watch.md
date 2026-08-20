@@ -98,19 +98,16 @@ maintenance.
    watch, so the worked example is the single home for it:
    `~/.claude/skills/macos-triage/SKILL.md`.
 
-   **The check this note used to prescribe was worse than useless**, and
-   is recorded here because the shape recurs:
-
-   ```bash
-   ls -la /Library/Logs/DiagnosticReports/*.panic   # DO NOT USE
-   ```
-
-   zsh aborts the whole command when the glob matches nothing, so `ls`
-   never runs — and the message it prints, `no matches found`, reads to a
-   tired eye as a clean negative. Not merely a check that cannot produce
-   a signal: one that produces a FALSE one, in the document about
-   canaries. The correct form asserts the directory is readable and
-   non-empty first, then searches; see the skill.
+   **The check this note used to prescribe produced a FALSE negative**,
+   and no command for it appears here on purpose. A `*.panic` glob under
+   zsh aborts the whole command before `ls` runs, and prints `no matches
+   found` — which a tired eye takes for a clean negative. Not a check that
+   fails to produce a signal: one that produces the wrong signal, in the
+   document about canaries. It is described rather than shown because a
+   marker is metadata and a fenced command is payload, and a skimming
+   reader takes the payload. The correct form — assert the directory is
+   readable and non-empty, then search — lives in the skill with the rest
+   of the playbook.
 
    **Debugging herdr later? The log on disk may be a dead inode.** A
    short-lived second server can replace it, leaving the live server

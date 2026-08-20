@@ -153,6 +153,34 @@ Check with `which -a <cmd>` before assuming which copy runs.
     query. Check it: `gh api repos/nickboy/dotfiles/rulesets` (the
     ruleset endpoint, not `/branches/*/protection`), and `yadm remote -v`.
 
+11. **Prove the CORRECTION landed everywhere the claim did** — rule 10
+    one level up. Rule 10 polices a query; this polices a fix. A claim
+    invalidated in the file where you met it, and never searched for
+    elsewhere, has an unrun query behind it and produces exactly what
+    rule 10 predicts.
+
+    Grep for the CLAIM, not for the file. The unit of correction is the
+    assertion; the document is only where you happened to meet it. Docs
+    restate facts at the point of use rather than cross-referencing, so
+    anything worth stating once is usually stated twice — the guidance
+    that `herdr integration install claude` needs its `/Users` path
+    re-fixed to `$HOME` lived in THREE files, and the PR whose whole
+    subject was claims that quietly stopped being true fixed one of
+    them. Search on the claim's distinctive tokens — the command name,
+    the literal path, the flag — before opening the PR. Seconds.
+
+    **Say in the PR body what you grepped for.** A reviewer cannot check
+    a search you only asserted, for the same reason an empty result needs
+    its positive control.
+
+    **Demote rather than delete.** A justification that has stopped
+    being load-bearing was usually TRUE WHEN WRITTEN. Deleting it
+    destroys the record of why the decision was made, and the next
+    person re-derives it or reverses it. History and force are different
+    states, and most corrections need the first: keep the sentence, say
+    when it stopped applying, and leave the reason that still carries
+    the decision doing the work alone.
+
 ## Skills
 
 Detailed workflows are in `~/.claude/skills/`. Claude loads these

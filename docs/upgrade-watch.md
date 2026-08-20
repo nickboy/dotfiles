@@ -146,6 +146,8 @@ maintenance.
    home is simply correct, and there is nothing to commit. PR #111
    removed this from `herdr-setup.md` and missed the copy here, which is
    the failure mode that PR was about: one claim, two homes, one fixed.
+   A third turned up in `claude-settings-sync`. That is rule 11 in
+   CLAUDE.md now — this line is the instance, not the rule.
 
    **0.8.2 changes the window title on pull.** `ui.window_title` is now
    set, so after `yadm pull` the outer terminal title starts naming the

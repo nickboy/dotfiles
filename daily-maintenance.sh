@@ -536,7 +536,26 @@ fi
 
 # Update yazi packages (plugins and flavors)
 if command -v ya >/dev/null 2>&1; then
-    if ! run_command "Yazi package upgrade" ya pkg upgrade; then
+    # Count the drift before repairing it, because --discard removes the
+    # only signal we had. See dm_yazi_drift_repair for why the signal was
+    # worth converting rather than keeping.
+    if drift=$(dm_yazi_drift_repair "$HOME/.config/yazi"); then
+        echo "Yazi: $drift"
+    fi
+
+    # --discard is REQUIRED, not a convenience. `ya pkg` refuses to deploy
+    # over a directory whose contents differ from the hash it recorded, and
+    # that check has no way to distinguish a hand-edit from a lockfile that
+    # drifted out of step with the tree. These directories are declared
+    # build artifacts (.gitignore, and the bootstrap that rebuilds them), so
+    # there is no hand-edit to protect — the guard only fires on drift.
+    #
+    # Its failure mode is not one red task. The abort stops the whole run at
+    # the FIRST mismatched package, so every package after it is skipped and
+    # never reported: measured 8 of 12 verifiable packages out of step while
+    # the log named only `git.yazi`. And it cannot self-heal, so the same
+    # failure repeats every day until someone runs the command by hand.
+    if ! run_command "Yazi package upgrade" ya pkg upgrade --discard; then
         FAILED_COMMANDS+=("ya pkg upgrade")
     fi
 else

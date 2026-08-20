@@ -178,7 +178,12 @@ fi
 # yazi plugins are declared in package.toml (ya pkg, SHA-pinned) — the
 # declaration must be yadm-tracked and every declared plugin installed,
 # or new machines silently lose the plugin set (the pre-2026-08 state)
-if [ -f "$HOME/.config/yazi/plugins.list" ]; then
+# GUARD NAME MATTERS: this said plugins.list, which #107 renamed to
+# packages.list — so every test below silently stopped running, including
+# the one asserting the list is tracked, which would itself have failed.
+# A guard that names a file is a check that can be switched off by an
+# unrelated rename, and the suite reports green either way.
+if [ -f "$HOME/.config/yazi/packages.list" ]; then
     # The NAME LIST is tracked; package.toml (ya pkg's lockfile) is NOT.
     # `ya pkg upgrade` runs from daily maintenance on every machine, so a
     # tracked lockfile went dirty everywhere and the machines drifted —
@@ -187,14 +192,25 @@ if [ -f "$HOME/.config/yazi/plugins.list" ]; then
     # tracking the lockfile brings the churn back, and untracking the list
     # leaves bootstrap with nothing to install (the pre-2026-08 state,
     # where a new machine's keymap referenced plugins that did not exist).
-    run_test "yazi plugins.list is tracked" \
-        "{ yadm ls-files .config/yazi/plugins.list 2>/dev/null || git ls-files .config/yazi/plugins.list 2>/dev/null; } | grep -q plugins.list"
+    run_test "yazi packages.list is tracked" \
+        "{ yadm ls-files .config/yazi/packages.list 2>/dev/null || git ls-files .config/yazi/packages.list 2>/dev/null; } | grep -q packages.list"
     run_test "yazi package.toml (the lockfile) is NOT tracked" \
         "! { yadm ls-files .config/yazi/package.toml 2>/dev/null || git ls-files .config/yazi/package.toml 2>/dev/null; } | grep -q package.toml"
     # bootstrap must replay the list, or a fresh machine installs nothing
     run_test "bootstrap installs from the tracked plugin list" \
-        "grep -q 'plugins.list' '$HOME/.config/yadm/bootstrap' &&
+        "grep -q 'packages.list' '$HOME/.config/yadm/bootstrap' &&
          grep -q 'ya pkg add' '$HOME/.config/yadm/bootstrap'"
+    # Both bulk `ya pkg` calls must carry --discard. Without it the deploy
+    # refuses any directory whose contents differ from the recorded hash,
+    # and that check cannot tell a hand-edit from lockfile drift — these
+    # dirs are declared build artifacts, so only drift ever trips it. The
+    # abort also stops the run at the FIRST mismatch, so the rest are
+    # skipped and unreported, and nothing self-heals: measured 8 of 12
+    # verifiable packages out of step while the log named one.
+    # `ya pkg add` has no --discard; only install and upgrade do.
+    run_test "bulk ya pkg calls discard artifact drift" \
+        "grep -qE 'ya pkg upgrade[^|]*--discard' '$HOME/daily-maintenance.sh' &&
+         grep -qE 'ya pkg install[^|]*--discard' '$HOME/.config/yadm/bootstrap'"
 fi
 
 # Third-party formulae must be TRUSTED BEFORE `brew bundle`, or Homebrew

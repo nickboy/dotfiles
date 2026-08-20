@@ -125,7 +125,18 @@ height = "70%"
 [[keys.command]]
 key = "prefix+shift+o"
 type = "shell"
-command = "e=$(herdr agent prompt \"$HERDR_ACTIVE_PANE_ID\" '/copy' 2>&1) || { case \"$e\" in *agent_blocked*) m='pane is waiting on its own prompt';; *agent_not_found*) m='not a Claude pane';; *) m='copy failed';; esac; herdr notification show 'copy' --body \"$m\"; }"
+command = '''
+e=$(herdr agent prompt "$HERDR_ACTIVE_PANE_ID" '/copy' 2>&1) || {
+  c=$(printf '%s' "$e" | jq -r '.error.code // empty' 2>/dev/null)
+  [ -n "$c" ] || c=$(printf '%s' "$e" | sed -n 's/.*"code":"\([a-z_]*\)".*/\1/p')
+  case "$c" in
+    agent_not_found) m='not a Claude pane' ;;
+    agent_blocked)   m='pane is waiting on its own prompt' ;;
+    *)               m="copy failed (${c:-unknown})" ;;
+  esac
+  herdr notification show 'copy' --body "$m"
+}
+'''
 description = "copy last Claude message"
 
 # ── Plugin bindings ────────────────────────────────────────────────
@@ -213,12 +224,27 @@ show_agent_labels_on_pane_borders = true
 hide_tab_bar_when_single_tab = true
 
 # Outer terminal title (0.8.2). Worth setting BECAUSE of the remote attach:
-# this renders on the SERVER, so {hostname} names the box the panes actually
+# it renders on the SERVER, so {hostname} names the box the panes actually
 # run on, not the laptop in front of you. With two machines and `hbox`, the
 # Ghostty tab stops being ambiguous about which one you are driving.
 # Tokens: {hostname} {workspace} {tab} {pane} {terminal_title}; "" leaves the
 # title alone.
+#
+# GATED BY CLASS, because the hostname is not the same KIND of string on a
+# work machine. Here `hostname` returns `NickdeMac-mini.local`; on a
+# corporate network the same call can return a fully qualified name
+# carrying the employer's domain, and work hostnames are often
+# `firstname-lastname-macbook` or an asset tag. Titles surface in
+# screenshots, screen shares, window switchers and recordings — so the
+# personal form would put a name and an employer into the title bar of
+# every screenshot taken on that machine. Nothing reaches this public repo
+# (the value resolves at runtime) but the repo would be CAUSING that
+# display on machines it does not own.
+{% if yadm.class == "work" %}
+window_title = "{workspace}"
+{% else %}
 window_title = "{hostname}: {workspace}"
+{% endif %}
 
 # Agent panel rows were unreadably dim. Theme-matched across the
 # stack: workspace in Mocha blue (same #89b4fa zjstatus uses for the

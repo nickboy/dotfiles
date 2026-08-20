@@ -17,10 +17,22 @@ on:
 permissions:
   contents: read
 
+# Every job carries timeout-minutes. GitHub's default is the 360-minute
+# ceiling, which a hung lint job once consumed in full — producing a red
+# indistinguishable from a real failure while never having linted anything.
+#
+# The values are sized against the observed MAXIMUM, not the typical run.
+# Hosted runners vary hard on cold caches and slow mirrors, and a macOS job
+# that normally finishes in a minute can take five to eight on a bad one.
+# That tail is what these numbers cover — they are not slack to be trimmed
+# toward the median. Tightening buys back a fraction of a percent of the
+# original six-hour loss and costs a red that fires on a slow-but-working
+# run, which teaches people to re-run without reading.
 jobs:
   lint-all:
     name: Comprehensive Lint Checks
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -32,7 +44,14 @@ jobs:
         with:
           python-version: '3.11'
 
+      # Step-level bound as well as the job's. A job timeout caps the COST
+      # of a hang; it does not name what hung — a 10-minute red says as
+      # little as the six-hour one did, beyond the job name. This step is
+      # the one that hung (apt + pip + npm, three registries that can each
+      # stall), so bounding it here turns a bounded mystery into a
+      # diagnosis: the failure names the step.
       - name: Install lint tools
+        timeout-minutes: 5
         run: |
           sudo apt-get update && sudo apt-get install -y shellcheck libxml2-utils
           pip install yamllint
@@ -161,6 +180,7 @@ jobs:
   documentation:
     name: Documentation Links
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -184,6 +204,7 @@ jobs:
   security-scan:
     name: Security Scanning
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -251,6 +272,7 @@ jobs:
   macos-integration:
     name: macOS Integration + Test Suite
     runs-on: macos-latest
+    timeout-minutes: 20
     steps:
       - name: Checkout repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -328,6 +350,7 @@ jobs:
     name: CI Summary
     needs: [lint-all, documentation, security-scan, macos-integration]
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     if: always()
     steps:
       - name: Summary

@@ -312,8 +312,17 @@ pane_history = false
 #
 # The experiment that would settle it: attach from a deliberately mismatched
 # client twice, with and without `--handoff`, and watch a pane a different
-# client is using. Note the experiment itself REPLACES THE RUNNING SERVER, so
-# run it when no live agent panes matter — not on a box doing work.
+# client is using.
+#
+# RUN IT ON A NAMED SESSION, not on the default one. Named sessions get
+# their own socket and directory (`herdr session list` — `herddeck-test`
+# lives at ~/.config/herdr/sessions/herddeck-test/herdr.sock), so a handoff
+# there replaces THAT server and leaves the default session's live panes
+# alone. No idle window needed. "It would destroy the running server" is
+# not a reason to leave this open, and it was mine for one round.
+#
+# The actual blocker is smaller and different: creating a mismatch at all
+# needs a second binary version to attach WITH.
 #
 # The condition is a dedicated `herdr-preview` class, NOT `personal`,
 # because those answer different questions. `local.class` says what a

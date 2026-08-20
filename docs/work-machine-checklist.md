@@ -562,9 +562,46 @@ not.
   a fresh install script discards it in silence — after which
   `herdr update` walks the machine onto a different channel from its
   peer, and attach breaks with no obvious cause. Found 2026-08-19 on a
-  devserver managed by a separate repo. The tell is one command:
-  `readlink ~/.config/herdr/config.toml`. If it resolves into a repo,
-  commit the value there instead.
+  devserver managed by a separate repo.
+
+  **`readlink` alone is not a sufficient tell** — measured, not
+  reasoned. Two realistic cases defeat it, and both fail toward the
+  SAFE-looking answer:
+
+  1. **The parent directory is the symlink.** `~/.config/herdr` is a
+     link and `config.toml` is an ordinary file inside it. Plain
+     `readlink` on the FILE returns empty. This is the stow/dotbot
+     shape — those managers link directories, not individual files —
+     so it is the common form of the case this warning exists for.
+  2. **Copy-based managers.** chezmoi's default is to WRITE the file,
+     not link it. The result is a plain regular file, indistinguishable
+     from unmanaged by any filesystem test, and the next
+     `chezmoi apply` overwrites the channel silently.
+
+  A relative symlink returns a relative target that is unusable
+  unresolved; a hardlink returns empty. Bind mounts are not a
+  realistic macOS case — firmlinks are system-managed and not user
+  configurable — so do not go looking.
+
+  Resolve, then ask about repo membership. This covers the symlinked
+  parent, relative links and hardlinks in one step:
+
+  ```bash
+  target=$(readlink -f ~/.config/herdr/config.toml)
+  [ "$target" = "$HOME/.config/herdr/config.toml" ] \
+    || echo "resolves elsewhere: $target"
+  git -C "$(dirname "$target")" rev-parse --show-toplevel 2>/dev/null
+  ```
+
+  A toplevel that is not yadm's means commit the channel in THAT repo.
+
+  **For the copy-based case there is no filesystem tell at all**, so
+  name the manager instead — look for a dotfiles repo containing that
+  relative path, or run
+  `chezmoi source-path ~/.config/herdr/config.toml`. Stating this
+  matters: a reader who runs the resolve check, sees nothing and stops
+  has run the check and learned nothing, which is rule 10 in a
+  different shape.
 
   On a yadm-managed box use the class. `herdr channel set` writes into
   `config.toml`, and `yadm alt` regenerates that file from the

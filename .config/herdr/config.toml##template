@@ -258,9 +258,71 @@ pane_history = false
 
 # Update channel, opted into per machine by an EXTRA class.
 #
-# `preview` ships most days; stable has sat on v0.8.0 since 2026-08-03,
-# and the fix for the client SIGABRT on terminal hangup (upstream #2427)
-# exists only on preview.
+# STABLE IS THE DEFAULT AND THE RECOMMENDATION. Preview was adopted on
+# 2026-08-19 and reverted the same day. The opt-in machinery stays because it
+# is sound, but the case for using it did not survive measurement.
+#
+# What this comment used to claim: "`preview` ships most days; stable has sat
+# on v0.8.0 since 2026-08-03, and the fix for the client SIGABRT on terminal
+# hangup (upstream #2427) exists only on preview." Every part of that is now
+# false, and the first part was never true.
+#
+# COUNTING RELEASES ANSWERS THE WRONG QUESTION, so no corrected version of
+# that count appears here. "Ships most days" and its inversion "preview is
+# the slower channel" both measure how often a TAG CHANGES, while the
+# decision needs to know WHAT CODE YOU GET. Those come apart: a preview tag
+# can sit a patch version BEHIND stable (below), so the two channels are not
+# two speeds of one lane and tag frequency cannot rank them. A corrected
+# number would only invite the next reader to keep using the metric.
+#
+# Preview reports its version as `0.8.0-preview.<date>`, and a semver
+# prerelease has LOWER precedence than the associated normal version:
+# 0.8.0-preview.<any date> < 0.8.0 < 0.8.1 < 0.8.2. So every tag in that
+# scheme sorts below plain 0.8.0 no matter how recently it was built, and a
+# tag that looks newer by its date can be two patch versions behind.
+#
+# Which way it points TODAY is mutable remote state, and it INVERTED WITHIN
+# 24 HOURS while this PR was open. No figure is recorded here for that
+# reason — a number would be wrong tomorrow and would be believed anyway.
+# Run the query (rule 10):
+#
+#   gh api repos/herdrdev/herdr/releases --jq '.[0].tag_name'
+#   gh api repos/herdrdev/herdr/compare/<newest-preview>...v0.8.2 \
+#     --jq '{status,ahead_by,behind_by}'
+#
+# THE REASON TO PREFER STABLE IS LOCKSTEP, not speed — see below. It is a
+# property of the topology rather than a statistic, so it does not flip when
+# someone fixes a denominator.
+#
+# The cost is not local. Every machine sharing a remote server has to move
+# channel together, including ones this repo does not manage; see
+# docs/work-machine-checklist.md. That coupling is what makes the reason
+# structural, and it holds whichever way the mismatch resolves.
+#
+# HOW it resolves is only PARTLY established, so read the two apart.
+# Verified here: `hbox` passes `--handoff` (.zshrc:598), and herdr documents
+# `server live-handoff` as "hand off live panes to a new local server",
+# passing fds to a new binary (`--import-exe`, `expected_protocol`).
+# NOT verified: what a mismatched attach actually does, and what a pane
+# belonging to ANOTHER client sees while it happens. The two candidate
+# readings differ in cost — "you cannot connect" is an inconvenience, while
+# "the server everyone else is attached to was silently replaced" is not —
+# and the recommendation does not depend on which, so it is left open rather
+# than guessed.
+#
+# The experiment that would settle it: attach from a deliberately mismatched
+# client twice, with and without `--handoff`, and watch a pane a different
+# client is using.
+#
+# RUN IT ON A NAMED SESSION, not on the default one. Named sessions get
+# their own socket and directory (`herdr session list` — `herddeck-test`
+# lives at ~/.config/herdr/sessions/herddeck-test/herdr.sock), so a handoff
+# there replaces THAT server and leaves the default session's live panes
+# alone. No idle window needed. "It would destroy the running server" is
+# not a reason to leave this open, and it was mine for one round.
+#
+# The actual blocker is smaller and different: creating a mismatch at all
+# needs a second binary version to attach WITH.
 #
 # The condition is a dedicated `herdr-preview` class, NOT `personal`,
 # because those answer different questions. `local.class` says what a

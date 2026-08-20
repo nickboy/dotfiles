@@ -159,6 +159,22 @@ this repo — most common) or **fresh clone**. Update path first.
 - [ ] Push transport for THIS machine: keep HTTPS +
   `gh auth login`, or a work SSH key — set in the machine's untracked
   `~/.gitconfig`. Do not copy the personal 1Password setup.
+- [ ] **Undo the 1Password binding for `github.com`, or ssh has no key
+  here.** Tracked `.ssh/config.d/10-github-1password.conf` points
+  `github.com` at the 1Password agent, which a work machine does not
+  run. `config.d` is first-match-wins, so override it from a file that
+  sorts EARLIER — the working value on this machine is two lines:
+
+  ```sshconfig
+  # ~/.ssh/config.d/05-github-work.conf   (untracked, gitignored)
+  Host github.com
+      IdentityAgent SSH_AUTH_SOCK
+  ```
+
+  It stays untracked deliberately. Nothing in it is secret, but shipping
+  it would send a rule that fights `10-github-1password.conf` to every
+  personal machine. Confirm with the resolver rather than by reading:
+  `ssh -G github.com | grep identityagent`.
 - [ ] Machine-only maintenance steps go in `~/.daily-maintenance.local`
   (untracked). `daily-maintenance.sh` sources it as its LAST step, so
   a failure there costs nothing but a line in the summary, and skips

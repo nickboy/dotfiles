@@ -48,6 +48,23 @@
 .zshenv.local
 .daily-maintenance.local
 
+# Machine-local executables. Untracked AND unignored is the worst state here:
+# status.showUntrackedFiles=no hides them from review while `yadm add -A`
+# still stages them. herdr self-updates in place (an 18 MB binary that would
+# be stale the moment it landed); dotfiles-upstream carries the work-marker
+# list that is the whole point of the script, so it can never be public.
+.local/bin/herdr
+.local/bin/dotfiles-upstream
+
+# ssh config.d is default-deny with an allowlist, so a new machine-local host
+# block is ignored on creation rather than needing a rule each time. Only the
+# two neutral files are shared: 00-defaults.conf, and the 1Password agent
+# block. Everything else names a host, an employer, or overrides one of those
+# two on a machine that cannot use it.
+.ssh/config.d/*
+!.ssh/config.d/00-defaults.conf
+!.ssh/config.d/10-github-1password.conf
+
 # Backup/snapshot copies of any of the above — same content, same risk
 *.bak
 *.bak-*

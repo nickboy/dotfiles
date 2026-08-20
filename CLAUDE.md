@@ -153,6 +153,14 @@ Check with `which -a <cmd>` before assuming which copy runs.
     query. Check it: `gh api repos/nickboy/dotfiles/rulesets` (the
     ruleset endpoint, not `/branches/*/protection`), and `yadm remote -v`.
 
+11. **Prove the CORRECTION landed everywhere the claim did** — rule 10
+    guards a query that lied; this guards one never conceived. Grep for
+    the CLAIM, not the file you met it in: docs restate facts at the
+    point of use, so anything worth stating once is usually stated
+    twice. Search its distinctive tokens before opening the PR, and say
+    in the body what you grepped — a reviewer cannot check a search you
+    only asserted.
+
 ## Skills
 
 Detailed workflows are in `~/.claude/skills/`. Claude loads these

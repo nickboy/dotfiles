@@ -170,6 +170,9 @@ automatically based on context:
   terminal emulators (Ghostty, Kitty), Atuin, sesh, aliases
 - **hackernews-summary** — Fetch and summarize top 30 HN stories
   (full front page) in Traditional Chinese
+- **macos-triage** — Diagnose a Mac that is slow, hot, or was
+  force-restarted; post-mortem and steady-state playbooks, plus the
+  alias/`log`-builtin traps that make queries lie
 
 ---
 

@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+#
+# PATH shim that restores `--effort max` on herdr's pane resumes.
+#
+# Why this exists: herdr restores an agent pane by running a hardcoded
+# `claude --resume=<session-id>` (the flag is compiled into the herdr binary,
+# there is no config for it). Effort cannot be carried any other way — the
+# settings.json schema is
+#   effortLevel: enum(["low","medium","high","xhigh"]).optional().catch(void 0)
+# so "max" is not merely rejected, it is silently swallowed by .catch() and the
+# level falls back to the default; and CLAUDE_EFFORT is write-only (the binary
+# only exports it for hook substitution). See docs/herdr.md.
+#
+# Install (opt-in, machine-local — the shim only helps where herdr runs):
+#   ln -sfn ~/.local/bin/claude-resume-effort ~/.local/shim/claude
+# Remove:
+#   rm ~/.local/shim/claude
+#
+# It lives in its own directory rather than ~/.local/bin because that directory
+# already holds an unrelated `claude` symlink to an old standalone 2.1.32
+# install; promoting the whole directory ahead of /usr/local/bin would silently
+# downgrade every session. ~/.local/shim is prepended in ~/.zshenv, which is the
+# only startup file the non-interactive resume shell reads.
+#
+# Everything that is not a resume launch is passed through untouched, and the
+# real binary is always reached with exec, so this adds no process to the tree.
+# Claude Code's own subprocesses (teammates, subagents) use the absolute path in
+# $CLAUDE_CODE_TEAMMATE_COMMAND and never hit this file.
+
+set -u
+
+# Canonical path, portably: macOS only grew `readlink -f` in Ventura.
+_abspath() {
+    if command -v realpath >/dev/null 2>&1; then
+        realpath "$1" 2>/dev/null
+    elif readlink -f / >/dev/null 2>&1; then
+        readlink -f "$1" 2>/dev/null
+    else
+        python3 -c 'import os,sys; print(os.path.realpath(sys.argv[1]))' "$1" 2>/dev/null
+    fi
+}
+
+# Resolve the real claude: first match on PATH that is not this shim.
+self="$(_abspath "${BASH_SOURCE[0]}")"
+[ -n "$self" ] || self="$0"
+real=""
+IFS=: read -r -a _path_entries <<<"$PATH"
+for _dir in "${_path_entries[@]}"; do
+    [ -n "$_dir" ] || continue
+    candidate="$_dir/claude"
+    [ -x "$candidate" ] || continue
+    [ "$(_abspath "$candidate")" = "$self" ] && continue
+    real="$candidate"
+    break
+done
+
+# No real claude found: say so on stderr rather than failing silently.
+if [ -z "$real" ]; then
+    echo "claude-resume-effort: no real 'claude' found on PATH" >&2
+    exit 127
+fi
+
+# Inject into any interactive session that has not chosen an effort itself.
+#
+# Originally this only covered `--resume`, because a herdr restore was the one
+# launch nobody could put a flag on. It now covers plain `claude` too: settings
+# cannot express max at all (the enum stops at xhigh), so without this a fresh
+# session silently runs a notch lower than intended on a machine where max is
+# wanted.
+#
+# Two exclusions, both load-bearing:
+#   * a subcommand (first arg not starting with '-') — `claude agents --json`
+#     is what tmux-claude-session-manager polls for status, and an --effort
+#     appended to it is an error;
+#   * -p / --print — scripted, non-interactive calls, where paying for max is
+#     waste. This matches how the tracked .zshrc claude() wrapper already
+#     classifies "not an interactive session".
+#
+# `--resume=<id>` must be matched as well as the space-separated form: the
+# joined form is what herdr emits (the string in its binary is "--resume=").
+inject=1
+has_effort=0
+
+case "${1:-}" in
+    "" | -*) : ;;          # no args, or starts with a flag: interactive
+    *) inject=0 ;;         # a subcommand
+esac
+
+for arg in "$@"; do
+    case "$arg" in
+        --effort | --effort=*) has_effort=1 ;;
+        -p | --print) inject=0 ;;
+    esac
+done
+
+if [ "$inject" = 1 ] && [ "$has_effort" = 0 ]; then
+    exec "$real" --effort "${CLAUDE_EFFORT_DEFAULT:-${CLAUDE_RESUME_EFFORT:-max}}" "$@"
+fi
+
+exec "$real" "$@"

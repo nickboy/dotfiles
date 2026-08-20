@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Keep herdr in lockstep across this Mac and the devserver.
+#
+# Both ends install from the SAME source: herdr.dev, via `herdr update`, into
+# ~/.local/bin. That is the whole point. herdr's wire protocol refuses attach on
+# ANY version mismatch, and brew's formula lags a fast-moving upstream — it sat
+# on 0.7.5 while herdr.dev had already shipped 0.8 — so a brew Mac and a
+# herdr.dev devserver could never be reliably matched. Same source, same
+# release, no version arithmetic.
+#
+# Nothing lets you request a specific version (`herdr update` only fetches
+# "latest"), so the two ends are kept together by updating them back-to-back and
+# then VERIFYING they landed on the same release. That check is the real payload
+# here — it turns a silent breakage into a loud, actionable one.
+#
+# Lives in ~/.local/bin (untracked) rather than the dotfiles repo: it names a
+# specific work host. Called as the last step of the maintenance run via
+# ~/.daily-maintenance.local, and usable by hand at any time.
+set -uo pipefail
+
+PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+# No hostname is compiled in: this file is TRACKED in a public repo. The
+# target comes from $1 (how ~/.daily-maintenance.local calls it, because a
+# launchd run never sources an interactive shell) or from $HERDR_REMOTE_HOST,
+# the same variable `hbox` reads.
+TARGET="${1:-${HERDR_REMOTE_HOST:-}}"
+if [ -z "$TARGET" ]; then
+    echo "herdr-sync: no target — pass one, or set HERDR_REMOTE_HOST" >&2
+    exit 2
+fi
+
+if ! command -v herdr >/dev/null 2>&1; then
+    exit 0                                  # herdr not installed here; nothing to do
+fi
+
+off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
+say() { printf '%sherdr-sync:%s %s\n' "$1" "$off" "$2"; }
+
+mac_before=$(herdr --version 2>/dev/null || true)
+
+if ! herdr update; then
+    say "$red" "mac update failed (still $mac_before) — leaving $TARGET alone"
+    exit 1
+fi
+
+mac_after=$(herdr --version 2>/dev/null || true)
+
+if [ "$mac_before" = "$mac_after" ]; then
+    # Nothing new upstream — the overwhelmingly common case on a daily run.
+    # Normally stop here rather than spend an ssh (and very likely a 2FA
+    # prompt) to learn the remote has nothing to do either. But the two ends
+    # can already be adrift — an earlier run may have moved this Mac while the
+    # remote update failed, or the remote was rebuilt — and that state is
+    # invisible from here. So: if a control master is ALREADY up the check is
+    # free, and worth doing; if not, stay quiet rather than force a prompt.
+    if ! ssh -O check "$TARGET" >/dev/null 2>&1; then
+        say "$green" "$mac_after, no new release"
+        exit 0
+    fi
+    remote_now=$(ssh -o BatchMode=yes -o ConnectTimeout=5 "$TARGET" \
+        'PATH=$HOME/.local/bin:$PATH herdr --version' 2>/dev/null || true)
+    if [ -z "$remote_now" ] || [ "$remote_now" = "$mac_after" ]; then
+        say "$green" "$mac_after, no new release"
+        exit 0
+    fi
+    say "$cyan" "no new release, but $TARGET is adrift on $remote_now — repairing"
+else
+    say "$cyan" "mac $mac_before -> $mac_after, syncing $TARGET"
+fi
+
+# HERDR_REMOTE_PROXY is passed in by the caller (see ~/.daily-maintenance.local,
+# which is gitignored) rather than hardcoded, because THIS file is not ignored
+# and the endpoint is corp-internal. A remote with no external DNS fails here
+# with "failed to fetch update manifest", which reads like a herdr fault and is
+# not. Only this call needs it: the other ssh's below just read a version.
+if ! ssh "$TARGET" \
+     "PATH=\$HOME/.local/bin:\$PATH ${HERDR_REMOTE_PROXY:+https_proxy=$HERDR_REMOTE_PROXY }herdr update"; then
+    say "$red" "remote update failed — mac moved to $mac_after, remote did NOT"
+    echo "  Attach will be refused until they match. Fix the remote before using hbox."
+    echo "  (etvm + tmux is unaffected — it does not care about herdr versions.)"
+    exit 1
+fi
+
+remote_after=$(ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH herdr --version' 2>/dev/null || true)
+
+if [ "$mac_after" != "$remote_after" ]; then
+    say "$red" "MISMATCH — mac '$mac_after' vs remote '$remote_after'"
+    echo "  Both ends fetch herdr.dev 'latest', so this means a release landed"
+    echo "  between the two updates. Re-run herdr-sync to settle them."
+    exit 1
+fi
+
+say "$green" "both on $mac_after"
+echo "  The remote SERVER still runs the old binary — attach is refused until it"
+echo "  restarts. When convenient (agents resume by themselves):"
+echo "    ssh $TARGET 'PATH=\$HOME/.local/bin:\$PATH herdr server stop'"

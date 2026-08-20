@@ -138,3 +138,41 @@ dm_pack_garbage_clean() {   # $1 = GIT_DIR
     echo "removed $removed interrupted-write pack file(s) older than ${DM_PACK_GARBAGE_MIN_AGE_MIN}m"
     return 0
 }
+
+# Count and repair yazi packages whose deployed contents have drifted from
+# the lockfile, BEFORE the upgrade runs. Prints the count; silent at zero.
+#
+# This exists because --discard removes the only signal we had. What that
+# signal was, though, was a tripwire and a bad one: `ya pkg` aborts at the
+# FIRST mismatch, so it named one package while seven others were equally
+# out of step and stayed invisible. Converting it to a measurement keeps
+# the information and drops the stop-the-world behaviour — a count above
+# zero every day means something is corrupting these dirs; zero after one
+# repair means it was a single desync.
+#
+# `install` and not `upgrade`: install deploys the rev the LOCKFILE
+# records, so a directory whose contents change under it was out of step
+# with its own entry. Under `upgrade` a changed directory could just be a
+# new upstream release, which is not drift.
+dm_yazi_fingerprint() {   # $1 = yazi config dir
+    local d
+    for d in "$1"/plugins/*/ "$1"/flavors/*/; do
+        [ -d "$d" ] || continue
+        printf '%s %s\n' \
+            "$(find "$d" -type f | sort | xargs shasum 2>/dev/null | shasum | cut -d' ' -f1)" \
+            "$(basename "$d")"
+    done
+}
+
+dm_yazi_drift_repair() {   # $1 = yazi config dir
+    local base="$1" before after n
+    command -v ya >/dev/null 2>&1 || return 1
+    [ -d "$base/plugins" ] || return 1
+    before=$(dm_yazi_fingerprint "$base")
+    ya pkg install --discard >/dev/null 2>&1 || return 1
+    after=$(dm_yazi_fingerprint "$base")
+    n=$(diff <(printf '%s\n' "$before") <(printf '%s\n' "$after") 2>/dev/null | grep -c '^>')
+    [ "${n:-0}" -gt 0 ] || return 1
+    echo "repaired $n yazi package(s) whose contents had drifted from the lockfile"
+    return 0
+}

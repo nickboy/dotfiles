@@ -348,8 +348,8 @@ if command -v ya &> /dev/null; then
         # dir looks modified and every `ya pkg add` aborts with "You have
         # modified the contents", leaving an EMPTY lockfile and no plugins
         # declared. Measured: 0 of 13 added with the dirs present, 13 of 13
-        # after clearing. `add` has no --discard, so clearing is the only
-        # route. The dirs are gitignored build artifacts and `ya pkg`
+        # after clearing. `add` has no --discard — `install` and `upgrade`
+        # do — so clearing is the only route for THIS step. The dirs are gitignored build artifacts and `ya pkg`
         # re-fetches them, so this costs a download, not any of your data.
         if ! grep -q '\[\[plugin.deps\]\]' "$yazi_lock" 2>/dev/null; then
             echo "  ↻ no yazi lockfile; clearing plugin artifacts so they can be re-fetched"
@@ -362,7 +362,12 @@ if command -v ya &> /dev/null; then
     else
         echo "  ⚠️  $yazi_list missing; falling back to whatever package.toml holds"
     fi
-    ya pkg install || echo "  ⚠️  Failed to install yazi packages"
+    # --discard for the same reason maintenance uses it: the guard cannot
+    # tell a hand-edit from lockfile drift, and these dirs are artifacts.
+    # It also repairs the case the clearing branch above MISSES — a
+    # lockfile that is present and non-empty but stale, where `ya pkg add`
+    # says "already exists" and changes nothing, so nothing converges.
+    ya pkg install --discard || echo "  ⚠️  Failed to install yazi packages"
 else
     echo "  ⚠️  ya not found, skipping yazi package installation"
     echo "     Install yazi first, then re-run 'yadm bootstrap'"

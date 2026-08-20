@@ -267,16 +267,34 @@ pane_history = false
 # hangup (upstream #2427) exists only on preview." Every part of that is now
 # false, and the first part was never true.
 #
-# Preview is the SLOWER channel. Release history 2026-03..08: 55 stable
-# releases against 27 previews, preview cadence falling 17 -> 7 -> 3 per
-# month, gaps reaching 14 days, and no previews at all before 2026-06.
+# CADENCE IS NOT THE REASON, and the count that said it was does not hold.
+# "55 stable against 27 previews" spans 2026-03..08, but preview did not
+# exist before 2026-06 — a total taken over months one arm never competed
+# in measures that arm's AGE, not its speed. Over the window both channels
+# existed, preview leads: 28 releases against 12 since 2026-06, and 4
+# against 2 in August alone. The old "ships most days" was still false (28
+# releases in about two and a half months), so the original claim was
+# wrong and inverting it is wrong too.
 #
-# Preview can also run BEHIND stable. Comparing
-# `preview-2026-08-18-9fac51722653...v0.8.2` gave ahead_by 10, behind_by 0 —
-# stable strictly contained the newest preview, so switching lost nothing.
-# The tag naming hides this: a preview reports its version as
-# `0.8.0-preview.<date>`, which sorts BELOW plain `0.8.0` in semver, so a tag
-# that looks newer than v0.8.0 is in fact two patch versions behind v0.8.2.
+# THE REASON IS LOCKSTEP, not speed. See the paragraph below: every machine
+# sharing a remote server has to move together, so the cost of preview is
+# paid by the whole set, and it is paid again on every channel change.
+#
+# What no release count shows is that preview can run BEHIND stable.
+# Preview reports its version as `0.8.0-preview.<date>`, and a semver
+# prerelease sorts BELOW plain `0.8.0` — so a tag that looks newer than
+# v0.8.0 can be two patch versions behind v0.8.2.
+#
+# Which way it points TODAY is mutable remote state, so this comment does
+# not record an answer. Run the query (rule 10):
+#
+#   gh api repos/herdrdev/herdr/releases --jq '.[0].tag_name'
+#   gh api repos/herdrdev/herdr/compare/<newest-preview>...v0.8.2 \
+#     --jq '{status,ahead_by,behind_by}'
+#
+# Measured 2026-08-18: behind_by 0, stable strictly contained the newest
+# preview. Measured again 2026-08-19: behind_by 1. It flips within a day,
+# which is the point — do not cache the answer.
 #
 # The cost is not local either. herdr refuses attach on ANY version mismatch,
 # and `hbox` passes `--handoff`, so a mismatch does not fail cleanly — it

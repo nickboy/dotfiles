@@ -564,15 +564,18 @@ if [ -f "$HOME/.config/starship.toml" ]; then
         # the blocked case report "not a Claude pane", which is false and
         # sends you to check whether the pane is an agent when it is one.
         # The command is a multi-line TOML literal, so read the block
-        # rather than one line.
+        # rather than one line. Assert the MAPPING, not that the two
+        # branches differ: two distinct WRONG messages satisfy
+        # distinctness, and swapping them is precisely the original bug —
+        # one cause reported under the other's name.
         run_test "herdr copy-last-reply binding tells the two refusals apart" \
             "blk=\$(awk '/^key = \"prefix\\+shift\\+o\"/,/^description = /' '$HOME/.config/herdr/config.toml##template');
              printf '%s' \"\$blk\" | grep -qF 'agent prompt' &&
              printf '%s' \"\$blk\" | grep -qF 'HERDR_ACTIVE_PANE_ID' &&
              printf '%s' \"\$blk\" | grep -qF \"'/copy'\" &&
-             printf '%s' \"\$blk\" | grep -qF 'agent_not_found' &&
-             printf '%s' \"\$blk\" | grep -qF 'agent_blocked' &&
-             printf '%s' \"\$blk\" | grep -qF 'copy failed' &&
+             printf '%s' \"\$blk\" | grep -qE 'agent_not_found\\).*not a Claude pane' &&
+             printf '%s' \"\$blk\" | grep -qE 'agent_blocked\\).*waiting on its own prompt' &&
+             printf '%s' \"\$blk\" | grep -qE '\\*\\).*copy failed' &&
              ! printf '%s' \"\$blk\" | grep -qF 'pane run'"
         # The tmux side needs its own guard, since if-shell is what
         # stops the keystrokes reaching a non-Claude pane.

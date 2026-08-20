@@ -168,12 +168,21 @@ The verdict needs root, so put it in the ask-the-user block:
 sudo powermetrics -n 3 -i 1000 --samplers cpu_power,gpu_power,thermal
 ```
 
-**There is no `smc` sampler on this build** — passing one fails the whole
-command. Verified list (n=1, Mac16,10): tasks, battery, network, disk,
-interrupts, cpu_power, thermal, gpu_power, ane_power, sfi. Confirm with
-`powermetrics --help` rather than trusting this line.
+**There is no `smc` sampler** — passing one fails the whole command. Do
+not trust that sentence either: enumerate them, which needs no root and
+re-derives on any machine, where a pasted list only ages.
 
-Not a desktop artefact — `battery` is still listed on a machine that has
+```bash
+powermetrics --help | sed -n '/following samplers are supported/,/^$/p'
+powermetrics --help | grep '^    all '   # the group, one line
+```
+
+(A `/sampler/,/^$/` range does NOT work: it matches the `--samplers`
+FLAG description higher up and stops at the blank line right after it,
+returning four lines of unrelated help. Verified — it is the same
+early-terminating-range mistake as everything else here.)
+
+Not a desktop artefact — `battery` is enumerated on a machine that has
 none, so the list is not hardware-filtered. `smc` is an Intel-era
 sampler, same family as `pmset -g therm` above. **That is the general
 form worth carrying to other tools**: a mechanism inherited from Intel

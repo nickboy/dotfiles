@@ -532,20 +532,80 @@ not.
   cannot be fixed — it has to reattach.
 
 - [ ] **Remote Linux server: herdr is one static binary.** Assets are
-  `herdr-linux-x86_64` and `herdr-linux-aarch64`. On a box yadm does
-  NOT manage, set the channel with herdr itself — nothing regenerates
-  the config there, so it sticks:
+  `herdr-linux-x86_64` and `herdr-linux-aarch64`. Where the channel
+  setting belongs depends on what manages that box, and there are
+  THREE cases, not two:
+
+  | The box is | Put the channel |
+  | --- | --- |
+  | yadm-managed | in the `##template`, via the class |
+  | managed by ANOTHER dotfiles repo | committed in THAT repo |
+  | genuinely unmanaged | `herdr channel set` — it sticks |
 
   ```bash
-  herdr channel set preview     # or stable
+  herdr channel set stable      # unmanaged boxes only
   herdr channel show
   herdr update
   herdr --version
   ```
 
-  On a yadm-managed box use the class instead. `herdr channel set`
-  writes into `config.toml`, and `yadm alt` regenerates that file from
-  the template on every pull and wipes it.
+  This page used to say `herdr channel set` sticks on any box yadm
+  does not manage. **That is wrong for the middle case, and the middle
+  case is the common one.** A repo that symlinks its config into place,
+
+  ```bash
+  ln -sf ../../dotfiles/config/herdr/config.toml ~/.config/herdr/config.toml
+  ```
+
+  makes `herdr channel set` write into that repo's WORKING COPY. It
+  takes effect at once and looks durable, then a checkout, a reset or
+  a fresh install script discards it in silence — after which
+  `herdr update` walks the machine onto a different channel from its
+  peer, and attach breaks with no obvious cause. Found 2026-08-19 on a
+  devserver managed by a separate repo.
+
+  **`readlink` alone is not a sufficient tell** — measured, not
+  reasoned. Two realistic cases defeat it, and both fail toward the
+  SAFE-looking answer:
+
+  1. **The parent directory is the symlink.** `~/.config/herdr` is a
+     link and `config.toml` is an ordinary file inside it. Plain
+     `readlink` on the FILE returns empty. This is the stow/dotbot
+     shape — those managers link directories, not individual files —
+     so it is the common form of the case this warning exists for.
+  2. **Copy-based managers.** chezmoi's default is to WRITE the file,
+     not link it. The result is a plain regular file, indistinguishable
+     from unmanaged by any filesystem test, and the next
+     `chezmoi apply` overwrites the channel silently.
+
+  A relative symlink returns a relative target that is unusable
+  unresolved; a hardlink returns empty. Bind mounts are not a
+  realistic macOS case — firmlinks are system-managed and not user
+  configurable — so do not go looking.
+
+  Resolve, then ask about repo membership. This covers the symlinked
+  parent, relative links and hardlinks in one step:
+
+  ```bash
+  target=$(readlink -f ~/.config/herdr/config.toml)
+  [ "$target" = "$HOME/.config/herdr/config.toml" ] \
+    || echo "resolves elsewhere: $target"
+  git -C "$(dirname "$target")" rev-parse --show-toplevel 2>/dev/null
+  ```
+
+  A toplevel that is not yadm's means commit the channel in THAT repo.
+
+  **For the copy-based case there is no filesystem tell at all**, so
+  name the manager instead — look for a dotfiles repo containing that
+  relative path, or run
+  `chezmoi source-path ~/.config/herdr/config.toml`. Stating this
+  matters: a reader who runs the resolve check, sees nothing and stops
+  has run the check and learned nothing, which is rule 10 in a
+  different shape.
+
+  On a yadm-managed box use the class. `herdr channel set` writes into
+  `config.toml`, and `yadm alt` regenerates that file from the
+  template on every pull and wipes it.
 
 - [ ] **A non-interactive ssh gets a minimal PATH**
   (`/usr/bin:/bin:/usr/sbin:/sbin`), which excludes `~/.local/bin`. So

@@ -80,7 +80,10 @@ Check with `which -a <cmd>` before assuming which copy runs.
    machine's own `~/.gitconfig` instead — see
    `docs/work-machine-checklist.md`.
 
-   Personal machines: GitHub auth goes over **SSH through the
+   Personal machines — and this invariant is about the **GitHub identity**,
+   not about every key on the disk. Other keys may legitimately exist;
+   what must never be true is that the GitHub auth or signing key has a
+   private half on disk. GitHub auth goes over **SSH through the
    1Password agent** — the key lives in 1Password with no private key
    on disk, routed by `~/.ssh/config.d/10-github-1password.conf`, so
    remotes must use `git@github.com:` and not `https://`. The same

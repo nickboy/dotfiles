@@ -238,6 +238,25 @@ run_test "secrets under .ssh and .claude are ignored by default" \
 run_test "the files this repo ships are still visible to add" \
     "! _ci .ssh/allowed_signers && ! _ci .ssh/config.d/00-defaults.conf &&
      ! _ci .claude/skills/a-new-skill/SKILL.md && ! _ci .claude/themes/x.json"
+# THE FORWARD PROPERTY, which is the entire reason this is default-deny
+# rather than a list of today's secrets: a path nobody has thought of yet
+# is ignored the moment it exists. The paths below are deliberately
+# fictional — if an enumerated blocklist ever replaces the deny, this is
+# the test that notices.
+run_test "a novel path under a denied directory is ignored on creation" \
+    "_ci .ssh/id_rsa_some_future_host && _ci .ssh/50-new-machine.conf &&
+     _ci .claude/telemetry-v3/blob.db && _ci .claude/whatever-2027.log"
+# The other direction, and the one a future over-broad rule breaks: a file
+# ALREADY TRACKED must never become ignored. git keeps tracking it, so the
+# damage is silent — the same invisibility class this block exists to fix.
+# Loops over the real list rather than a fixed sample, so it cannot go
+# stale as the tracked set grows.
+# NO `exit` IN HERE: run_test evals in THIS shell, so an exit ends the
+# whole suite — which reads as a finished run with the summary missing,
+# not as a failure. Counting keeps the assertion inside an expression.
+run_test "no tracked file under .ssh or .claude is ignored" \
+    "[ \"\$( { yadm ls-files .ssh/ .claude/ 2>/dev/null || git ls-files .ssh/ .claude/ 2>/dev/null; } |
+        while read -r f; do _ci \"\$f\" && echo x; done | wc -l | tr -d ' ')\" = 0 ]"
 
 # Third-party formulae must be TRUSTED BEFORE `brew bundle`, or Homebrew
 # skips them and bundle reports success having installed nothing. Trust

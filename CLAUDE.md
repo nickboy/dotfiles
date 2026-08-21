@@ -80,10 +80,12 @@ Check with `which -a <cmd>` before assuming which copy runs.
    machine's own `~/.gitconfig` instead — see
    `docs/work-machine-checklist.md`.
 
-   Personal machines — and this invariant is about the **GitHub identity**,
-   not about every key on the disk. Other keys may legitimately exist;
-   what must never be true is that the GitHub auth or signing key has a
-   private half on disk. GitHub auth goes over **SSH through the
+   Personal machines. **⚠️ The GitHub auth half of this is NOT in force on
+   the Mac mini, measured 2026-08-21**: `ssh -T git@github.com -v` reports
+   `Server accepts key: ~/.ssh/id_ed25519` — an ON-DISK private key, not
+   an agent key. Cause and fix are a separate change; do not read what
+   follows as a description of the current machine. GitHub auth is
+   INTENDED to go over **SSH through the
    1Password agent** — the key lives in 1Password with no private key
    on disk, routed by `~/.ssh/config.d/10-github-1password.conf`, so
    remotes must use `git@github.com:` and not `https://`. The same

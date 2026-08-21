@@ -243,6 +243,35 @@ if [ "${SHOW_HERDR:-1}" = 1 ] && [ -n "${HERDR_TAB_ID:-}" ] &&
     fi
 fi
 
+# Hand the DISPLAY to another statusline, keeping the side effects above.
+#
+# One repo serves two Macs that want different status bars. The tab-rename
+# above is not display — it is the only per-turn hook Claude Code offers, so
+# whatever renders, that work still has to happen. Replacing statusLine
+# wholesale (the obvious move) silently drops it: the tab then stops following
+# /rename, with nothing on screen to say why. That is the bug this fixes.
+#
+# The delegate name lives in the UNTRACKED override file, never here. On a
+# work machine it points at an employer-internal plugin whose launcher
+# resolves paths under a corporate prefix, and rule 9 keeps both out of a
+# public repo. Absence of that file IS the switch, so the tracked tree stays
+# byte-identical on every machine and a `yadm pull` has nothing to reconcile:
+#
+#   ~/.config/claude-statusline/config.sh
+#   STATUSLINE_DISPLAY_DELEGATE='bash -c ...'
+#
+# Falls back to rendering our own line when the delegate produces nothing —
+# uninstalled plugin, moved path, non-zero exit. A blank status bar would be
+# the worst outcome here: it looks like Claude Code broke, and it gives no
+# hint that a delegate was ever configured.
+if [ -n "${STATUSLINE_DISPLAY_DELEGATE:-}" ]; then
+    _delegated=$(printf '%s' "$INPUT" | bash -c "$STATUSLINE_DISPLAY_DELEGATE" 2>/dev/null)
+    if [ -n "$_delegated" ]; then
+        printf '%s\n' "$_delegated"
+        exit 0
+    fi
+fi
+
 # -----------------------------------------------------------------------------
 # Colors — Catppuccin Mocha palette (24-bit truecolor) to match starship/tmux
 # -----------------------------------------------------------------------------

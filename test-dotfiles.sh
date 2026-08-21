@@ -1390,6 +1390,25 @@ CS_STUB
     cs_run beta
     run_test "claude-statusline: drift check is throttled to once a minute" \
         "[ ! -s '$CS_TMP/calls.log' ]"
+
+    # Display delegate. One repo serves two Macs wanting different status
+    # bars, so the tracked script hands rendering to a command named only in
+    # the UNTRACKED override file. Both polarities plus both failure modes:
+    # a delegate that silently produced nothing would blank the status bar,
+    # which reads as "Claude Code broke" and hides that a delegate exists.
+    CS_IN='{"session_id":"utcs-del","model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$HOME"'"},"cost":{"total_cost_usd":0.5,"total_duration_ms":1000}}'
+    run_test "statusline delegate: unset renders our own line" \
+        "printf '%s' '$CS_IN' | '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+    run_test "statusline delegate: set replaces the rendered line" \
+        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'DELEGATED'"
+    run_test "statusline delegate: …and suppresses ours, not just appends" \
+        "! { printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'; }"
+    run_test "statusline delegate: a missing command falls back, never blank" \
+        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=/nonexistent/xyz '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+    run_test "statusline delegate: a silent non-zero exit falls back too" \
+        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE='exit 1' '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+    run_test "statusline delegate: receives the same stdin JSON" \
+        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"jq -r .session_id\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'utcs-del'"
     rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs /tmp/claude-tabname-w1-t9
 fi
 

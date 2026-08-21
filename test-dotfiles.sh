@@ -222,6 +222,23 @@ if [ -f "$HOME/.config/yazi/packages.list" ]; then
          awk '/^dm_yazi_drift_repair\(\)/,/^}/' '$HOME/daily-maintenance-lib.sh' | grep -q 'ya pkg install --discard'"
 fi
 
+# The machine-local boundary has three states, and the dangerous one is
+# UNTRACKED-AND-UNIGNORED: invisible to review, still staged by `yadm add
+# -A`, in a PUBLIC repo. Both halves are asserted because either alone is
+# the bug — deny everything and a new skill silently stops being addable;
+# allow by default and the next private key is one keystroke from public.
+# Measured 2026-08-21, before the rule existed: id_ed25519 (a real OpenSSH
+# private key), authorized_keys, .claude/.credentials.json and the
+# transcript directory were all unignored.
+_ci() { { yadm check-ignore -q "$1" 2>/dev/null || git check-ignore -q "$1" 2>/dev/null; }; }
+run_test "secrets under .ssh and .claude are ignored by default" \
+    "_ci .ssh/id_ed25519 && _ci .ssh/authorized_keys &&
+     _ci .claude/.credentials.json && _ci .claude/projects/x.jsonl &&
+     _ci .ssh/config.d/99-some-new-host.conf"
+run_test "the files this repo ships are still visible to add" \
+    "! _ci .ssh/allowed_signers && ! _ci .ssh/config.d/00-defaults.conf &&
+     ! _ci .claude/skills/a-new-skill/SKILL.md && ! _ci .claude/themes/x.json"
+
 # Third-party formulae must be TRUSTED BEFORE `brew bundle`, or Homebrew
 # skips them and bundle reports success having installed nothing. Trust
 # lives in ~/.homebrew/trust.json, which is machine-local and untracked,

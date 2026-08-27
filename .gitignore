@@ -56,14 +56,39 @@
 .local/bin/herdr
 .local/bin/dotfiles-upstream
 
-# ssh config.d is default-deny with an allowlist, so a new machine-local host
-# block is ignored on creation rather than needing a rule each time. Only the
-# two neutral files are shared: 00-defaults.conf, and the 1Password agent
-# block. Everything else names a host, an employer, or overrides one of those
-# two on a machine that cannot use it.
+# ~/.ssh IS DEFAULT-DENY, THE DIRECTORY AND NOT JUST config.d.
+#
+# #117 applied this shape to config.d and stopped there, which left the
+# PRIVATE KEYS untracked-and-unignored — the state this file already calls
+# the dangerous one twice above, and the pre_pull hook a third time. A key
+# in that state is one `yadm add -A` from a public repository, and the
+# allowlist is what makes the NEXT one safe without anyone remembering.
+#
+# Measured before writing this rule: id_ed25519 (a real OPENSSH PRIVATE KEY,
+# 600), herddeck_fake_remote, authorized_keys, known_hosts — all unignored.
+#
+# allowed_signers is deliberately shared: it holds PUBLIC keys and rule 9
+# depends on it being tracked. config is neutral; it only includes config.d.
+.ssh/*
+!.ssh/config
+!.ssh/allowed_signers
+!.ssh/config.d/
 .ssh/config.d/*
 !.ssh/config.d/00-defaults.conf
 !.ssh/config.d/10-github-1password.conf
+
+# ~/.claude is default-deny for the same reason and a different payload:
+# .credentials.json holds an OAuth token, and projects/ holds transcripts of
+# every conversation on this machine. Neither was ignored. Only the two
+# directories this repo actually ships are re-included, so a new skill is
+# still added normally while a new cache, log or daemon directory from an
+# upstream release is ignored on creation.
+.claude/*
+!.claude/skills/
+!.claude/themes/
+
+# Agent skills installed by plugins — symlink targets under .claude/skills
+.agents/
 
 # Backup/snapshot copies of any of the above — same content, same risk
 *.bak

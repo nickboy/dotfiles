@@ -1102,8 +1102,13 @@ fi
 # behind produces a job that fails at every login and reports to nobody — three
 # were found by hand in 2026-08 (com.logi.cp-dev-mgr, com.jetbrains.toolbox,
 # com.symless.synergy3), all from uninstalls. The scan runs against fixtures so
-# the real /Library is never touched, and so BOTH polarities are exercised: a
-# detector that has only ever been seen finding nothing is not a detector.
+# the real /Library is never touched, and so BOTH polarities are exercised.
+# A detector only ever seen finding nothing is not a detector — and the
+# other direction is the one that has actually paid out here: a detector
+# that fires on EVERYTHING passes every positive case, because "does it
+# fire on X" is satisfied by "it fires on everything". Only the negative
+# case separates correct from always-fires, which is why the extraction
+# bug below showed up in exactly one test out of four.
 if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     ORPH_DIR=$(mktemp -d)
     mkdir -p "$ORPH_DIR/agents"

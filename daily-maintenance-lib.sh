@@ -176,3 +176,84 @@ dm_yazi_drift_repair() {   # $1 = yazi config dir
     echo "repaired $n yazi package(s) whose contents had drifted from the lockfile"
     return 0
 }
+
+# Classify a launchd plist's program path. Prints one of:
+#   ok            — the program exists
+#   stale <path>  — gone, but a binary of the same NAME is still installed
+#   orphan        — gone, and nothing by that name remains
+#
+# The distinction exists because the two need OPPOSITE remedies and wear
+# the same symptom. A versioned Homebrew Cellar path dies on the next
+# upgrade while the binary stays put at the stable symlink; deleting that
+# agent throws away a working service. An uninstalled app leaves an agent
+# that should go. Extracted from the scan so it can be tested by behaviour
+# rather than by grepping the script that contains it.
+#
+# ~/.local/bin and ~/.cargo/bin are probed directly: launchd trims PATH,
+# and a check that works interactively and fails under the timer is worse
+# than no check.
+dm_launchd_classify() {   # $1 = absolute program path
+    local prog="$1" name repl d search old_root new_root
+    [ -n "$prog" ] || { echo orphan; return 0; }
+    [ -e "$prog" ] && { echo ok; return 0; }
+    name=$(basename "$prog")
+
+    # Search the user's REAL PATH, not this process's. Enumerating a couple
+    # of known bin directories looked principled and omitted the highest-risk
+    # class on this machine: mise puts node, python, go and ruby under
+    # ~/.local/share/mise/installs/<tool>/<VERSION>/bin, which is the SAME
+    # version-pinned shape as the Cellar path that caused the original bug —
+    # so a mise upgrade would have produced "orphan" and an advice to DELETE
+    # a working service. Reading the configured PATH picks those up, plus
+    # cargo, local, Homebrew and whatever is added next year, with no list
+    # to maintain. Callers set DM_LAUNCHD_PATH once to avoid paying for the
+    # login shell per plist.
+    search="${DM_LAUNCHD_PATH:-$(zsh -lc 'print -r -- $PATH' 2>/dev/null)}"
+    [ -n "$search" ] || search="$PATH"
+
+    repl=""
+    local IFS=:
+    for d in $search; do
+        [ -n "$d" ] || continue
+        if [ -x "$d/$name" ]; then repl="$d/$name"; break; fi
+    done
+    unset IFS
+    [ -n "$repl" ] || { echo orphan; return 0; }
+
+    # Same install tree or not. Sharing a prefix like /opt/homebrew means the
+    # replacement is almost certainly the same program at its stable path;
+    # sharing only / or /usr means a DIFFERENT program happens to have the
+    # same basename, and the caller should say so rather than implying the
+    # target is verified. The verdict stays "repoint, not delete" either way
+    # — only the confidence in the target changes, on evidence already held.
+    # Longest common DIRECTORY prefix, not a fixed depth: three components
+    # is /Users/<user> under $HOME, which would call any two unrelated trees
+    # in the home directory the same one.
+    old_root=""
+    local a b oldIFS="$IFS"
+    IFS=/
+    # shellcheck disable=SC2086  # splitting on IFS=/ is the point
+    set -- $prog
+    local -a old_parts=("$@")
+    # shellcheck disable=SC2086
+    set -- $repl
+    local -a new_parts=("$@")
+    IFS="$oldIFS"
+    local i=0 common=""
+    while [ "$i" -lt "${#old_parts[@]}" ] && [ "$i" -lt "${#new_parts[@]}" ]; do
+        [ "${old_parts[$i]}" = "${new_parts[$i]}" ] || break
+        common="$common/${old_parts[$i]}"
+        i=$((i + 1))
+    done
+    common=$(printf '%s' "$common" | sed 's|^//*|/|;s|/$||')
+    # A prefix that is only a generic root proves nothing about relatedness.
+    case "$common" in
+        ""|/|/usr|/usr/local|/opt|/var|"$HOME") old_root=x; new_root=y ;;
+        *) old_root=x; new_root=x ;;
+    esac
+    if [ "$old_root" = "$new_root" ]; then
+        echo "stale $repl"
+    else
+        echo "stale-unrelated $repl"
+    fi
+}

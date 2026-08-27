@@ -811,6 +811,7 @@ if [ -x /usr/libexec/PlistBuddy ]; then
     [ -n "${LAUNCHD_SCOPE_NOTE:-}" ] && echo "  (${LAUNCHD_SCOPE_NOTE})"
 
     orphan_count=0
+    stale_count=0
     orphan_names=""
     for scan_dir in $LAUNCHD_SCAN_DIRS; do
         [ -d "$scan_dir" ] || continue
@@ -830,18 +831,63 @@ if [ -x /usr/libexec/PlistBuddy ]; then
                 /*) ;;      # absolute — judgeable
                 *)  continue ;;
             esac
-            if [ ! -e "$prog" ]; then
+            # TWO CAUSES WEAR THIS SYMPTOM AND THEY NEED OPPOSITE REMEDIES.
+            # A program missing because the app was uninstalled is an
+            # orphan: delete it. A program missing because a VERSIONED path
+            # moved — a Homebrew Cellar directory replaced by an upgrade —
+            # is a working service with a stale path, and deleting it
+            # throws the service away. Measured here 2026-08-26:
+            # com.nickboy.herddeck.daemon named
+            # /opt/homebrew/Cellar/bun/1.3.14/bin/bun and stopped the day
+            # bun became 1.4.0, while the binary sat at
+            # /opt/homebrew/bin/bun the entire time. Printing one remedy
+            # for both would have had the service deleted.
+            #
+            # The tell is cheap: does a binary of the same NAME still
+            # exist? PATH here has /opt/homebrew/bin (set in the plist AND
+            # at the top of this script) but NOT ~/.local/bin or
+            # ~/.cargo/bin, so those are probed directly rather than
+            # trusted to a PATH that launchd trims.
+            verdict=$(dm_launchd_classify "$prog")
+            if [ "$verdict" != "ok" ]; then
                 label=$(basename "$plist" .plist)
-                echo "  ⚠️  $label"
-                echo "      → $prog (missing)"
-                orphan_count=$((orphan_count + 1))
-                orphan_names="${orphan_names}${orphan_names:+, }${label}"
+                prog_name=$(basename "$prog")
+                replacement=""
+                case "$verdict" in
+                    stale\ *)           replacement=${verdict#stale } ;;
+                    stale-unrelated\ *) replacement=${verdict#stale-unrelated } ;;
+                esac
+                if [ -n "$replacement" ]; then
+                    echo "  ⚠️  $label — STALE PATH, not an orphan"
+                    echo "      → $prog (missing)"
+                    case "$verdict" in
+                        stale-unrelated\ *)
+                            echo "      → a program named $prog_name exists at $replacement,"
+                            echo "        but NOT in the same install tree — verify before repointing" ;;
+                        *)
+                            echo "      → $prog_name is at $replacement — repoint, do not delete" ;;
+                    esac
+                    stale_count=$((stale_count + 1))
+                else
+                    echo "  ⚠️  $label"
+                    echo "      → $prog (missing)"
+                    orphan_count=$((orphan_count + 1))
+                    orphan_names="${orphan_names}${orphan_names:+, }${label}"
+                fi
             fi
         done
     done
 
+    if [ "$stale_count" -gt 0 ]; then
+        echo ""
+        echo "  Repointing one: plutil -replace ProgramArguments.0 -string <new path>"
+        echo "  <plist>, then bootout and bootstrap it. Prefer the stable symlink"
+        echo "  (/opt/homebrew/bin/x) over a Cellar path, or the next upgrade"
+        echo "  breaks it again the same way."
+    fi
     if [ "$orphan_count" -eq 0 ]; then
-        echo "  None — every plist points at a program that exists."
+        [ "$stale_count" -eq 0 ] && \
+            echo "  None — every plist points at a program that exists."
     else
         echo ""
         echo "  Removing one: launchctl bootout gui/\$(id -u)/<label>, then delete"

@@ -992,6 +992,47 @@ echo -e "${YELLOW}15. Unit Tests${NC}"
 # state is never touched and all three branches are exercised.
 if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     TM_UT_DIR=$(mktemp -d)
+# Two causes wear one symptom in the launchd scan, and they need OPPOSITE
+# remedies: a versioned Homebrew path that moved on upgrade is a working
+# service with a stale path, while an uninstalled app leaves an agent that
+# should go. Printing one remedy for both is how a live daemon gets deleted.
+# Behaviour, not source-grep — the classifier is a library function so the
+# three verdicts can be produced rather than asserted about.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/daily-maintenance-lib.sh"
+    LC_UT_DIR=$(mktemp -d)
+    # Same install tree: <root>/pkg/<VERSION>/bin/x is gone while
+    # <root>/pkg/bin/x remains — the Cellar shape. A fixture whose
+    # replacement lives in a DIFFERENT tree exercises the unrelated verdict
+    # instead, which is how the stricter classifier caught the first version
+    # of this test.
+    mkdir -p "$LC_UT_DIR/pkg/bin"
+    printf '#!/bin/sh\necho hi\n' > "$LC_UT_DIR/pkg/bin/ut-fake-binary"
+    chmod +x "$LC_UT_DIR/pkg/bin/ut-fake-binary"
+    printf '#!/bin/sh\necho hi\n' > "$LC_UT_DIR/ut-fake-binary"
+    chmod +x "$LC_UT_DIR/ut-fake-binary"
+    run_test "launchd classifier: an existing program is ok" \
+        "[ \"\$(dm_launchd_classify /bin/ls)\" = ok ]"
+    # The name still resolves on PATH, so this is a moved path and NOT an
+    # orphan. Uses a real binary under a fabricated version directory, the
+    # exact shape a Cellar upgrade leaves behind.
+    run_test "launchd classifier: a moved versioned path is stale, not orphan" \
+        "DM_LAUNCHD_PATH=\"$LC_UT_DIR/pkg/bin\" \
+         dm_launchd_classify '$LC_UT_DIR/pkg/1.0/bin/ut-fake-binary' |
+         grep -q '^stale $LC_UT_DIR/pkg/bin/ut-fake-binary\$'"
+    # A namesake in a DIFFERENT install tree is a suggestion, not a match.
+    # Saying so is not hedging — it reports what was measured. The verdict
+    # stays repoint-not-delete; only confidence in the target changes.
+    run_test "launchd classifier: a namesake in another tree is flagged unrelated" \
+        "PATH=\"$LC_UT_DIR:\$PATH\" DM_LAUNCHD_PATH=\"$LC_UT_DIR\" \
+         dm_launchd_classify /opt/unrelated-vendor/9.9/bin/ut-fake-binary |
+         grep -q '^stale-unrelated '"
+    run_test "launchd classifier: a vanished program with no namesake is an orphan" \
+        "[ \"\$(dm_launchd_classify /Applications/UtNoSuchApp.app/Contents/MacOS/ut-no-such-prog)\" = orphan ]"
+    rm -rf "$LC_UT_DIR"
+fi
+
     # End at the NEXT section, not at Machine-local extras: the orphan-scan
     # section was added between them, so the wider range pulled it in and
     # every TM fixture run also scanned the real /Library — 36 plists times
@@ -1061,13 +1102,26 @@ fi
 # behind produces a job that fails at every login and reports to nobody — three
 # were found by hand in 2026-08 (com.logi.cp-dev-mgr, com.jetbrains.toolbox,
 # com.symless.synergy3), all from uninstalls. The scan runs against fixtures so
-# the real /Library is never touched, and so BOTH polarities are exercised: a
-# detector that has only ever been seen finding nothing is not a detector.
+# the real /Library is never touched, and so BOTH polarities are exercised.
+# A detector only ever seen finding nothing is not a detector — and the
+# other direction is the one that has actually paid out here: a detector
+# that fires on EVERYTHING passes every positive case, because "does it
+# fire on X" is satisfied by "it fires on everything". Only the negative
+# case separates correct from always-fires, which is why the extraction
+# bug below showed up in exactly one test out of four.
 if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     ORPH_DIR=$(mktemp -d)
     mkdir -p "$ORPH_DIR/agents"
-    awk '/^# --- Orphaned LaunchAgents/,/^# --- Machine-local extras/' \
-        "$HOME/daily-maintenance.sh" | sed '$d' > "$ORPH_DIR/section.sh"
+    # The section now calls dm_launchd_classify, which lives in the library.
+    # Without this source line the function is undefined, $verdict is empty,
+    # and EVERY plist is reported — which is how the suite caught the
+    # extraction: the "an existing program is not reported" case went red
+    # while the three positive cases stayed green, because an empty verdict
+    # is never "ok".
+    { echo ". \"$HOME/daily-maintenance-lib.sh\""
+      awk '/^# --- Orphaned LaunchAgents/,/^# --- Machine-local extras/' \
+          "$HOME/daily-maintenance.sh" | sed '$d'
+    } > "$ORPH_DIR/section.sh"
 
     orph_pb() { /usr/libexec/PlistBuddy -c "$1" "$2" >/dev/null 2>&1; }
     # absolute path, missing target -> must be caught

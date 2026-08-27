@@ -871,6 +871,35 @@ if [ -f "$HOME/.github/workflows/ci.yml" ]; then
     # 404 that surfaces as docker exit 125, i.e. a scan "failure".
     run_test "CI pins the TruffleHog scanner version (not latest)" \
         "grep -qE '^ *version: [0-9]+\.[0-9]+\.[0-9]+ *\$' $HOME/.github/workflows/ci.yml"
+    # DEPENDABOT STRUCTURALLY CANNOT GET THIS RIGHT. It parses `uses:` and
+    # has no model of an input three lines below, so it moves the action
+    # SHA and leaves `version:` behind — an upgrade that reads as one and
+    # is not, because the action still docker-runs the OLD image. #120 was
+    # exactly that. The comment saying "bump both lines or neither" sits
+    # inside the diff a reviewer sees, which is the best placement
+    # available, and the control is still a human reading carefully on the
+    # class of PR most likely to be merged at a glance.
+    #
+    # The `# vX.Y.Z` comment is the ONLY local record of what the SHA
+    # means — you cannot derive it from bcfcf73 without a network call —
+    # so parsing it is reading the only source there is, not a hack. What
+    # makes that fragile is the shape this suite keeps meeting: a failed
+    # extraction yields empty, and empty == empty PASSES. Hence the
+    # positive control first — as an `&&` chain, NOT `|| exit 1`, because
+    # run_test evals in the calling shell and an exit there ends the SUITE,
+    # which prints a test name with no verdict and reads as a finished run.
+    # I wrote that warning into another block this week and then did it
+    # here anyway; the break test is what caught it.
+    # Deliberately NOT querying GHCR from CI: it
+    # is the strongest check and belongs in the manual bump, because in a
+    # lint job it adds a network dependency whose failure is
+    # indistinguishable from a real mismatch.
+    run_test "CI TruffleHog action SHA and scanner version agree" \
+        "th_line=\$(grep -E 'uses: trufflesecurity/trufflehog@' '$HOME/.github/workflows/ci.yml');
+         printf '%s' \"\$th_line\" | grep -qE '# v[0-9]+\.[0-9]+\.[0-9]+' &&
+         th_tag=\$(printf '%s' \"\$th_line\" | sed -E 's/.*# v([0-9]+\.[0-9]+\.[0-9]+).*/\\1/') &&
+         th_ver=\$(grep -E '^ *version: [0-9]+\.[0-9]+\.[0-9]+ *\$' '$HOME/.github/workflows/ci.yml' | tr -d ' ' | cut -d: -f2) &&
+         [ -n \"\$th_tag\" ] && [ \"\$th_tag\" = \"\$th_ver\" ]"
 fi
 
 # Credential files must NEVER become tracked in this PUBLIC repo. The

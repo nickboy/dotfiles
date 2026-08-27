@@ -176,3 +176,33 @@ dm_yazi_drift_repair() {   # $1 = yazi config dir
     echo "repaired $n yazi package(s) whose contents had drifted from the lockfile"
     return 0
 }
+
+# Classify a launchd plist's program path. Prints one of:
+#   ok            — the program exists
+#   stale <path>  — gone, but a binary of the same NAME is still installed
+#   orphan        — gone, and nothing by that name remains
+#
+# The distinction exists because the two need OPPOSITE remedies and wear
+# the same symptom. A versioned Homebrew Cellar path dies on the next
+# upgrade while the binary stays put at the stable symlink; deleting that
+# agent throws away a working service. An uninstalled app leaves an agent
+# that should go. Extracted from the scan so it can be tested by behaviour
+# rather than by grepping the script that contains it.
+#
+# ~/.local/bin and ~/.cargo/bin are probed directly: launchd trims PATH,
+# and a check that works interactively and fails under the timer is worse
+# than no check.
+dm_launchd_classify() {   # $1 = absolute program path
+    local prog="$1" name repl d
+    [ -n "$prog" ] || { echo orphan; return 0; }
+    [ -e "$prog" ] && { echo ok; return 0; }
+    name=$(basename "$prog")
+    repl=$(command -v "$name" 2>/dev/null)
+    if [ -z "$repl" ]; then
+        for d in "$HOME/.local/bin" "$HOME/.cargo/bin"; do
+            [ -x "$d/$name" ] && { repl="$d/$name"; break; }
+        done
+    fi
+    [ -n "$repl" ] && { echo "stale $repl"; return 0; }
+    echo orphan
+}

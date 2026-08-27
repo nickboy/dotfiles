@@ -1002,6 +1002,14 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     # shellcheck source=/dev/null
     . "$HOME/daily-maintenance-lib.sh"
     LC_UT_DIR=$(mktemp -d)
+    # Same install tree: <root>/pkg/<VERSION>/bin/x is gone while
+    # <root>/pkg/bin/x remains — the Cellar shape. A fixture whose
+    # replacement lives in a DIFFERENT tree exercises the unrelated verdict
+    # instead, which is how the stricter classifier caught the first version
+    # of this test.
+    mkdir -p "$LC_UT_DIR/pkg/bin"
+    printf '#!/bin/sh\necho hi\n' > "$LC_UT_DIR/pkg/bin/ut-fake-binary"
+    chmod +x "$LC_UT_DIR/pkg/bin/ut-fake-binary"
     printf '#!/bin/sh\necho hi\n' > "$LC_UT_DIR/ut-fake-binary"
     chmod +x "$LC_UT_DIR/ut-fake-binary"
     run_test "launchd classifier: an existing program is ok" \
@@ -1010,8 +1018,16 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     # orphan. Uses a real binary under a fabricated version directory, the
     # exact shape a Cellar upgrade leaves behind.
     run_test "launchd classifier: a moved versioned path is stale, not orphan" \
-        "PATH=\"$LC_UT_DIR:\$PATH\" dm_launchd_classify /nonexistent/v1.2.3/bin/ut-fake-binary |
-         grep -q '^stale $LC_UT_DIR/ut-fake-binary\$'"
+        "DM_LAUNCHD_PATH=\"$LC_UT_DIR/pkg/bin\" \
+         dm_launchd_classify '$LC_UT_DIR/pkg/1.0/bin/ut-fake-binary' |
+         grep -q '^stale $LC_UT_DIR/pkg/bin/ut-fake-binary\$'"
+    # A namesake in a DIFFERENT install tree is a suggestion, not a match.
+    # Saying so is not hedging — it reports what was measured. The verdict
+    # stays repoint-not-delete; only confidence in the target changes.
+    run_test "launchd classifier: a namesake in another tree is flagged unrelated" \
+        "PATH=\"$LC_UT_DIR:\$PATH\" DM_LAUNCHD_PATH=\"$LC_UT_DIR\" \
+         dm_launchd_classify /opt/unrelated-vendor/9.9/bin/ut-fake-binary |
+         grep -q '^stale-unrelated '"
     run_test "launchd classifier: a vanished program with no namesake is an orphan" \
         "[ \"\$(dm_launchd_classify /Applications/UtNoSuchApp.app/Contents/MacOS/ut-no-such-prog)\" = orphan ]"
     rm -rf "$LC_UT_DIR"

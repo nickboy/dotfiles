@@ -852,12 +852,21 @@ if [ -x /usr/libexec/PlistBuddy ]; then
             if [ "$verdict" != "ok" ]; then
                 label=$(basename "$plist" .plist)
                 prog_name=$(basename "$prog")
-                replacement=${verdict#stale }
-                [ "$verdict" = "orphan" ] && replacement=""
+                replacement=""
+                case "$verdict" in
+                    stale\ *)           replacement=${verdict#stale } ;;
+                    stale-unrelated\ *) replacement=${verdict#stale-unrelated } ;;
+                esac
                 if [ -n "$replacement" ]; then
                     echo "  ⚠️  $label — STALE PATH, not an orphan"
                     echo "      → $prog (missing)"
-                    echo "      → $prog_name is at $replacement — repoint, do not delete"
+                    case "$verdict" in
+                        stale-unrelated\ *)
+                            echo "      → a program named $prog_name exists at $replacement,"
+                            echo "        but NOT in the same install tree — verify before repointing" ;;
+                        *)
+                            echo "      → $prog_name is at $replacement — repoint, do not delete" ;;
+                    esac
                     stale_count=$((stale_count + 1))
                 else
                     echo "  ⚠️  $label"

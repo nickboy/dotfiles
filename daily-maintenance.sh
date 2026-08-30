@@ -654,6 +654,35 @@ if command -v yazi >/dev/null 2>&1; then
     fi
 fi
 
+# LAUNCHABILITY, which is a different question from schema validity and
+# needs a different check. The block above asks tools to parse their config
+# and assumes they EXIT; a cask upgrade on 2026-08-28 left the claude
+# binary hanging forever on `--version`, so a check in that style would
+# have hung this run instead of reporting it. Bounded, and the two failure
+# modes get different remedies because they have different causes.
+if command -v claude >/dev/null 2>&1; then
+    echo -n "Status: claude launches (--version, 20s cap) "
+    claude_probe=$(dm_launch_probe 20 claude --version)
+    case "$claude_probe" in
+        ok)      echo "✓ SUCCESS" ;;
+        skipped) echo "– skipped (no timeout command)" ;;
+        hang)    echo "✗ FAILED — HUNG, not rejected"
+                 echo "    The binary never reached its own code, so this is not a"
+                 echo "    config problem. Seen after a cask upgrade: the installed"
+                 echo "    file's inode was unlaunchable while a byte-identical copy"
+                 echo "    in the SAME directory ran instantly. Give it a new inode:"
+                 echo "      d=\$(dirname \$(readlink -f \$(command -v claude)))"
+                 echo "      cp \$d/claude \$d/.claude.new && \$d/.claude.new --version \\"
+                 echo "        && mv -f \$d/.claude.new \$d/claude"
+                 echo "    Verify the signature survived: codesign --verify --strict"
+                 FAILED_COMMANDS+=("launch check: claude HUNG") ;;
+        *)       echo "✗ FAILED (${claude_probe})"
+                 echo "    Exited non-zero rather than hanging — that is the tool"
+                 echo "    rejecting something it can see. Run it by hand."
+                 FAILED_COMMANDS+=("launch check: claude") ;;
+    esac
+fi
+
 if command -v zellij >/dev/null 2>&1; then
     echo -n "Status: zellij (zellij setup --check) "
     if zellij setup --check >/dev/null 2>&1; then

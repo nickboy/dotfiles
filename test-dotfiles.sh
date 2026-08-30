@@ -1021,6 +1021,27 @@ echo -e "${YELLOW}15. Unit Tests${NC}"
 # state is never touched and all three branches are exercised.
 if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
     TM_UT_DIR=$(mktemp -d)
+# A launch probe must tell HANG from FAIL, because they have unrelated
+# remedies: a non-zero exit is the tool rejecting its config, a timeout is
+# the tool never reaching its own code. The config-schema checks above
+# assume the tool exits — a 2026-08-28 cask upgrade left a binary hanging
+# forever on --version, which an unbounded check would have inherited
+# rather than reported. Fourth verdict matters too: if the timeout command
+# itself is missing or broken the probe must say SKIPPED, not invent a
+# `fail 127` verdict about the probed command that is really about itself.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    # shellcheck source=/dev/null
+    . "$HOME/daily-maintenance-lib.sh"
+    run_test "launch probe: a clean exit is ok" \
+        "[ \"\$(dm_launch_probe 5 /usr/bin/true)\" = ok ]"
+    run_test "launch probe: a non-zero exit is fail, with the code" \
+        "[ \"\$(dm_launch_probe 5 /usr/bin/false)\" = 'fail 1' ]"
+    run_test "launch probe: a hang is hang, not fail" \
+        "[ \"\$(dm_launch_probe 2 /bin/sleep 30)\" = hang ]"
+    run_test "launch probe: a broken timeout command skips, not fails" \
+        "[ \"\$(TIMEOUT_CMD=/nonexistent-timeout dm_launch_probe 2 /usr/bin/true)\" = skipped ]"
+fi
+
 # Two causes wear one symptom in the launchd scan, and they need OPPOSITE
 # remedies: a versioned Homebrew path that moved on upgrade is a working
 # service with a stale path, while an uninstalled app leaves an agent that

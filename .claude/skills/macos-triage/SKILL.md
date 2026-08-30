@@ -42,10 +42,19 @@ Violating these produces confident wrong answers, not errors.
    `set -- $var` yields one argument and empties the rest, silently
    turning a command into a broken one that still exits 0. Quote
    explicitly or use `${=var}`.
-3. **`log` is a zsh builtin** in the non-interactive shell. `log show …`
+3. **A name can resolve to something other than the binary you mean —
+   in BOTH directions.** `log` is a zsh builtin in the non-interactive
+   shell, so `log show …`
    hits the builtin, prints "too many arguments", exits 1 — and since a
    pipeline's status is its LAST command's, `log show … | wc -l` prints
    0 and exits 0. Always spell it `/usr/bin/log`.
+
+   The reverse costs just as much: a program that EXECS — `timeout`,
+   `xargs`, `nohup`, `sudo` — cannot see functions or aliases, so
+   wrapping a shell-resolved name silently probes something else.
+   `timeout 25 command claude` ran NOTHING (`command` is a builtin) and
+   `timeout 25 claude` would have missed the wrapper function this
+   machine defines. Resolve the path first: `zsh -lc 'whence -p claude'`.
 4. **A failed query is not a negative result.** Before writing "nothing
    found", prove the query landed: directory exists, is readable, is
    non-empty; the tool produced output at all under a broader filter.
@@ -364,11 +373,6 @@ Two traps met on 2026-08-30, both of which produce confident wrong answers.
 looks like "stuck in the dynamic linker" and is not evidence of anything —
 Bun and similar bundlers embed a runtime whose frames do not symbolicate,
 so the stack is truncated rather than short. Do not build a theory on it.
-
-**`timeout 25 command foo` runs nothing.** `command` is a shell builtin, so
-`timeout` looks for an executable by that name and fails. The same applies
-to any wrapper that is a shell function: `timeout` cannot see functions.
-Resolve the real path first with `zsh -lc 'whence -p foo'`.
 
 The discriminating experiment, when a binary hangs and nothing else
 explains it — vary ONE thing at a time and let each result exclude a class:

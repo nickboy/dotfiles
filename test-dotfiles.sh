@@ -1029,7 +1029,19 @@ if [ -f "$HOME/daily-maintenance.sh" ] && [ -x /usr/libexec/PlistBuddy ]; then
 # rather than reported. Fourth verdict matters too: if the timeout command
 # itself is missing or broken the probe must say SKIPPED, not invent a
 # `fail 127` verdict about the probed command that is really about itself.
-if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+# GUARDED ON THE MACHINE, NOT ON THE REPO, and it announces the skip.
+# macOS ships no `timeout`; it arrives with Homebrew coreutils, so a CI
+# runner has none and the probe correctly degrades to `skipped` there —
+# which made all three verdict assertions red on first push while the
+# fourth passed trivially. That asymmetry is the tell.
+#
+# A real machine always has it: Brewfile:83 installs coreutils, and
+# daily-maintenance resolves gtimeout then timeout into TIMEOUT_CMD. So
+# this guard covers CI and a not-yet-bootstrapped machine, not normal use
+# — and maintenance says "skipped (no timeout command)" out loud in that
+# case rather than reporting a pass it did not earn.
+if [ -f "$HOME/daily-maintenance-lib.sh" ] &&
+   { command -v timeout >/dev/null 2>&1 || command -v gtimeout >/dev/null 2>&1; }; then
     # shellcheck source=/dev/null
     . "$HOME/daily-maintenance-lib.sh"
     run_test "launch probe: a clean exit is ok" \
@@ -1040,6 +1052,8 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
         "[ \"\$(dm_launch_probe 2 /bin/sleep 30)\" = hang ]"
     run_test "launch probe: a broken timeout command skips, not fails" \
         "[ \"\$(TIMEOUT_CMD=/nonexistent-timeout dm_launch_probe 2 /usr/bin/true)\" = skipped ]"
+elif [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    echo -e "${YELLOW}  ↷ launch-probe tests skipped: no timeout/gtimeout on this machine${NC}"
 fi
 
 # Two causes wear one symptom in the launchd scan, and they need OPPOSITE

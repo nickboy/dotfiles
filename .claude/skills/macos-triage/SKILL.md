@@ -356,6 +356,41 @@ how far back their activity goes, not by the fact that they are running.
 and Tailspin captures (37 MB each is normal). Count them, estimate the
 disk-write cost, and check `softwareupdate -l` for a newer build.
 
+## When a program will not start
+
+Two traps met on 2026-08-30, both of which produce confident wrong answers.
+
+**`sample` on a single-file bundled binary shows only `_dyld_start`.** That
+looks like "stuck in the dynamic linker" and is not evidence of anything —
+Bun and similar bundlers embed a runtime whose frames do not symbolicate,
+so the stack is truncated rather than short. Do not build a theory on it.
+
+**`timeout 25 command foo` runs nothing.** `command` is a shell builtin, so
+`timeout` looks for an executable by that name and fails. The same applies
+to any wrapper that is a shell function: `timeout` cannot see functions.
+Resolve the real path first with `zsh -lc 'whence -p foo'`.
+
+The discriminating experiment, when a binary hangs and nothing else
+explains it — vary ONE thing at a time and let each result exclude a class:
+
+```bash
+codesign --verify --strict "$b"     # content and signature intact?
+env -i HOME=/tmp/probe PATH=/usr/bin:/bin "$b" --version   # config? env?
+cp "$b" "$(dirname "$b")/copy" && "$(dirname "$b")/copy" --version
+```
+
+If a byte-identical copy IN THE SAME DIRECTORY runs while the original
+hangs, then path, directory, content and environment are all excluded and
+what is left is the INODE. Give it a fresh one by copying over it, and
+re-verify the signature afterwards. Measured once on a 302 MB cask binary
+after an interrupted upgrade; clearing `com.apple.quarantine` did not help
+and `com.apple.provenance` cannot be removed.
+
+**A hang and a non-zero exit are different diagnoses.** A tool that exits
+non-zero is rejecting something it can see, usually its config. A tool that
+never returns has not reached its own code, so nothing it can see is
+relevant. Bound every launch check and report the two separately.
+
 ## Before you run an A/B
 
 **State what each hypothesis PREDICTS before you run anything. If they

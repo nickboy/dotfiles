@@ -257,3 +257,38 @@ dm_launchd_classify() {   # $1 = absolute program path
         echo "stale-unrelated $repl"
     fi
 }
+
+# Probe that a command can actually START, bounded. Prints one of:
+#   ok | hang | fail <rc> | skipped
+#
+# HANG AND FAIL ARE DIFFERENT DIAGNOSES and this repo has already paid for
+# collapsing two causes into one message once. A non-zero exit is the tool
+# rejecting something — usually its config. A TIMEOUT is the tool never
+# reaching its own code, which on macOS means the binary itself, and the
+# remedy is unrelated to anything the tool can see.
+#
+# The existing config-schema checks assume the tool EXITS. This one exists
+# because a claude-code cask upgrade on 2026-08-28 left a binary that hung
+# forever on `--version`, so an unbounded check in that style would have
+# hung the maintenance run rather than reported it.
+#
+# Skips rather than risking the run when no timeout command exists: a check
+# that can hang the thing it is checking is worse than no check.
+dm_launch_probe() {   # $1 = seconds, rest = command and args
+    local secs="$1" rc tmo
+    shift
+    tmo="${TIMEOUT_CMD:-}"
+    [ -n "$tmo" ] || tmo=$(command -v timeout 2>/dev/null || command -v gtimeout 2>/dev/null)
+    # Resolve AND validate. A TIMEOUT_CMD pointing at something missing
+    # otherwise reports `fail 127` — a verdict about the probed command
+    # that is really about the probe, which is the misattribution this
+    # function exists to avoid.
+    command -v "$tmo" >/dev/null 2>&1 || { echo skipped; return 0; }
+    "$tmo" "$secs" "$@" >/dev/null 2>&1
+    rc=$?
+    case "$rc" in
+        0)   echo ok ;;
+        124) echo hang ;;
+        *)   echo "fail $rc" ;;
+    esac
+}

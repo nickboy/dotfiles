@@ -654,6 +654,50 @@ if command -v yazi >/dev/null 2>&1; then
     fi
 fi
 
+# LAUNCHABILITY, which is a different question from schema validity and
+# needs a different check. The block above asks tools to parse their config
+# and assumes they EXIT; a cask upgrade on 2026-08-28 left the claude
+# binary hanging forever on `--version`, so a check in that style would
+# have hung this run instead of reporting it. Bounded, and the two failure
+# modes get different remedies because they have different causes.
+if command -v claude >/dev/null 2>&1; then
+    # Says what it PROBED, not that the tool is healthy. `--version`
+    # proves the binary started and reached its own code — true, and
+    # narrow. A bounded claim is not a false one, but only if the report
+    # equals what was verified; "claude launches OK" would over-claim.
+    # It also fits the failure it exists for exactly: that break was at
+    # the loader/inode layer, so this is not a proxy for it, it is the
+    # same layer.
+    #
+    # 20s: warm start measured at 0.04-0.05s (n=3, running the binary
+    # directly — `claude` is a shell function interactively). The COLD
+    # path after a cask upgrade — Gatekeeper assessment, provenance, cold
+    # dyld cache — is n=0 and this cap is a guess about it. What replaces
+    # the guess: the next cask upgrade IS the cold path, so time it then.
+    # Move it LONGER if anything: 20s once a day is nothing, while a false
+    # hang on a security tool trains people to ignore the check.
+    echo -n "Status: claude launch probe (--version, 20s cap) "
+    claude_probe=$(dm_launch_probe 20 claude --version)
+    case "$claude_probe" in
+        ok)      echo "✓ started" ;;
+        skipped) echo "– skipped (no timeout command)" ;;
+        hang)    echo "✗ FAILED — HUNG, not rejected"
+                 echo "    The binary never reached its own code, so this is not a"
+                 echo "    config problem. Seen after a cask upgrade: the installed"
+                 echo "    file's inode was unlaunchable while a byte-identical copy"
+                 echo "    in the SAME directory ran instantly. Give it a new inode:"
+                 echo "      d=\$(dirname \$(readlink -f \$(command -v claude)))"
+                 echo "      cp \$d/claude \$d/.claude.new && \$d/.claude.new --version \\"
+                 echo "        && mv -f \$d/.claude.new \$d/claude"
+                 echo "    Verify the signature survived: codesign --verify --strict"
+                 FAILED_COMMANDS+=("launch check: claude HUNG") ;;
+        *)       echo "✗ FAILED (${claude_probe})"
+                 echo "    Exited non-zero rather than hanging — that is the tool"
+                 echo "    rejecting something it can see. Run it by hand."
+                 FAILED_COMMANDS+=("launch check: claude") ;;
+    esac
+fi
+
 if command -v zellij >/dev/null 2>&1; then
     echo -n "Status: zellij (zellij setup --check) "
     if zellij setup --check >/dev/null 2>&1; then

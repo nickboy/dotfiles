@@ -244,11 +244,11 @@ jobs:
       # runs `docker run ghcr.io/trufflesecurity/trufflehog:<version>`
       # and that input defaults to the MUTABLE `latest` tag, the same
       # class of mutable ref that got Trivy's @master pinned earlier.
-      # NOTE the tag has NO `v` prefix: the git tag is v3.97.0 but the
-      # GHCR tag is 3.97.0. `v3.97.0` is a 404 and docker run exits 125
+      # NOTE the tag has NO `v` prefix: the git tag is v3.97.1 but the
+      # GHCR tag is 3.97.1. `v3.97.1` is a 404 and docker run exits 125
       # (image pull failure), which reads as a scan failure, not a typo.
-      # Re-verified against the registry for this bump — 3.97.0 → 200,
-      # v3.97.0 → 404 — because the whole trap is that the wrong one is
+      # Re-verified against the registry for this bump — 3.97.1 → 200,
+      # v3.97.1 → 404 — because the whole trap is that the wrong one is
       # the one a human would write.
       #
       # BUMP BOTH LINES OR NEITHER. Dependabot only sees `uses:` and will
@@ -259,7 +259,7 @@ jobs:
         uses: trufflesecurity/trufflehog@20652fbbdefffcdaa493a5bf57ab2ac6b1db715b # v3.97.1
         with:
           path: ./
-          version: 3.97.0
+          version: 3.97.1
           extra_args: --results=verified
 
       # Second, complementary net. --results=verified above means

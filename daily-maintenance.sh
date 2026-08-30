@@ -661,10 +661,25 @@ fi
 # have hung this run instead of reporting it. Bounded, and the two failure
 # modes get different remedies because they have different causes.
 if command -v claude >/dev/null 2>&1; then
-    echo -n "Status: claude launches (--version, 20s cap) "
+    # Says what it PROBED, not that the tool is healthy. `--version`
+    # proves the binary started and reached its own code — true, and
+    # narrow. A bounded claim is not a false one, but only if the report
+    # equals what was verified; "claude launches OK" would over-claim.
+    # It also fits the failure it exists for exactly: that break was at
+    # the loader/inode layer, so this is not a proxy for it, it is the
+    # same layer.
+    #
+    # 20s: warm start measured at 0.04-0.05s (n=3, running the binary
+    # directly — `claude` is a shell function interactively). The COLD
+    # path after a cask upgrade — Gatekeeper assessment, provenance, cold
+    # dyld cache — is n=0 and this cap is a guess about it. What replaces
+    # the guess: the next cask upgrade IS the cold path, so time it then.
+    # Move it LONGER if anything: 20s once a day is nothing, while a false
+    # hang on a security tool trains people to ignore the check.
+    echo -n "Status: claude launch probe (--version, 20s cap) "
     claude_probe=$(dm_launch_probe 20 claude --version)
     case "$claude_probe" in
-        ok)      echo "✓ SUCCESS" ;;
+        ok)      echo "✓ started" ;;
         skipped) echo "– skipped (no timeout command)" ;;
         hang)    echo "✗ FAILED — HUNG, not rejected"
                  echo "    The binary never reached its own code, so this is not a"

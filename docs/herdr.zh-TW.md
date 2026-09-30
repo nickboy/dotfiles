@@ -5,7 +5,7 @@
 2026-08-05 起由 herdr **自家 updater** 管理（**非** Homebrew——
 上游對 brew 安裝停用 `herdr update`，且只有自家 updater 支援
 live handoff）：升級用 `herdr update --handoff`，替換本機 server
-時 pane 不死。協定在版本不匹配時拒絕 attach；`--remote` attach
+時 pane 不死。相容的 client／server 版本自 0.9.0 起不必一致（在那之前任何差異都拒絕 attach）；`--remote` attach
 會自動同步遠端 binary（詳見 [herdr-setup.md](herdr-setup.md)，
 英文）。設定在
 `~/.config/herdr/config.toml`（ctrl+a prefix、對映 tmux 鍵位、

@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Recover a herdr machine stuck on `! auth` in the sidebar.
+#
+# BEFORE USING THIS, check whether you need it at all. Everything below only
+# bites when the server demands a second factor on the path herdr takes, and
+# that requirement is often gated on SOURCE ADDRESS rather than set globally
+# — an sshd `Match ... Address <ranges>` block. Reach the same host over a
+# local port-forward instead and the connection is seen as ::1, matches no
+# range, and falls through to the weaker global default: key alone, no
+# prompt. Measured here, same instant, same options, only the transport
+# differing: `BATCHMODE-OK` and exit 0 through a forward, `Permission denied
+# (keyboard-interactive)` and exit 255 direct. On that path herdr's probe
+# simply works and this script has nothing to do.
+#
+# WHY A WRAPPER, when `herdr machine reconnect` already exists: on a server
+# that requires two factors, plain `reconnect` can authenticate SUCCESSFULLY
+# and still fail. Measured output, in order:
+#
+#   mux_client_request_session: session request failed: Session open refused by peer
+#   (2FA prompt)
+#   Success. Logging you in...                      <- auth WORKED
+#   ControlSocket /tmp/hssh-<uid>/<hash> already exists, disabling multiplexing
+#   Error: remote platform detection failed: ... Permission denied (keyboard-interactive).
+#
+# herdr's own control master refuses to share (`Session open refused by peer`),
+# so the freshly authenticated connection cannot be installed as the master.
+# herdr drops it, opens a plain `-o BatchMode=yes` connection instead, and that
+# one can never answer a second factor. You spend a passcode and get nothing.
+#
+# The refusal is herdr's master, not the server's session cap. Measured by
+# counting: twelve sessions opened one at a time against the BLOCKING master
+# were refused 12 for 12, starting with the FIRST. sshd's MaxSessions defaults
+# to 10, so a cap would have let roughly nine through before refusing. A
+# hand-made master on the same host takes concurrent sessions normally.
+#
+# Measured with client 0.9.3, local server 0.9.3, remote server 0.9.3, so this
+# is not the pre-0.9.2 behaviour: upgrading both servers changed nothing.
+#
+# So: close the blocking master FIRST, then reconnect. Reconnect then takes
+# about nine seconds.
+#
+# THIS IS DESTRUCTIVE TO AN IN-FLIGHT CONNECTION and that is the point. Run it
+# when the sidebar already shows `! auth`, not to "refresh" a healthy machine.
+#
+# No hostname is compiled in: this file is TRACKED in a public repo. The target
+# comes from $1 or $HERDR_REMOTE_HOST, the same variable `hbox` and herdr-sync
+# read.
+set -uo pipefail
+
+PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
+
+TARGET="${1:-${HERDR_REMOTE_HOST:-}}"
+if [ -z "$TARGET" ]; then
+    echo "herdr-reconnect: no target — pass one, or set HERDR_REMOTE_HOST" >&2
+    exit 2
+fi
+
+if ! command -v herdr >/dev/null 2>&1; then
+    echo "herdr-reconnect: herdr not installed" >&2
+    exit 2
+fi
+
+off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
+say() { printf '%sherdr-reconnect:%s %s\n' "$1" "$off" "$2"; }
+
+sockdir="/tmp/hssh-$(id -u)"
+
+# Prefer the EXACT path template herdr is using, read off its own running ssh,
+# so we close the right master rather than every master in the directory. The
+# template still contains %C; ssh expands it against $TARGET, which is what
+# makes it target-specific. Fall back to the directory only if herdr has no ssh
+# running right now (in which case there is usually nothing to close anyway).
+tmpl=$(/bin/ps -Ao command 2>/dev/null \
+       | grep -oE -- "-S ${sockdir}/[^ ]+" \
+       | head -1 | cut -d' ' -f2)
+
+closed=0
+if [ -n "$tmpl" ]; then
+    if ssh -S "$tmpl" -O check "$TARGET" >/dev/null 2>&1; then
+        ssh -S "$tmpl" -O exit "$TARGET" >/dev/null 2>&1 && closed=1
+    fi
+fi
+
+# Anything left is a socket whose master is already gone: ssh still trips over
+# the file itself ("already exists, disabling multiplexing"), so the file has to
+# go, not just the process.
+if [ -d "$sockdir" ]; then
+    for s in "$sockdir"/*; do
+        [ -e "$s" ] || continue
+        ssh -S "$s" -O exit "$TARGET" >/dev/null 2>&1 && closed=1
+        rm -f "$s" 2>/dev/null && closed=1
+    done
+fi
+
+if [ "$closed" -eq 1 ]; then
+    say "$cyan" "cleared the blocking control master, reconnecting $TARGET"
+else
+    say "$cyan" "no control master in the way, reconnecting $TARGET"
+fi
+
+# Interactive on purpose: this is the ONE herdr path that can answer a second
+# factor. Do not add BatchMode, and do not background it.
+if herdr machine reconnect "$TARGET"; then
+    say "$green" "$TARGET reconnected — open clients pick it up within 30s"
+    exit 0
+fi
+
+say "$red" "reconnect failed"
+cat <<EOF
+  If it said "Success. Logging you in..." and THEN failed, a master was
+  recreated between the clear and the reconnect. Run this again.
+
+  Note that \`herdr machine status\` reports "auth required" here even when
+  the machine is fine: status opens an extra session, and the master refuses
+  extra sessions. Judge by the sidebar, not by status.
+EOF
+exit 1

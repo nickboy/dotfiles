@@ -292,6 +292,76 @@ resume_agents_on_restore = true
 [worktrees]
 directory = "~/.herdr/worktrees"
 
+# ── Remote SSH ─────────────────────────────────────────────────────
+#
+# WORK ONLY, and it needs a companion step or it makes things WORSE.
+#
+# herdr spawns its remote ssh with `-o BatchMode=yes
+# -o NumberOfPasswordPrompts=0`. That ssh can present a key or
+# certificate and can NEVER answer an interactive prompt. Work
+# devboxes demand BOTH factors: `ssh -vv` shows the certificate
+# ACCEPTED and then `Authentications that can continue:
+# keyboard-interactive`. So herdr can only ride a control master that
+# something interactive already authenticated.
+#
+# BUT CHECK WHETHER THAT REQUIREMENT IS GATED ON SOURCE ADDRESS before
+# accepting it as fixed. sshd can carry the second factor in a `Match
+# ... Address <ranges>` block rather than globally, in which case a
+# connection arriving over a local port-forward is seen as ::1, matches
+# none of them, and falls through to the weaker global default — key
+# alone, no prompt, and the whole problem below evaporates. Measured on
+# this setup: `Authentications that can continue: publickey,password`
+# through a forward versus a mandatory second factor direct. Compare the
+# two paths before assuming the prompt is unavoidable.
+#
+# Left true, herdr uses its OWN socket under /tmp/hssh-<uid>/ with
+# ControlPersist=600. Only an interactive herdr command creates it, it
+# expires after ten idle minutes, and a plain ssh aimed at that exact
+# path gets `Session open refused by peer`. It is also why `herdr machine
+# status` reports `auth required` permanently.
+#
+# The refusal is herdr's master, not an sshd session cap. Counted: twelve
+# sessions against the blocking master were refused 12 for 12, starting
+# with the FIRST, where MaxSessions (default 10) would have let about
+# nine through. Measured with every component on 0.9.3, so it is not the
+# pre-0.9.2 behaviour either.
+#
+# Set false and herdr reads ~/.ssh/config unchanged, picking up the
+# ControlPath and the far longer ControlPersist configured there for the
+# devbox, on a master a normal `ssh` creates and that DOES take extra
+# sessions.
+#
+# THE COMPANION STEP: a master must ALREADY EXIST. Without one, every
+# herdr connection needs an interactive auth it cannot perform, fails,
+# and retries. That is the MFA loop this setting produced the first time
+# it was tried, and the reason it was reverted then.
+#
+#   ssh -M -N -f devbox        # once per ControlPersist window
+#
+# Do NOT wrap that in `nohup`: it redirects stdout and the handshake dies
+# with `ssh_dispatch_run_fatal: Connection to UNKNOWN port 65535: Broken
+# pipe`. Measured, twice.
+# REVERTED 2026-09-29, do not re-apply without reading this.
+#
+# Setting it false DOES buy the 8 h master, and `herdr machine status`
+# went from a permanent `auth required` to `reachable`. It also BREAKS
+# `herdr --remote`, which is the daily driver here. The second-factor prompt still
+# appears and still accepts a passcode, so the setting looks fine right
+# up until the transport dies:
+#
+#   ssh_dispatch_run_fatal: Connection to UNKNOWN port 65535: Broken pipe
+#   error: remote platform detection failed: ...
+#
+# `herdr machine reconnect` refuses outright with "interactive SSH
+# recovery requires remote.manage_ssh_config=true", so with this false
+# there is NO working interactive path back in.
+#
+# Note the identical broken-pipe error appears if you wrap the manual
+# master in `nohup`. Same string, and at the time it was blamed on
+# nohup's stdout redirection; that diagnosis is now in doubt.
+#
+# manage_ssh_config = true    # default, leave it
+
 # ── Experimental ───────────────────────────────────────────────────
 [experimental]
 {% if yadm.os == "Darwin" %}

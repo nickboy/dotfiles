@@ -83,14 +83,26 @@ dm_unload() {
     launchctl bootout "$DM_DOMAIN/$DM_LABEL"
 }
 
-# Pure predicate: did a herdr version bump land while a server is live?
-# $1 = version before upgrade, $2 = after, $3 = socket path override
-# (defaults to the real socket). No side effects — the caller decides
-# how to notify. Unit-tested in test-dotfiles.sh.
-dm_herdr_strand_detected() {
-    local before="$1" after="$2"
-    local sock="${3:-$HOME/.config/herdr/herdr.sock}"
-    [ -n "$before" ] && [ "$before" != "$after" ] && [ -S "$sock" ]
+# Pure predicate: is the RUNNING herdr server older than the installed
+# binary? $1 = the text of `herdr status`. No side effects — the caller
+# decides how to notify. Unit-tested in test-dotfiles.sh.
+#
+# REPLACES dm_herdr_strand_detected, which compared `herdr --version`
+# before and after `brew upgrade`. That could only ever fire when BREW
+# moved the version, and herdr left Homebrew on 2026-08-05 — its own
+# comment admitted the check was "normally a no-op". Meanwhile the case
+# it existed to catch happens constantly by another route: `herdr update`,
+# run by herdr-sync from this very script, replaces the binary under a
+# live server. Measured 2026-09-30: the local server had been running
+# 0.9.1 against a 0.9.3 binary for two days and nothing said so.
+#
+# herdr answers the question itself, for any cause, so ask it instead of
+# inferring. Callers MUST check the socket exists first: a herdr CLI call
+# with no server running can start one, inheriting the launchd
+# environment, which is why the old check avoided the CLI entirely.
+dm_herdr_server_stale() {
+    printf '%s\n' "$1" \
+        | grep -qE '^[[:space:]]*server_binary_stale:[[:space:]]*yes[[:space:]]*$'
 }
 
 # Remove half-written packs left behind by an INTERRUPTED pack write.

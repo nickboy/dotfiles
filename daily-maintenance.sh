@@ -84,7 +84,7 @@ echo "========================================="
 # Set up PATH to include homebrew
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-# Shared helpers (dm_herdr_strand_detected lives here so it can be
+# Shared helpers (dm_herdr_server_stale lives here so it can be
 # unit-tested by test-dotfiles.sh)
 # shellcheck source=daily-maintenance-lib.sh
 source "$(dirname "${BASH_SOURCE[0]}")/daily-maintenance-lib.sh"
@@ -348,31 +348,36 @@ FAILED_COMMANDS=()
 # Run your daily maintenance commands
 # 900s timeout: a stalled network otherwise hangs the whole run (the other
 # network steps are already wrapped; brew was the only unguarded one)
-# herdr LEFT Homebrew 2026-08-05 (self-updater managed; see
-# docs/herdr-setup.md), so brew can no longer change its version and
-# this check is normally a no-op. It stays as a TRIPWIRE: if a brew
-# copy is ever mistakenly reinstalled (shadow-racing ~/.local/bin) and
-# auto-upgraded, the version delta below catches it the same morning.
-# 'herdr --version' reads the binary only — it never auto-starts a server.
-HERDR_VERSION_BEFORE="$(herdr --version 2>/dev/null || true)"
 if ! run_command "Homebrew formula upgrade" run_with_timeout 900 brew upgrade --yes; then
     FAILED_COMMANDS+=("brew upgrade")
 fi
 
-# Tripwire evaluation (see the capture comment above): herdr's wire
-# protocol refuses attach on ANY version mismatch, so an unexpected bump
-# strands a still-running server. NEVER kill it here — the owner may be
-# in a live session, and no herdr CLI may be called (it could auto-start
-# a server inheriting this launchd environment). Detect via the socket
-# and notify; agent panes resume natively after the owner restarts.
-HERDR_VERSION_AFTER="$(herdr --version 2>/dev/null || true)"
-if dm_herdr_strand_detected "$HERDR_VERSION_BEFORE" "$HERDR_VERSION_AFTER"; then
-    echo "herdr upgraded ($HERDR_VERSION_BEFORE -> $HERDR_VERSION_AFTER) with a live server."
-    echo "Attach will be refused until the server restarts (herdr server stop; herdr)."
-    if command -v terminal-notifier >/dev/null 2>&1; then
-        terminal-notifier -title "herdr upgraded" \
-            -message "Server still on $HERDR_VERSION_BEFORE. When convenient: herdr server stop, then herdr (agents auto-resume)." \
-            >/dev/null 2>&1 || true
+# Is the RUNNING herdr server older than the binary on disk? Ask herdr,
+# which reports it as `server_binary_stale`, rather than inferring it from
+# a version delta around `brew upgrade` — see dm_herdr_server_stale for why
+# that inference could not see the case that actually happens.
+#
+# ONLY when the socket already exists. That proves a server is running, so
+# the CLI call cannot start one inheriting this launchd environment. NEVER
+# restart it here either: the owner may be mid-session.
+#
+# Not a stranding. Before 0.9.0 the wire protocol refused attach on ANY
+# mismatch; 0.9.0 relaxed that, so compatible versions no longer have to
+# match and a missing server feature disables only the affected action.
+# This is a nudge to restart at leisure. Agent panes resume natively
+# afterwards (resume_agents_on_restore).
+HERDR_SOCK="$HOME/.config/herdr/herdr.sock"
+if [ -S "$HERDR_SOCK" ]; then
+    HERDR_STATUS="$(herdr status 2>/dev/null || true)"
+    if dm_herdr_server_stale "$HERDR_STATUS"; then
+        HERDR_RUNNING="$(printf '%s\n' "$HERDR_STATUS" | awk '/^ *version:/{print $2; exit}')"
+        echo "herdr server is running $HERDR_RUNNING, older than the installed $(herdr --version 2>/dev/null)."
+        echo "Restart when convenient: herdr server stop, then herdr (agents auto-resume)."
+        if command -v terminal-notifier >/dev/null 2>&1; then
+            terminal-notifier -title "herdr server is stale" \
+                -message "Running $HERDR_RUNNING, binary is newer. When convenient: herdr server stop, then herdr (agents auto-resume)." \
+                >/dev/null 2>&1 || true
+        fi
     fi
 fi
 

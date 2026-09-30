@@ -55,6 +55,12 @@
 # list that is the whole point of the script, so it can never be public.
 .local/bin/herdr
 .local/bin/dotfiles-upstream
+# devvm-tunnel is built AROUND a corp-internal SSH tool and names it seven
+# times; the tool is what resolves a host this machine cannot, so the script
+# cannot be genericised the way herdr-sync was (that one takes its proxy from
+# the caller and names nothing). HEAD contains zero mentions of that tool, so
+# tracking this would be the first — exactly the line rule 9 draws.
+.local/bin/devvm-tunnel
 
 # ~/.ssh IS DEFAULT-DENY, THE DIRECTORY AND NOT JUST config.d.
 #

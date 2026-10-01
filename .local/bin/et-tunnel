@@ -74,7 +74,12 @@ if [ -z "$TUNNEL_CMD" ]; then
 fi
 
 off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
-say() { printf '%set-tunnel:%s %s\n' "$1" "$off" "$2"; }
+# stderr, not stdout. ssh writes its passcode prompt straight to the tty, so
+# when stdout is buffered anywhere (a pipe, a tee, a pager) the prompt arrives
+# with none of the surrounding context and the script reads as hung. Observed
+# exactly that: "no control master — authenticating first" vanished and all
+# the user saw was a bare `Passcode:` they did not recognise as a prompt.
+say() { printf '%set-tunnel:%s %s\n' "$1" "$off" "$2" >&2; }
 
 listening() { /usr/sbin/lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; }
 
@@ -108,7 +113,8 @@ esac
 # "Connectivity to host is OK but ET failed" and, by default, writes no log at
 # all — which points nowhere near the real cause and cost an afternoon.
 if ! ssh -O check "$TARGET" >/dev/null 2>&1; then
-    say "$cyan" "no control master for $TARGET — authenticating first (expect one prompt)"
+    say "$cyan" "no control master for $TARGET"
+    say "$cyan" "ssh will now ask for your second factor — TYPE IT AT THE PROMPT BELOW"
     # Interactive on purpose. Do NOT add nohup: it redirects stdout and the
     # handshake dies with "ssh_dispatch_run_fatal: Connection to UNKNOWN port
     # 65535: Broken pipe", which reads like a network fault and is not.

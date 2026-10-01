@@ -136,3 +136,12 @@ Library/LaunchAgents/com.daily-maintenance.plist
 
 # btop theme (downloaded by bootstrap)
 .config/btop/themes/
+
+# Work-laptop scratch: incident notes, upstream issue drafts, Workplace post
+# drafts. Every one of them quotes raw terminal output, so they carry corp
+# hostnames, certificate paths and the SSH banner verbatim — the material the
+# tracked files are carefully written to avoid. Untracked was not enough:
+# status.showUntrackedFiles=no hides this directory from `yadm status` while
+# `yadm add -A` would still stage it, which is the exact state this file warns
+# about three times above.
+work-laptop-notes/

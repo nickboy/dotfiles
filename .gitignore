@@ -55,6 +55,12 @@
 # list that is the whole point of the script, so it can never be public.
 .local/bin/herdr
 .local/bin/dotfiles-upstream
+# et-tunnel was listed here while it named a corp-internal SSH tool seven
+# times. It no longer does: the tunnel command moved to ET_TUNNEL_CMD in
+# an ignored machine-local file, the same shape herdr-sync uses for its proxy
+# endpoint. The script keeps the parts worth sharing — the loopback guard,
+# the control-master precondition, and the two robustness flags whose
+# defaults are wrong — and names no tool. Tracked again as of 2026-09-30.
 
 # ~/.ssh IS DEFAULT-DENY, THE DIRECTORY AND NOT JUST config.d.
 #
@@ -130,3 +136,12 @@ Library/LaunchAgents/com.daily-maintenance.plist
 
 # btop theme (downloaded by bootstrap)
 .config/btop/themes/
+
+# Work-laptop scratch: incident notes, upstream issue drafts, internal post
+# drafts. Every one of them quotes raw terminal output, so they carry corp
+# hostnames, certificate paths and the SSH banner verbatim — the material the
+# tracked files are carefully written to avoid. Untracked was not enough:
+# status.showUntrackedFiles=no hides this directory from `yadm status` while
+# `yadm add -A` would still stage it, which is the exact state this file warns
+# about three times above.
+work-laptop-notes/

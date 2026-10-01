@@ -345,8 +345,10 @@ claim was never verified and is removed rather than reworded.
   machine uses enterprise hosting, flag it and make those sections
   conditional rather than fighting them ad hoc.
 - [ ] herdr (if used): follow [herdr-setup.md](herdr-setup.md) —
-  version lockstep with any remote, server started from a clean
-  login shell, clients re-attach after toast-config changes.
+  server started from a clean login shell, clients re-attach after
+  toast-config changes. Strict version lockstep with the remote is no
+  longer required (0.9.0: compatible versions may differ); converging
+  them is still worth doing, but a mismatch is not an outage.
 - [ ] **A corp-managed toolchain can shadow a Homebrew formula, and the
   error suggests the one fix you must not apply.** `brew bundle` reports
   something like

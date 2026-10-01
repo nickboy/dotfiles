@@ -6,7 +6,8 @@ Managed by herdr's OWN updater since 2026-08-05 (NOT Homebrew —
 upstream disables `herdr update` for brew installs, and only the
 self-updater supports live handoff): upgrade with
 `herdr update --handoff`, which replaces the local server without
-killing panes. Its wire protocol refuses attach across versions;
+killing panes. Compatible client/server versions no longer have to match
+(0.9.0; before that any difference refused attach);
 `--remote` attaches auto-sync the remote binary (see
 [herdr-setup.md](herdr-setup.md)).
 Config: `~/.config/herdr/config.toml` (ctrl+a

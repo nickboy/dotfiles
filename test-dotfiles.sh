@@ -397,15 +397,23 @@ if [ -f "$HOME/daily-maintenance.sh" ]; then
     run_test "Maintenance runs config schema checks" \
         "grep -q 'zellij setup --check' $HOME/daily-maintenance.sh && grep -q 'atuin doctor' $HOME/daily-maintenance.sh"
     # Tripwire: the maintenance run must never call the herdr CLI beyond
-    # --version — any other subcommand can auto-start a server that
-    # inherits the launchd environment (the CLAUDECODE-leak bug class).
-    # Allowed matches: --version calls, echo/notifier message strings,
-    # the socket path. Anything else fails.
-    run_test "Maintenance calls herdr CLI only with --version" \
-        "! grep -E '^[^#]*\\bherdr\\b' $HOME/daily-maintenance.sh | grep -v -e '--version' -e echo -e terminal-notifier -e '\\-message' -e '\\.sock' | grep -q ."
+    # the read-only forms allowed here — any other subcommand can
+    # auto-start a server that inherits the launchd environment (the
+    # CLAUDECODE-leak bug class).
+    #
+    # `herdr status` was added to the allowlist on evidence, not on
+    # assumption: run against a host whose server had just been stopped, it
+    # printed "status: not running" rather than starting one (measured
+    # 2026-09-30 on 0.9.3). The call site also guards on the socket
+    # existing, so it only ever speaks to a server that is already up.
+    #
+    # Allowed matches: --version, `herdr status`, echo/notifier message
+    # strings, the socket path. Anything else fails.
+    run_test "Maintenance calls herdr CLI only in read-only forms" \
+        "! grep -E '^[^#]*\\bherdr\\b' $HOME/daily-maintenance.sh | grep -v -e '--version' -e 'herdr status' -e echo -e terminal-notifier -e '\\-message' -e '\\.sock' | grep -q ."
     # The strand guard depends on the shared lib being sourced.
     run_test "Maintenance sources daily-maintenance-lib.sh" \
-        "grep -qE '^source .*daily-maintenance-lib.sh' $HOME/daily-maintenance.sh && grep -q 'dm_herdr_strand_detected' $HOME/daily-maintenance.sh"
+        "grep -qE '^source .*daily-maintenance-lib.sh' $HOME/daily-maintenance.sh && grep -q 'dm_herdr_server_stale' $HOME/daily-maintenance.sh"
     # Failures must reach the desktop, not just the log (the bob wedge
     # was recorded daily for a month and surfaced never)
     run_test "Maintenance notifies on failed tasks" \
@@ -753,9 +761,9 @@ if [ -f "$HOME/.config/atuin/config.toml" ]; then
     #   Daemon running (needs restart) stale — restart after an upgrade
     #   Daemon is not running          service never started
     if command -v atuin >/dev/null 2>&1 && grep -A12 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
-        run_test "atuin daemon running and current when enabled" \
-            "[ \"\$(atuin daemon status 2>&1 | head -1)\" = 'Daemon running' ]"
-    fi
+    run_test "atuin daemon running and current when enabled" \
+        "[ \"\$(atuin daemon status 2>&1 | head -1)\" = 'Daemon running' ]"
+fi
 fi
 
 # Validate sesh config (TOML syntax)
@@ -973,19 +981,31 @@ echo
 # NOTE: never lint '**/*.md' from ~ — it scans the whole home dir and hangs.
 # -z/-0 keeps filenames with spaces intact and skips the run on empty input.
 echo -e "${YELLOW}13. Markdown Lint${NC}"
-if command -v npx >/dev/null 2>&1; then
-    # Locally the tracked files come from yadm; in CI checkouts from git.
-    if command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
-        run_test "markdownlint on tracked markdown files" \
-            "yadm ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
-    elif git rev-parse --git-dir >/dev/null 2>&1; then
-        run_test "markdownlint on tracked markdown files" \
-            "git ls-files -z '*.md' | xargs -0 npx markdownlint-cli"
-    else
-        echo -e "${YELLOW}  Not a yadm/git repo; skipping markdown lint${NC}"
-    fi
+# `command -v npx` only proves the LAUNCHER exists. npx still has to fetch
+# markdownlint-cli, and where the registry is unreachable that fetch fails
+# and clean markdown is reported as a LINT FAILURE. Measured on the work
+# laptop: npx returns 503, every tracked file lints clean, and the suite
+# said "Failed: markdownlint on tracked markdown files". A failure that
+# means "could not ask" trains you to ignore the one that means "wrong".
+# So resolve a linter that actually RUNS, and skip loudly otherwise.
+MDLINT=""
+if command -v markdownlint >/dev/null 2>&1; then
+    MDLINT="markdownlint"
+elif command -v npx >/dev/null 2>&1 && npx markdownlint-cli --version >/dev/null 2>&1; then
+    MDLINT="npx markdownlint-cli"
+fi
+
+if [ -z "$MDLINT" ]; then
+    echo -e "${YELLOW}  no runnable markdownlint (not installed; npx could not fetch it); skipping — CI enforces it${NC}"
+# Locally the tracked files come from yadm; in CI checkouts from git.
+elif command -v yadm >/dev/null 2>&1 && yadm ls-files >/dev/null 2>&1; then
+    run_test "markdownlint on tracked markdown files" \
+        "yadm ls-files -z '*.md' | xargs -0 $MDLINT"
+elif git rev-parse --git-dir >/dev/null 2>&1; then
+    run_test "markdownlint on tracked markdown files" \
+        "git ls-files -z '*.md' | xargs -0 $MDLINT"
 else
-    echo -e "${YELLOW}  npx not available; skipping markdown lint (CI will enforce it)${NC}"
+    echo -e "${YELLOW}  Not a yadm/git repo; skipping markdown lint${NC}"
 fi
 # The README split moved sections into docs/ pages — every relative .md
 # link in the READMEs and docs/ must resolve, or the split rots silently.
@@ -1306,33 +1326,42 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     rm -rf "$PG_DIR"
 fi
 
-# dm_herdr_strand_detected: pure predicate from daily-maintenance-lib.sh.
-# Since herdr left Homebrew (2026-08-05) the maintenance call site is a
-# no-op TRIPWIRE (fires only if a brew copy is mistakenly reinstalled
-# and auto-upgraded) — the predicate's semantics are unchanged, so
-# these polarity tests stand as-is.
-# A real unix socket is required for the -S branch; python3 binds one in
-# a temp dir so all four polarities are exercised.
+# dm_herdr_server_stale: pure predicate from daily-maintenance-lib.sh.
+# It reads herdr's own `server_binary_stale` field, so the fixtures are
+# `herdr status` TEXT and the unix-socket bind the old predicate needed
+# is gone. The socket guard moved to the CALL SITE, where it stops a herdr
+# CLI call from starting a server under launchd; that is asserted below
+# rather than here, because the predicate no longer knows about it.
 if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     HERDR_UT_DIR=$(mktemp -d)
-    python3 -c "import socket; socket.socket(socket.AF_UNIX).bind('$HERDR_UT_DIR/live.sock')" 2>/dev/null
-    UT_SRC="source '$HOME/daily-maintenance-lib.sh' >/dev/null 2>&1;"
-    # macOS caps unix socket paths at ~104 bytes; if the bind failed
-    # (long CI temp dir), skip the two socket-positive cases instead of
-    # reporting a false failure.
-    if [ -S "$HERDR_UT_DIR/live.sock" ]; then
-        run_test "herdr strand: mismatch + live socket -> detected" \
-            "bash -c \"$UT_SRC dm_herdr_strand_detected 'herdr 1.0' 'herdr 2.0' '$HERDR_UT_DIR/live.sock'\""
-        run_test "herdr strand: same version -> silent" \
-            "bash -c \"$UT_SRC ! dm_herdr_strand_detected 'herdr 1.0' 'herdr 1.0' '$HERDR_UT_DIR/live.sock'\""
-    else
-        echo -e "  ${YELLOW}ℹ️  unix socket bind unavailable; skipping socket-positive cases${NC}"
-    fi
-    run_test "herdr strand: no socket -> silent" \
-        "bash -c \"$UT_SRC ! dm_herdr_strand_detected 'herdr 1.0' 'herdr 2.0' '$HERDR_UT_DIR/missing.sock'\""
-    run_test "herdr strand: herdr absent (empty before) -> silent" \
-        "bash -c \"$UT_SRC ! dm_herdr_strand_detected '' 'herdr 2.0' '$HERDR_UT_DIR/live.sock'\""
+    UT_SRC="source $HOME/daily-maintenance-lib.sh >/dev/null 2>&1;"
+    printf 'server:\n  status: running\n  version: 0.9.1\nupdate:\n  restart_needed: no\n  server_binary_stale: yes\n' \
+        > "$HERDR_UT_DIR/stale.txt"
+    printf 'server:\n  status: running\n  version: 0.9.3\nupdate:\n  restart_needed: no\n  server_binary_stale: no\n' \
+        > "$HERDR_UT_DIR/fresh.txt"
+    printf 'status: not running\nsocket: /x/herdr.sock\n' > "$HERDR_UT_DIR/down.txt"
+    # `restart_needed: no` sits next to it in real output and reads like the
+    # answer while meaning something else (protocol compatibility). A
+    # predicate keying on the wrong line would pass every case above, so
+    # pin the distinction: stale=yes and restart_needed=no together.
+    printf 'update:\n  restart_needed: yes\n  server_binary_stale: no\n' \
+        > "$HERDR_UT_DIR/restart-only.txt"
+
+    run_test "herdr stale: server_binary_stale yes -> detected" \
+        "bash -c '$UT_SRC dm_herdr_server_stale \"\$(cat $HERDR_UT_DIR/stale.txt)\"'"
+    run_test "herdr stale: server_binary_stale no -> silent" \
+        "bash -c '$UT_SRC ! dm_herdr_server_stale \"\$(cat $HERDR_UT_DIR/fresh.txt)\"'"
+    run_test "herdr stale: server down -> silent" \
+        "bash -c '$UT_SRC ! dm_herdr_server_stale \"\$(cat $HERDR_UT_DIR/down.txt)\"'"
+    run_test "herdr stale: restart_needed is NOT the field it keys on" \
+        "bash -c '$UT_SRC ! dm_herdr_server_stale \"\$(cat $HERDR_UT_DIR/restart-only.txt)\"'"
+    run_test "herdr stale: empty input -> silent" \
+        "bash -c '$UT_SRC ! dm_herdr_server_stale \"\"'"
     rm -rf "$HERDR_UT_DIR"
+
+    # The CLI must only be called when a server is already running.
+    run_test "herdr stale: call site guards on the socket before the CLI" \
+        "grep -qE '^if \[ -S \"\\\$HERDR_SOCK\" \]; then' $HOME/daily-maintenance.sh"
 fi
 
 # claude-copy-last: fixture-based extraction. The transcript JSONL is
@@ -1565,17 +1594,17 @@ CS_STUB
     # which reads as "Claude Code broke" and hides that a delegate exists.
     CS_IN='{"session_id":"utcs-del","model":{"display_name":"Opus"},"workspace":{"current_dir":"'"$HOME"'"},"cost":{"total_cost_usd":0.5,"total_duration_ms":1000}}'
     run_test "statusline delegate: unset renders our own line" \
-        "printf '%s' '$CS_IN' | '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+        "printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
     run_test "statusline delegate: set replaces the rendered line" \
-        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'DELEGATED'"
+        "printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'DELEGATED'"
     run_test "statusline delegate: …and suppresses ours, not just appends" \
-        "! { printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'; }"
+        "! { printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 STATUSLINE_DISPLAY_DELEGATE=\"printf DELEGATED\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'; }"
     run_test "statusline delegate: a missing command falls back, never blank" \
-        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=/nonexistent/xyz '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+        "printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 STATUSLINE_DISPLAY_DELEGATE=/nonexistent/xyz '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
     run_test "statusline delegate: a silent non-zero exit falls back too" \
-        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE='exit 1' '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
+        "printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 STATUSLINE_DISPLAY_DELEGATE='exit 1' '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -q 'Opus'"
     run_test "statusline delegate: receives the same stdin JSON" \
-        "printf '%s' '$CS_IN' | STATUSLINE_DISPLAY_DELEGATE=\"jq -r .session_id\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'utcs-del'"
+        "printf '%s' '$CS_IN' | CLAUDE_STATUSLINE_IGNORE_CONFIG=1 STATUSLINE_DISPLAY_DELEGATE=\"jq -r .session_id\" '$HOME/.local/bin/claude-statusline' 2>/dev/null | grep -qx 'utcs-del'"
     rm -rf "$CS_TMP" /tmp/claude-statusline-name-utcs /tmp/claude-statusline-tabcheck-utcs /tmp/claude-tabname-w1-t9
 fi
 

@@ -2,11 +2,23 @@
 # Keep herdr in lockstep across this Mac and the devbox.
 #
 # Both ends install from the SAME source: herdr.dev, via `herdr update`, into
-# ~/.local/bin. That is the whole point. herdr's wire protocol refuses attach on
-# ANY version mismatch, and brew's formula lags a fast-moving upstream — it sat
-# on 0.7.5 while herdr.dev had already shipped 0.8 — so a brew Mac and a
-# herdr.dev devbox could never be reliably matched. Same source, same
+# ~/.local/bin. That is the whole point: brew's formula lags a fast-moving
+# upstream — it sat on 0.7.5 while herdr.dev had already shipped 0.8 — so a brew
+# Mac and a herdr.dev server could never be reliably matched. Same source, same
 # release, no version arithmetic.
+#
+# THE ORIGINAL REASON WAS STRONGER THAN IT IS NOW. This said "herdr's wire
+# protocol refuses attach on ANY version mismatch", which was true when written
+# and stopped being true in 0.9.0: "Compatible client and server versions do not
+# have to match." A client update leaves compatible servers and their running
+# agents untouched, and a missing server feature disables only the affected
+# action instead of refusing the connection.
+#
+# So this script now buys convergence, not the ability to attach at all. Keeping
+# it is still worth it — the two ends drifting for weeks is how you end up
+# debugging a feature gap instead of an outage — but a failure here is no longer
+# an emergency. See docs/herdr-setup.md for the multi-machine work that will
+# likely retire this script entirely.
 #
 # Nothing lets you request a specific version (`herdr update` only fetches
 # "latest"), so the two ends are kept together by updating them back-to-back and
@@ -23,6 +35,12 @@ PATH="$HOME/.local/bin:/opt/homebrew/bin:$PATH"
 # target comes from $1 (how ~/.daily-maintenance.local calls it, because a
 # launchd run never sources an interactive shell) or from $HERDR_REMOTE_HOST,
 # the same variable `hbox` reads.
+RESTART_REMOTE=0
+if [ "${1:-}" = "--restart-remote" ]; then
+    RESTART_REMOTE=1
+    shift
+fi
+
 TARGET="${1:-${HERDR_REMOTE_HOST:-}}"
 if [ -z "$TARGET" ]; then
     echo "herdr-sync: no target — pass one, or set HERDR_REMOTE_HOST" >&2
@@ -35,6 +53,52 @@ fi
 
 off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
 say() { printf '%sherdr-sync:%s %s\n' "$1" "$off" "$2"; }
+
+# --restart-remote: stop the remote server and start a fresh one, so it picks
+# up a binary already installed there. Deliberately a separate, EXPLICIT mode
+# and never part of the daily run: it ends the remote pane processes. Agents
+# resume natively afterwards (resume_agents_on_restore), but one mid-task
+# loses its turn, so refuse while any is busy rather than judging for you.
+#
+# Stopping alone is not enough. `herdr server stop` leaves the host with no
+# server until something starts one, so this starts it too and then VERIFIES
+# the version — the whole point is the version, and a restart that silently
+# failed to start looks identical to one that worked.
+if [ "$RESTART_REMOTE" = 1 ]; then
+    busy=$(ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH herdr agent list 2>/dev/null' \
+           | python3 -c 'import sys,json
+try: d=json.load(sys.stdin)
+except Exception: print("?"); raise SystemExit
+a=(d.get("result",d) or {}).get("agents") or []
+print(sum(1 for x in a if x.get("agent_status") in ("working","blocked")))' 2>/dev/null || echo '?')
+    if [ "$busy" = '?' ]; then
+        say "$red" "could not read remote agent state — not restarting blind"
+        exit 1
+    fi
+    if [ "$busy" != 0 ]; then
+        say "$red" "$busy remote agent(s) working or blocked — restart would cut them off"
+        echo "  Check them first:  ssh $TARGET 'PATH=\$HOME/.local/bin:\$PATH herdr agent list'"
+        exit 1
+    fi
+
+    say "$cyan" "stopping remote server on $TARGET"
+    ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH herdr server stop' || true
+    sleep 3
+    # setsid so the new server outlives this ssh channel. The remote is Linux;
+    # macOS has no setsid, which is why this mode is remote-only.
+    ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH; setsid herdr server </dev/null >/dev/null 2>&1 &' || true
+    sleep 8
+
+    now=$(ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH herdr status server' 2>/dev/null || true)
+    ver=$(printf '%s\n' "$now" | awk '/^ *version:/{print $2; exit}')
+    if printf '%s\n' "$now" | grep -qE '^[[:space:]]*status:[[:space:]]*running'; then
+        say "$green" "remote server restarted, now serving ${ver:-unknown}"
+        exit 0
+    fi
+    say "$red" "remote server did not come back up"
+    printf '%s\n' "$now" | sed 's/^/  /'
+    exit 1
+fi
 
 mac_before=$(herdr --version 2>/dev/null || true)
 
@@ -76,8 +140,14 @@ fi
 if ! ssh "$TARGET" \
      "PATH=\$HOME/.local/bin:\$PATH ${HERDR_REMOTE_PROXY:+https_proxy=$HERDR_REMOTE_PROXY }herdr update"; then
     say "$red" "remote update failed — mac moved to $mac_after, remote did NOT"
-    echo "  Attach will be refused until they match. Fix the remote before using hbox."
-    echo "  (etvm + tmux is unaffected — it does not care about herdr versions.)"
+    echo "  Not urgent: since 0.9.0 compatible versions do not have to match, so"
+    echo "  attach still works and only a missing server feature is disabled."
+    echo "  If the proxy is the problem, you do NOT need the remote to reach the"
+    echo "  internet at all — herdr can push the binary from here over the same"
+    echo "  SSH connection. Download the remote's platform build on this machine"
+    echo "  (see https://herdr.dev/latest.json) and run an interactive attach:"
+    echo "    HERDR_REMOTE_BINARY=/path/to/herdr-linux-x86_64 hbox"
+    echo "  It asks before installing and does not stop the running remote server."
     exit 1
 fi
 
@@ -90,7 +160,29 @@ if [ "$mac_after" != "$remote_after" ]; then
     exit 1
 fi
 
-say "$green" "both on $mac_after"
-echo "  The remote SERVER still runs the old binary — attach is refused until it"
-echo "  restarts. When convenient (agents resume by themselves):"
-echo "    ssh $TARGET 'PATH=\$HOME/.local/bin:\$PATH herdr server stop'"
+say "$green" "both BINARIES on $mac_after"
+
+# BINARY PARITY IS NOT THE ANSWER, and reporting it as success is how this
+# script hid a two-day drift. `herdr --version` reads the file on disk; a
+# server that is already running keeps its own build until restarted, so both
+# ends can report the new version while both still SERVE the old one.
+# Measured 2026-09-30: binaries 0.9.3 on both machines, local server 0.9.1,
+# remote server 0.9.0 — two releases behind the feature being debugged, and
+# nothing anywhere said so. herdr reports it as `server_binary_stale`; ask for
+# that instead of inferring from the binary.
+for side in local remote; do
+    if [ "$side" = local ]; then
+        st=$(herdr status 2>/dev/null || true)
+    else
+        st=$(ssh "$TARGET" 'PATH=$HOME/.local/bin:$PATH herdr status' 2>/dev/null || true)
+    fi
+    # No server running is the clean case: the next start picks up the new
+    # binary by itself, so there is nothing to report.
+    printf '%s\n' "$st" | grep -qE '^[[:space:]]*server_binary_stale:[[:space:]]*yes' || continue
+    running=$(printf '%s\n' "$st" | awk '/^ *version:/{print $2; exit}')
+    say "$cyan" "$side server is still serving $running"
+done
+
+echo "  Restart a stale server when convenient (agents resume by themselves):"
+echo "    local :  herdr server stop   # then start herdr again"
+echo "    remote:  ssh $TARGET 'PATH=\$HOME/.local/bin:\$PATH herdr server stop'"

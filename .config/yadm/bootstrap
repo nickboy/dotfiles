@@ -375,9 +375,10 @@ fi
 
 # Atuin daemon service: the tracked config enables daemon mode, so the
 # launchd service must run on every machine or history writes go
-# nowhere (the test suite asserts the socket is live). Idempotent.
+# nowhere (the test suite asserts the daemon is running and current).
+# Idempotent.
 if command -v atuin &> /dev/null && command -v brew &> /dev/null; then
-    if grep -A6 '\[daemon\]' ~/.config/atuin/config.toml 2>/dev/null | grep -qE '^enabled = true'; then
+    if grep -A12 '\[daemon\]' ~/.config/atuin/config.toml 2>/dev/null | grep -qE '^enabled = true'; then
         if ! brew services list 2>/dev/null | grep -qE '^atuin\s+started'; then
             echo "🚀 Starting atuin daemon service..."
             brew services start atuin >/dev/null 2>&1 || \

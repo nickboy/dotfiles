@@ -739,9 +739,22 @@ if [ -f "$HOME/.config/atuin/config.toml" ]; then
     # Guarded on atuin being installed: CI checks out the tracked config
     # (daemon enabled) onto a runner with no atuin — skip there, still
     # catch a real machine that never started the service.
-    if command -v atuin >/dev/null 2>&1 && grep -A6 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
-        run_test "atuin daemon socket live when enabled" \
-            "[ -S \"$HOME/.local/share/atuin/atuin.sock\" ]"
+    #
+    # Ask atuin, not the filesystem. This used to test for a socket at
+    # ~/.local/share/atuin/atuin.sock; 18.23 puts it under $TMPDIR/atuin-<uid>/,
+    # so the check went red on a perfectly healthy daemon — and a hard-coded
+    # path can never see the other failure that mattered here: a daemon that
+    # is RUNNING but predates a `brew upgrade`. That one sat for four days
+    # (started 9/18, atuin upgraded 9/22, protocol 2 vs 3) with the client
+    # quietly unable to use it. `atuin daemon status` distinguishes all three
+    # states in its first line, and exits 0 for every one of them, so the
+    # assertion is on the TEXT, not the exit status:
+    #   Daemon running                 healthy
+    #   Daemon running (needs restart) stale — restart after an upgrade
+    #   Daemon is not running          service never started
+    if command -v atuin >/dev/null 2>&1 && grep -A12 '\[daemon\]' "$HOME/.config/atuin/config.toml" 2>/dev/null | grep -qE '^enabled = true'; then
+        run_test "atuin daemon running and current when enabled" \
+            "[ \"\$(atuin daemon status 2>&1 | head -1)\" = 'Daemon running' ]"
     fi
 fi
 

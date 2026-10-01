@@ -336,7 +336,7 @@ directory = "~/.herdr/worktrees"
 # and retries. That is the MFA loop this setting produced the first time
 # it was tried, and the reason it was reverted then.
 #
-#   ssh -M -N -f devbox        # once per ControlPersist window
+#   ssh -M -N -f <host>       # once per ControlPersist window
 #
 # Do NOT wrap that in `nohup`: it redirects stdout and the handshake dies
 # with `ssh_dispatch_run_fatal: Connection to UNKNOWN port 65535: Broken

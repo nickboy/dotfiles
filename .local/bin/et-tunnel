@@ -128,30 +128,38 @@ mkdir -p "$LOG_DIR" 2>/dev/null || true
 cmd=${TUNNEL_CMD//\{host\}/$HOSTNAME_REAL}
 cmd=${cmd//\{port\}/$PORT}
 
-say "$green" "ready — handing over to the tunnel on $PORT -> $HOSTNAME_REAL:22"
-say "$cyan" "leave this running; background it with ctrl+z then bg, or rerun as 'et-tunnel $TARGET &'"
-say "$cyan" "then: herdr machine status   (expect reachable within 30s)"
+say "$cyan" "starting tunnel $PORT -> $HOSTNAME_REAL:22"
 
-# THE SCRIPT DOES NOT BACKGROUND THIS, and that is deliberate. ET needs the
-# interactive shell's terminal, and four ways of detaching it were measured
-# failing, each dying within seconds with "Session terminated" in its log:
+# Backgrounding here is fine, and a long detour concluded otherwise. Four
+# arrangements were tried — plain `&`, `</dev/null`, a never-EOF pipe, and a
+# real pty from script(1) — and all four died within seconds with "Session
+# terminated". The common factor was not the detaching: every one of those
+# attempts also carried a -connection-retries flag that kills the session by
+# itself. Removing it makes all four work, including this one.
 #
-#   cmd &                      a non-interactive shell gives an async list
-#                              /dev/null on stdin by POSIX rule, so this is
-#                              already the next case in disguise
-#   cmd </dev/null &           immediate EOF
-#   tail -f /dev/null | cmd &  stdin that never EOFs, still not enough
-#   script -q /dev/null cmd &  a real pty, still not enough
-#
-# The one arrangement that survives — measured at six hours — is the plain
-# `cmd &` typed into an INTERACTIVE shell. So exec into it and let the
-# caller's own shell own the job. `et-tunnel <alias> &` works because that
-# ampersand is the interactive one.
-#
-# This also means the script cannot verify the port afterwards; ET's own
-# output is what you watch instead. That is the trade for a tunnel that
-# actually outlives the command.
+# The lesson worth keeping is about the test, not the flag: four variables
+# were changed while a fifth stayed constant, so four innocent mechanisms
+# took the blame in turn. Isolate one at a time, sequentially, before
+# concluding anything about why a daemon will not stay up.
 #
 # Word splitting is intended: ET_TUNNEL_CMD is a command line, not a path.
 # shellcheck disable=SC2086
-exec $cmd
+$cmd >>"$LOG_DIR/tunnel.out" 2>&1 &
+disown 2>/dev/null || true
+
+for _ in $(seq 1 20); do
+    sleep 1
+    listening && break
+done
+
+if ! listening; then
+    say "$red" "tunnel did not come up on port $PORT"
+    echo "  Check the control master first — it is the usual cause:" >&2
+    echo "    ssh -O check $TARGET" >&2
+    echo "  Command was: $cmd" >&2
+    echo "  ET's log, which exists only because -log_dir is set: $LOG_DIR" >&2
+    exit 1
+fi
+
+say "$green" "tunnel up on localhost:$PORT"
+say "$cyan" "herdr picks it up within 30s — check with: herdr machine status"

@@ -17,6 +17,7 @@ maintenance.
 | `~/.local/bin/env` (uv artifact) | uv | (7) | suite `env` check |
 | bob data dir (PATH + maintenance) | bob (git dev) | (8) | suite nvim boot |
 | `~/.claude/projects/*.jsonl` | Claude Code | (9) | suite fixture test |
+| claude-code cask BINARY | Homebrew cask | (10) | maintenance launch probe |
 
 ## Notes
 
@@ -232,6 +233,44 @@ maintenance.
      matches its existing install on the full command string, so the
      `$HOME` rewrite this repo prescribes reads as absent and it appends
      a duplicate.
+
+10. **The claude-code cask binary — a launch failure, not a config one.**
+    Every other row here watches a CONFIG for schema drift. This one
+    watches whether the program can START, because on 2026-08-28 a cask
+    upgrade left `/opt/homebrew/Caskroom/claude-code/2.1.236/claude`
+    hanging forever on `--version` while already-running sessions kept
+    working — they hold the previous, now-deleted inode open, so the
+    breakage is invisible until you open a NEW session.
+
+    **It was the inode, not the file.** Signature valid
+    (`codesign --verify --strict` passes in 0.15s, Developer ID: Anthropic
+    PBC), content intact, and a byte-identical copy IN THE SAME DIRECTORY
+    ran instantly. Path, directory, content and environment were all
+    excluded that way — `env -i` with a fresh `HOME` hung too. Clearing
+    `com.apple.quarantine` changed nothing and `com.apple.provenance`
+    cannot be removed. The remedy is a NEW inode:
+
+    ```bash
+    d=$(dirname "$(readlink -f "$(command -v claude)")")
+    cp "$d/claude" "$d/.claude.new" && "$d/.claude.new" --version \
+      && mv -f "$d/.claude.new" "$d/claude"
+    codesign --verify --strict "$d/claude"   # confirm it survived the copy
+    ```
+
+    **The canary has to be BOUNDED, which is why it is not in the schema
+    block above.** Those checks assume the tool exits; this one hangs, so
+    an unbounded check would have inherited the hang instead of reporting
+    it. `dm_launch_probe` returns `ok` / `hang` / `fail <rc>` / `skipped`, and
+    maintenance prints different remedies for hang and fail because they
+    have unrelated causes — a non-zero exit is the tool rejecting
+    something it can see, a timeout is the tool never reaching its own
+    code.
+
+    Two traps met while diagnosing this, both recorded in the
+    `macos-triage` skill rather than here: `sample` showing only
+    `_dyld_start` for a Bun single-file binary is a symbolication limit
+    and not evidence of where it stopped, and `timeout 25 command claude`
+    never runs anything because `command` is a shell builtin.
 
    It also reads `herdr pane get <id>` →
    `.result.pane.agent_session.value` to select the transcript

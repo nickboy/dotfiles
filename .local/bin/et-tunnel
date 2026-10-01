@@ -1,0 +1,149 @@
+#!/usr/bin/env bash
+# Bring up (or confirm) an Eternal Terminal tunnel to a remote host, and point
+# a local port at its sshd.
+#
+# WHY THIS IS WORTH A SCRIPT, and not just the one tunnel command: reaching a
+# host THROUGH a local port-forward is not a convenience, it can change which
+# authentication the server demands. Where two-factor lives in an sshd
+# `Match ... Address <ranges> LocalPort 22` block rather than globally, a
+# connection arriving over the forward is seen as ::1, matches no range, and
+# falls through to the weaker global default — key alone, no prompt. Measured
+# here, same instant, same options, only the transport differing:
+#
+#   tunnel:  BATCHMODE-OK   exit=0
+#   direct:  Permission denied (keyboard-interactive)   exit=255
+#
+# That is what makes herdr usable in such an environment: its probe runs
+# `-o BatchMode=yes` and can never answer a prompt, so on the direct path
+# `herdr machine status` is permanently `auth required`, and on this one it
+# is `reachable`.
+#
+# RUN IT FROM A REAL TERMINAL, not a herdr pane. Closing a herdr pane takes
+# its whole process tree with it, including children already reparented to
+# launchd — measured, twice, each time taking a connection that had just cost
+# an interactive authentication.
+#
+# ── Configuration ──────────────────────────────────────────────────────────
+#
+# ET_TUNNEL_CMD is the command that builds the tunnel. `{host}` and
+# `{port}` are substituted. It is a variable rather than a literal because
+# this file is TRACKED in a PUBLIC repo and the wrapper used at work is
+# internal tooling; set it in a machine-local, gitignored file. Same reason
+# herdr-sync takes its proxy endpoint from the caller.
+#
+#     plain Eternal Terminal:  et {host} -t {port}:22 -N
+#
+# Whatever you set, include the equivalent of these two, or you lose most of
+# what this script is for:
+#
+#   * a connection-retry count. Wrappers have been seen defaulting it to
+#     ZERO, which means the tunnel gives up on the first sleep/wake cycle —
+#     exactly the overnight case you wanted it for. Measured on one such
+#     wrapper: the flag exists, its own help says it "handles sleep/wake
+#     issues", and the default is 0.
+#   * a log directory. ET writes nothing by default, so when it fails its one
+#     unhelpful line ("Connectivity to host is OK but ET failed") is the
+#     entire evidence trail, and it points nowhere near the real cause.
+#
+# No hostname is compiled in either. The target is an ssh alias passed as $1
+# or taken from $HERDR_REMOTE_HOST, and the real hostname is read back out of
+# your ssh config, because the tunnel command needs the actual name (it may
+# resolve it somewhere this machine cannot) while this script should not have
+# to know it.
+set -uo pipefail
+
+PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
+
+TARGET="${1:-${HERDR_REMOTE_HOST:-}}"
+PORT="${2:-${ET_TUNNEL_PORT:-2222}}"
+LOG_DIR="${ET_TUNNEL_LOG_DIR:-$HOME/.local/state/et-tunnel}"
+TUNNEL_CMD="${ET_TUNNEL_CMD:-}"
+
+if [ -z "$TARGET" ]; then
+    echo "et-tunnel: no target — pass an ssh alias, or set HERDR_REMOTE_HOST" >&2
+    exit 2
+fi
+
+if [ -z "$TUNNEL_CMD" ]; then
+    if command -v et >/dev/null 2>&1; then
+        TUNNEL_CMD="et {host} -t {port}:22 -N"
+    else
+        echo "et-tunnel: set ET_TUNNEL_CMD (see the header) — no 'et' on PATH" >&2
+        exit 2
+    fi
+fi
+
+off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
+say() { printf '%set-tunnel:%s %s\n' "$1" "$off" "$2"; }
+
+listening() { /usr/sbin/lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; }
+
+if listening; then
+    say "$green" "port $PORT already forwarded — nothing to do"
+    exit 0
+fi
+
+# The tunnel command wants the real hostname, not the alias.
+#
+# PASS THE DIRECT ALIAS, not the tunnelled one. The tunnel alias resolves to
+# localhost by definition, and the loopback guard below exists because the
+# obvious first guess (`et-tunnel <tunnel-alias>`) is exactly wrong: it
+# would build a tunnel from this machine to itself. An early version had only
+# an `alias == hostname` check, which does not catch that at all, and the
+# idempotent path hid it — with the port already up the script exits before
+# ever reading a hostname.
+HOSTNAME_REAL=$(ssh -G "$TARGET" 2>/dev/null | awk '/^hostname /{print $2; exit}')
+case "${HOSTNAME_REAL:-}" in
+    '' | "$TARGET")
+        say "$red" "no real HostName for '$TARGET' in your ssh config"
+        exit 1 ;;
+    localhost | localhost.* | 127.* | ::1 | 0.0.0.0)
+        say "$red" "'$TARGET' points at $HOSTNAME_REAL — that is the tunnelled alias"
+        echo "  Pass the DIRECT alias instead, the one whose HostName is the real host."
+        echo "  This script builds the tunnel that the other alias then rides."
+        exit 2 ;;
+esac
+
+# ET's bootstrap needs an ALREADY AUTHENTICATED ssh. Without one it fails with
+# "Connectivity to host is OK but ET failed" and, by default, writes no log at
+# all — which points nowhere near the real cause and cost an afternoon.
+if ! ssh -O check "$TARGET" >/dev/null 2>&1; then
+    say "$cyan" "no control master for $TARGET — authenticating first (expect one prompt)"
+    # Interactive on purpose. Do NOT add nohup: it redirects stdout and the
+    # handshake dies with "ssh_dispatch_run_fatal: Connection to UNKNOWN port
+    # 65535: Broken pipe", which reads like a network fault and is not.
+    if ! ssh -M -N -f -o ControlPersist=8h -o ConnectTimeout=60 "$TARGET"; then
+        say "$red" "authentication failed — tunnel not started"
+        exit 1
+    fi
+fi
+
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+cmd=${TUNNEL_CMD//\{host\}/$HOSTNAME_REAL}
+cmd=${cmd//\{port\}/$PORT}
+
+say "$cyan" "starting tunnel $PORT -> $HOSTNAME_REAL:22"
+# Word splitting is intended: ET_TUNNEL_CMD is a command line, not a path.
+# shellcheck disable=SC2086
+$cmd &
+disown 2>/dev/null || true
+
+for _ in $(seq 1 20); do
+    sleep 1
+    listening && break
+done
+
+if ! listening; then
+    say "$red" "tunnel did not come up on port $PORT"
+    echo "  Almost always the control master went away — check it first:"
+    echo "    ssh -O check $TARGET"
+    echo "  Command was: $cmd"
+    echo "  If your tunnel command sets a log directory, look there: $LOG_DIR"
+    exit 1
+fi
+
+say "$green" "tunnel up on localhost:$PORT"
+echo "  Point an ssh alias at it with HostName localhost, Port $PORT,"
+echo "  HostKeyAlias $HOSTNAME_REAL, ProxyCommand none, and — the two that are"
+echo "  easy to miss — IdentitiesOnly no plus an IdentityAgent for your agent,"
+echo "  or publickey fails and sshd drops to asking for a password."

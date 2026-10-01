@@ -278,7 +278,9 @@ records = true
 # Daemon keeps a hot in-memory search index (frizbee engine + frecency
 # ranking since 18.19) — faster Ctrl+R. The process is managed by
 # launchd: `brew services start atuin` (per machine — the test suite
-# asserts the socket is live whenever this is enabled).
+# asserts `atuin daemon status` reports it running AND current whenever
+# this is enabled; after a `brew upgrade atuin`, restart it:
+# `brew services restart atuin`).
 enabled = true
 
 ## How often the daemon should sync in seconds

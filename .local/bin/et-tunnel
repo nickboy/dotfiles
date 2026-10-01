@@ -25,7 +25,7 @@
 #
 # ── Configuration ──────────────────────────────────────────────────────────
 #
-# DEVVM_TUNNEL_CMD is the command that builds the tunnel. `{host}` and
+# ET_TUNNEL_CMD is the command that builds the tunnel. `{host}` and
 # `{port}` are substituted. It is a variable rather than a literal because
 # this file is TRACKED in a PUBLIC repo and the wrapper used at work is
 # internal tooling; set it in a machine-local, gitignored file. Same reason
@@ -55,12 +55,12 @@ set -uo pipefail
 PATH="$HOME/.local/bin:/usr/local/bin:/opt/homebrew/bin:$PATH"
 
 TARGET="${1:-${HERDR_REMOTE_HOST:-}}"
-PORT="${2:-${DEVVM_TUNNEL_PORT:-2222}}"
-LOG_DIR="${DEVVM_TUNNEL_LOG_DIR:-$HOME/.local/state/devvm-tunnel}"
-TUNNEL_CMD="${DEVVM_TUNNEL_CMD:-}"
+PORT="${2:-${ET_TUNNEL_PORT:-2222}}"
+LOG_DIR="${ET_TUNNEL_LOG_DIR:-$HOME/.local/state/et-tunnel}"
+TUNNEL_CMD="${ET_TUNNEL_CMD:-}"
 
 if [ -z "$TARGET" ]; then
-    echo "devvm-tunnel: no target — pass an ssh alias, or set HERDR_REMOTE_HOST" >&2
+    echo "et-tunnel: no target — pass an ssh alias, or set HERDR_REMOTE_HOST" >&2
     exit 2
 fi
 
@@ -68,13 +68,13 @@ if [ -z "$TUNNEL_CMD" ]; then
     if command -v et >/dev/null 2>&1; then
         TUNNEL_CMD="et {host} -t {port}:22 -N"
     else
-        echo "devvm-tunnel: set DEVVM_TUNNEL_CMD (see the header) — no 'et' on PATH" >&2
+        echo "et-tunnel: set ET_TUNNEL_CMD (see the header) — no 'et' on PATH" >&2
         exit 2
     fi
 fi
 
 off=$'\033[0m'; cyan=$'\033[36m'; green=$'\033[32m'; red=$'\033[31m'
-say() { printf '%sdevvm-tunnel:%s %s\n' "$1" "$off" "$2"; }
+say() { printf '%set-tunnel:%s %s\n' "$1" "$off" "$2"; }
 
 listening() { /usr/sbin/lsof -nP -iTCP:"$PORT" -sTCP:LISTEN >/dev/null 2>&1; }
 
@@ -87,7 +87,7 @@ fi
 #
 # PASS THE DIRECT ALIAS, not the tunnelled one. The tunnel alias resolves to
 # localhost by definition, and the loopback guard below exists because the
-# obvious first guess (`devvm-tunnel <tunnel-alias>`) is exactly wrong: it
+# obvious first guess (`et-tunnel <tunnel-alias>`) is exactly wrong: it
 # would build a tunnel from this machine to itself. An early version had only
 # an `alias == hostname` check, which does not catch that at all, and the
 # idempotent path hid it — with the port already up the script exits before
@@ -123,7 +123,7 @@ cmd=${TUNNEL_CMD//\{host\}/$HOSTNAME_REAL}
 cmd=${cmd//\{port\}/$PORT}
 
 say "$cyan" "starting tunnel $PORT -> $HOSTNAME_REAL:22"
-# Word splitting is intended: DEVVM_TUNNEL_CMD is a command line, not a path.
+# Word splitting is intended: ET_TUNNEL_CMD is a command line, not a path.
 # shellcheck disable=SC2086
 $cmd &
 disown 2>/dev/null || true

@@ -55,7 +55,7 @@
 # list that is the whole point of the script, so it can never be public.
 .local/bin/herdr
 .local/bin/dotfiles-upstream
-# devvm-tunnel was listed here while it named a corp-internal SSH tool seven
+# et-tunnel was listed here while it named a corp-internal SSH tool seven
 # times. It no longer does: the tunnel command moved to DEVVM_TUNNEL_CMD in
 # an ignored machine-local file, the same shape herdr-sync uses for its proxy
 # endpoint. The script keeps the parts worth sharing — the loopback guard,

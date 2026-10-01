@@ -42,10 +42,19 @@ Violating these produces confident wrong answers, not errors.
    `set -- $var` yields one argument and empties the rest, silently
    turning a command into a broken one that still exits 0. Quote
    explicitly or use `${=var}`.
-3. **`log` is a zsh builtin** in the non-interactive shell. `log show …`
+3. **A name can resolve to something other than the binary you mean —
+   in BOTH directions.** `log` is a zsh builtin in the non-interactive
+   shell, so `log show …`
    hits the builtin, prints "too many arguments", exits 1 — and since a
    pipeline's status is its LAST command's, `log show … | wc -l` prints
    0 and exits 0. Always spell it `/usr/bin/log`.
+
+   The reverse costs just as much: a program that EXECS — `timeout`,
+   `xargs`, `nohup`, `sudo` — cannot see functions or aliases, so
+   wrapping a shell-resolved name silently probes something else.
+   `timeout 25 command claude` ran NOTHING (`command` is a builtin) and
+   `timeout 25 claude` would have missed the wrapper function this
+   machine defines. Resolve the path first: `zsh -lc 'whence -p claude'`.
 4. **A failed query is not a negative result.** Before writing "nothing
    found", prove the query landed: directory exists, is readable, is
    non-empty; the tool produced output at all under a broader filter.
@@ -355,6 +364,36 @@ how far back their activity goes, not by the fact that they are running.
 `buildVariant: CustomerSeed` enables AutoBugCapture, DiagnosticRequest
 and Tailspin captures (37 MB each is normal). Count them, estimate the
 disk-write cost, and check `softwareupdate -l` for a newer build.
+
+## When a program will not start
+
+Two traps met on 2026-08-30, both of which produce confident wrong answers.
+
+**`sample` on a single-file bundled binary shows only `_dyld_start`.** That
+looks like "stuck in the dynamic linker" and is not evidence of anything —
+Bun and similar bundlers embed a runtime whose frames do not symbolicate,
+so the stack is truncated rather than short. Do not build a theory on it.
+
+The discriminating experiment, when a binary hangs and nothing else
+explains it — vary ONE thing at a time and let each result exclude a class:
+
+```bash
+codesign --verify --strict "$b"     # content and signature intact?
+env -i HOME=/tmp/probe PATH=/usr/bin:/bin "$b" --version   # config? env?
+cp "$b" "$(dirname "$b")/copy" && "$(dirname "$b")/copy" --version
+```
+
+If a byte-identical copy IN THE SAME DIRECTORY runs while the original
+hangs, then path, directory, content and environment are all excluded and
+what is left is the INODE. Give it a fresh one by copying over it, and
+re-verify the signature afterwards. Measured once on a 302 MB cask binary
+after an interrupted upgrade; clearing `com.apple.quarantine` did not help
+and `com.apple.provenance` cannot be removed.
+
+**A hang and a non-zero exit are different diagnoses.** A tool that exits
+non-zero is rejecting something it can see, usually its config. A tool that
+never returns has not reached its own code, so nothing it can see is
+relevant. Bound every launch check and report the two separately.
 
 ## Before you run an A/B
 

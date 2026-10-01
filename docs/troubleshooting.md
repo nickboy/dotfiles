@@ -91,8 +91,10 @@ Regression-tested in `test-dotfiles.sh`.
 **Symptom:** Cannot attach to a running herdr server after a brew
 upgrade; herdr reports "protocol version mismatch".
 
-**Root cause:** herdr's wire protocol refuses attach across any
-version difference between client and server.
+**Root cause:** before 0.9.0 the wire protocol refused attach across ANY
+version difference. From 0.9.0 compatible versions may differ, and a
+missing server feature disables only the affected action — so this symptom
+now means genuinely incompatible endpoints, not merely unequal versions.
 
 **Fix:** Finishing work via attach is impossible. Stop the server
 and let it restart; layout and Claude panes resume natively via

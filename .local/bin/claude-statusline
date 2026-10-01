@@ -30,8 +30,15 @@ SHOW_COST=1
 SHOW_BURN=1
 SHOW_RATE_LIMITS=1
 SHOW_HERDR=1
+#
+# CLAUDE_STATUSLINE_IGNORE_CONFIG=1 skips the overrides entirely. The suite
+# needs it and the need was found the hard way: once this machine actually set
+# a delegate, the tests asserting DEFAULT rendering began failing — they were
+# tests that broke the moment the feature they cover got used. A test must be
+# able to pin the switches it is asserting on, not inherit them.
 # shellcheck source=/dev/null
-[ -f "$HOME/.config/claude-statusline/config.sh" ] &&
+[ -z "${CLAUDE_STATUSLINE_IGNORE_CONFIG:-}" ] &&
+    [ -f "$HOME/.config/claude-statusline/config.sh" ] &&
     . "$HOME/.config/claude-statusline/config.sh"
 
 # -----------------------------------------------------------------------------

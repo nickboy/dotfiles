@@ -56,7 +56,7 @@
 .local/bin/herdr
 .local/bin/dotfiles-upstream
 # et-tunnel was listed here while it named a corp-internal SSH tool seven
-# times. It no longer does: the tunnel command moved to DEVVM_TUNNEL_CMD in
+# times. It no longer does: the tunnel command moved to ET_TUNNEL_CMD in
 # an ignored machine-local file, the same shape herdr-sync uses for its proxy
 # endpoint. The script keeps the parts worth sharing — the loopback guard,
 # the control-master precondition, and the two robustness flags whose

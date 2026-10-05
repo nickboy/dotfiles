@@ -541,6 +541,49 @@ if [ -f "$HOME/Brewfile" ]; then
     fi
 fi
 
+# The repo's history was rewritten 2026-10-04 to remove employer-identifying
+# strings (a work email in author fields, internal host and product names).
+# Nothing enforces that they stay out. The live risk is not a fresh mistake:
+# this machine still holds 10 local-only branches and 7 stashes created BEFORE
+# the rewrite, every one of them carrying the old strings, and pushing any of
+# them re-publishes what the rewrite removed.
+#
+# Scoped to tracked files, because that is what a push can publish. The token
+# list is deliberately literal rather than a broad pattern — "corp" or "vpn"
+# would fire on the SSH documentation in README.md, and a check that cries
+# wolf gets deleted. These are the exact spellings the rewrite replaced.
+#
+# A grep that finds nothing is indistinguishable from a grep that never ran,
+# so the control below asserts the scan actually reached the tree.
+# Each token is written with one letter in a character class, e.g. d[e]vvm.
+# The regex still matches the real string, but this FILE does not match the
+# regex — without that, the scan finds its own token list and the check fails
+# on a clean tree. Found the hard way: the first version failed immediately.
+EMPLOYER_TOKENS='d[e]vvm|d[e]vserver|f[a]cebook|W[o]rkplace post|@m[e]ta\.com|@w[a]lmart\.com'
+# File list must work in BOTH environments. `yadm ls-files` is empty on CI,
+# which has no yadm — the scan then reads nothing and the check passes for
+# the worst possible reason. CI caught exactly that: the main check went
+# green while the control went red. Fall back to `git ls-files` (CI checks
+# the repo out normally), then to find(1).
+if yadm ls-files >/dev/null 2>&1 && [ -n "$(yadm ls-files 2>/dev/null | head -1)" ]; then
+    EMPLOYER_FILES() { yadm ls-files -z 2>/dev/null; }
+elif git ls-files >/dev/null 2>&1 && [ -n "$(git ls-files 2>/dev/null | head -1)" ]; then
+    EMPLOYER_FILES() { git ls-files -z 2>/dev/null; }
+else
+    EMPLOYER_FILES() { find . -path ./.git -prune -o -type f -print0 2>/dev/null; }
+fi
+EMPLOYER_HITS=$(EMPLOYER_FILES \
+    | xargs -0 grep -lEi "$EMPLOYER_TOKENS" 2>/dev/null | tr '\n' ' ')
+run_test "no employer-identifying strings in tracked files" \
+    "[ -z \"$(echo "$EMPLOYER_HITS" | tr -d '[:space:]')\" ]"
+[ -n "$EMPLOYER_HITS" ] && echo -e "  ${YELLOW}found in: $EMPLOYER_HITS${NC}"
+# Positive control: the same pipeline with a token the repo certainly contains
+# must find something. If this fails the scan above proved nothing.
+EMPLOYER_CONTROL=$(EMPLOYER_FILES \
+    | xargs -0 grep -lE 'herdr' 2>/dev/null | head -1)
+run_test "…and that scan actually reached the tree" \
+    "[ -n '$EMPLOYER_CONTROL' ]"
+
 # yazi's preview backends fail SILENTLY: a missing one renders a blank pane
 # with no error anywhere. ueberzugpp taught this the expensive way — it was
 # hand-installed and never declared, so a rebuilt machine just quietly lost

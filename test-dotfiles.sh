@@ -560,14 +560,26 @@ fi
 # regex — without that, the scan finds its own token list and the check fails
 # on a clean tree. Found the hard way: the first version failed immediately.
 EMPLOYER_TOKENS='d[e]vvm|d[e]vserver|f[a]cebook|W[o]rkplace post|@m[e]ta\.com|@w[a]lmart\.com'
-EMPLOYER_HITS=$(yadm ls-files -z 2>/dev/null \
+# File list must work in BOTH environments. `yadm ls-files` is empty on CI,
+# which has no yadm — the scan then reads nothing and the check passes for
+# the worst possible reason. CI caught exactly that: the main check went
+# green while the control went red. Fall back to `git ls-files` (CI checks
+# the repo out normally), then to find(1).
+if yadm ls-files >/dev/null 2>&1 && [ -n "$(yadm ls-files 2>/dev/null | head -1)" ]; then
+    EMPLOYER_FILES() { yadm ls-files -z 2>/dev/null; }
+elif git ls-files >/dev/null 2>&1 && [ -n "$(git ls-files 2>/dev/null | head -1)" ]; then
+    EMPLOYER_FILES() { git ls-files -z 2>/dev/null; }
+else
+    EMPLOYER_FILES() { find . -path ./.git -prune -o -type f -print0 2>/dev/null; }
+fi
+EMPLOYER_HITS=$(EMPLOYER_FILES \
     | xargs -0 grep -lEi "$EMPLOYER_TOKENS" 2>/dev/null | tr '\n' ' ')
 run_test "no employer-identifying strings in tracked files" \
     "[ -z \"$(echo "$EMPLOYER_HITS" | tr -d '[:space:]')\" ]"
 [ -n "$EMPLOYER_HITS" ] && echo -e "  ${YELLOW}found in: $EMPLOYER_HITS${NC}"
 # Positive control: the same pipeline with a token the repo certainly contains
 # must find something. If this fails the scan above proved nothing.
-EMPLOYER_CONTROL=$(yadm ls-files -z 2>/dev/null \
+EMPLOYER_CONTROL=$(EMPLOYER_FILES \
     | xargs -0 grep -lE 'herdr' 2>/dev/null | head -1)
 run_test "…and that scan actually reached the tree" \
     "[ -n '$EMPLOYER_CONTROL' ]"

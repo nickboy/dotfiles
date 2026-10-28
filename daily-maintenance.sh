@@ -381,6 +381,34 @@ if [ -S "$HERDR_SOCK" ]; then
     fi
 fi
 
+# A `brew upgrade` that moves atuin leaves the launchd daemon running the
+# old build, and the new client cannot talk to it. Unlike herdr above this
+# IS safe to restart unattended: the daemon holds only a search index and
+# sync state, nothing a session depends on, and is back in about a second.
+#
+# Only when Homebrew's service owns the daemon (`brew services list` shows
+# it started). A daemon run any other way is left alone rather than having
+# a second one started beside it. Restart, then ask again: a restart that
+# did not fix it is a failure, not a success.
+if command -v atuin >/dev/null 2>&1 && command -v brew >/dev/null 2>&1 \
+    && dm_atuin_daemon_needs_restart "$(atuin daemon status 2>&1)"; then
+    if [ "$(brew services list 2>/dev/null | awk '$1 == "atuin" {print $2}')" = "started" ]; then
+        echo "atuin daemon predates the installed $(atuin --version 2>/dev/null); restarting it."
+        brew services restart atuin >/dev/null 2>&1 || true
+        sleep 3
+        ATUIN_AFTER="$(atuin daemon status 2>&1 | head -1)"
+        if [ "$ATUIN_AFTER" = "Daemon running" ]; then
+            echo "atuin daemon restarted and current."
+        else
+            echo "atuin daemon still not current after restart: $ATUIN_AFTER"
+            FAILED_COMMANDS+=("atuin daemon restart")
+        fi
+    else
+        echo "atuin daemon needs a restart but is not a brew service; left alone."
+        FAILED_COMMANDS+=("atuin daemon restart (not a brew service)")
+    fi
+fi
+
 # Self-heal: remove leftover *.upgrading cask staging dirs from a previously
 # interrupted/failed upgrade, so they can't block this run with an
 # "already an App at ..." error.

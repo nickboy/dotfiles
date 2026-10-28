@@ -105,6 +105,21 @@ dm_herdr_server_stale() {
         | grep -qE '^[[:space:]]*server_binary_stale:[[:space:]]*yes[[:space:]]*$'
 }
 
+# Does the running atuin daemon need a restart? Ask atuin: since 18.24
+# `atuin daemon status` prints "Daemon running (needs restart)" on its first
+# line when the daemon predates the installed binary (a protocol mismatch:
+# the old daemon rejects the new client's x-atuin-build header). That is
+# what `brew upgrade` leaves behind every time atuin moves, and until the
+# daemon restarts, history search and recording go through a broken daemon.
+# Measured twice: 2026-10-04, and 2026-10-27 when the morning run moved
+# atuin to 18.24.2 under a daemon started nine days earlier.
+#
+# First line only, exact match: "Daemon running" (current) and "Daemon is
+# not running" (never started) must both read as no.
+dm_atuin_daemon_needs_restart() {
+    [ "$(printf '%s\n' "$1" | head -1)" = "Daemon running (needs restart)" ]
+}
+
 # Remove half-written packs left behind by an INTERRUPTED pack write.
 # git labels them "garbage" in count-objects and never removes them, so
 # they accumulate — 17.2GB on this machine, invisible to every

@@ -572,13 +572,13 @@ fi
 if command -v ghostty >/dev/null 2>&1; then
     run_test "Ghostty config valid" "ghostty +validate-config"
     if [ -f "$HOME/.config/ghostty/config" ]; then
-        # Ghostty 1.4 renamed scrollback-limit to scrollback-limit-bytes (the old
-        # name is a deprecated alias). Accept either spelling, so the rename
-        # cannot silently turn this into "value missing -> 0 -> fail" or, worse,
-        # into a check that reads nothing and is quietly rewritten to pass.
-        SCROLLBACK=$(sed -n 's/^scrollback-limit\(-bytes\)\{0,1\} *=  *\([0-9]*\)/\2/p' "$HOME/.config/ghostty/config" 2>/dev/null | head -1)
+        # Ghostty 1.4 renamed scrollback-limit to scrollback-limit-bytes. The
+        # old name still works as a deprecated alias, but this config tracks
+        # current Ghostty, so require the new spelling: reverting to the old
+        # one reads as "missing" here and fails rather than passing quietly.
+        SCROLLBACK=$(sed -n 's/^scrollback-limit-bytes *=  *\([0-9]*\)/\1/p' "$HOME/.config/ghostty/config" 2>/dev/null | head -1)
         SCROLLBACK=${SCROLLBACK:-0}
-        run_test "Ghostty scrollback limit >= 1000000 bytes" "[ \"$SCROLLBACK\" -ge 1000000 ]"
+        run_test "Ghostty scrollback-limit-bytes >= 1000000" "[ \"$SCROLLBACK\" -ge 1000000 ]"
     fi
 fi
 

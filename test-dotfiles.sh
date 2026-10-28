@@ -1373,6 +1373,25 @@ if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
     rm -rf "$PG_DIR"
 fi
 
+# dm_atuin_daemon_needs_restart: pure predicate on `atuin daemon status`.
+# The three first lines atuin prints; only the stale one may match, and
+# a near-miss prefix ("Daemon running") must not.
+if [ -f "$HOME/daily-maintenance-lib.sh" ]; then
+    AT_SRC="source $HOME/daily-maintenance-lib.sh >/dev/null 2>&1;"
+    run_test "atuin restart: 'needs restart' -> detected" \
+        "bash -c '$AT_SRC dm_atuin_daemon_needs_restart \"Daemon running (needs restart)
+  Reason: the peer did not specify the x-atuin-build header\"'"
+    run_test "atuin restart: current daemon -> silent" \
+        "bash -c '$AT_SRC ! dm_atuin_daemon_needs_restart \"Daemon running
+  PID: 1\"'"
+    run_test "atuin restart: daemon not running -> silent" \
+        "bash -c '$AT_SRC ! dm_atuin_daemon_needs_restart \"Daemon is not running\"'"
+    run_test "atuin restart: empty input -> silent" \
+        "bash -c '$AT_SRC ! dm_atuin_daemon_needs_restart \"\"'"
+    run_test "atuin restart: maintenance wires it in and re-checks after" \
+        "grep -q 'dm_atuin_daemon_needs_restart' $HOME/daily-maintenance.sh && grep -q 'atuin daemon restart' $HOME/daily-maintenance.sh"
+fi
+
 # dm_herdr_server_stale: pure predicate from daily-maintenance-lib.sh.
 # It reads herdr's own `server_binary_stale` field, so the fixtures are
 # `herdr status` TEXT and the unix-socket bind the old predicate needed

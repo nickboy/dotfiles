@@ -543,10 +543,10 @@ fi
 
 # The repo's history was rewritten 2026-10-04 to remove employer-identifying
 # strings (a work email in author fields, internal host and product names).
-# Nothing enforces that they stay out. The live risk is not a fresh mistake:
-# this machine still holds 10 local-only branches and 7 stashes created BEFORE
-# the rewrite, every one of them carrying the old strings, and pushing any of
-# them re-publishes what the rewrite removed.
+# Nothing else enforces that they stay out. The risk is an old copy coming
+# back: any clone, branch or stash made BEFORE the rewrite still carries the
+# old strings (the ones on the Mac mini and the work laptop included), and
+# pushing or merging one re-publishes what the rewrite removed.
 #
 # Scoped to tracked files, because that is what a push can publish. The token
 # list is deliberately literal rather than a broad pattern — "corp" or "vpn"

@@ -9,7 +9,10 @@ font-feature = calt
 font-feature = liga
 
 # Performance
-scrollback-limit = 25000000
+# Renamed in Ghostty 1.4 (old name still accepted, deprecated). 1.4 also
+# compresses off-screen scrollback (70-90% less resident memory) and raised
+# the default to 50 MB; 25 MB is kept here so behaviour does not change.
+scrollback-limit-bytes = 25000000
 
 # Window settings
 window-padding-x = 10
@@ -103,7 +106,10 @@ clipboard-paste-bracketed-safe = true
 # Mouse and selection improvements
 mouse-hide-while-typing = true
 focus-follows-mouse = true
-copy-on-select = clipboard
+# 1.4 changed `clipboard` to mean the system clipboard ONLY; the pre-1.4
+# meaning (system clipboard + selection buffer for middle-click paste) is
+# now spelled `both`. Kept as 1.3 behaved.
+copy-on-select = both
 
 # Link handling
 link-url = true
